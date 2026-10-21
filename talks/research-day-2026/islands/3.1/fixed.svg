@@ -1,0 +1,265 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" data-object="island-3.1-results">
+<rect data-object="ground" x="0" y="0" width="1000" height="1000" fill="#FBF8F4"/>
+<g data-object="legend">
+<g data-object="legend-transbert">
+<circle data-object="legend-transbert-dot" cx="72.20" cy="71.08" r="15.0" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/>
+<text data-object="legend-transbert-name" x="98.0" y="71.08" font-family="Georgia,'Times New Roman',serif" font-size="26" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">TransBERT</text>
+<text data-object="legend-transbert-desc" font-style="italic" x="98.0" y="100.02" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">translated life-science text</text>
+</g>
+<g data-object="legend-camembert">
+<circle data-object="legend-camembert-dot" cx="389.51" cy="71.08" r="15.0" fill="#fff" stroke="#302E2E" stroke-width="2.4"/>
+<text data-object="legend-camembert-name" x="415.31" y="71.08" font-family="Georgia,'Times New Roman',serif" font-size="26" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">CamemBERT</text>
+<text data-object="legend-camembert-desc" font-style="italic" x="415.31" y="100.02" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">general-purpose French</text>
+</g>
+<g data-object="legend-drbert">
+<circle data-object="legend-drbert-dot" cx="691.22" cy="71.08" r="15.0" fill="#96C0BC" stroke="#302E2E" stroke-width="2.4"/>
+<text data-object="legend-drbert-name" x="717.02" y="71.08" font-family="Georgia,'Times New Roman',serif" font-size="26" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">DrBERT</text>
+<text data-object="legend-drbert-desc" font-style="italic" x="717.02" y="100.02" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">native French life-science text</text>
+</g>
+</g>
+<text data-object="method" x="500.0" y="137.16" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">Each model tuned for itself, trained repeatedly, scored by 5-fold cross-validation, then tested for significance</text>
+<g data-object="by-task">
+<text data-object="by-task-head" x="56" y="177.78" font-family="Georgia,'Times New Roman',serif" font-size="23" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">Each task, averaged over its datasets</text>
+<text data-object="by-task-scale" font-style="italic" x="944" y="177.78" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="end" dominant-baseline="central">every ruler is 3 points long</text>
+<g data-object="row-cls">
+<text data-object="row-cls-task" x="56" y="241.57" font-family="Georgia,'Times New Roman',serif" font-size="25" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">Classification</text>
+<text data-object="row-cls-metric" font-style="italic" x="56" y="266.99" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">weighted F1 · 5 datasets</text>
+<g data-object="row-cls-ruler">
+<line data-object="row-cls-ruler-line" x1="381.56" y1="251.49" x2="926.00" y2="251.49" stroke="#302E2E" stroke-width="2.4" stroke-linecap="round"/>
+<line data-object="row-cls-tick-0" x1="381.56" y1="242.49" x2="381.56" y2="260.49" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-cls-tick-1" x1="472.30" y1="247.99" x2="472.30" y2="254.99" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-cls-tick-2" x1="563.04" y1="245.49" x2="563.04" y2="257.49" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-cls-tick-3" x1="653.78" y1="247.99" x2="653.78" y2="254.99" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-cls-tick-4" x1="744.52" y1="245.49" x2="744.52" y2="257.49" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-cls-tick-5" x1="835.26" y1="247.99" x2="835.26" y2="254.99" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-cls-tick-6" x1="926.00" y1="242.49" x2="926.00" y2="260.49" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<text data-object="row-cls-lo" x="381.56" y="212.95" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">73</text>
+<text data-object="row-cls-hi" x="926" y="212.95" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">76</text>
+</g>
+<g data-object="row-cls-lead" data-tie="0">
+<line data-object="row-cls-lead-line" x1="593.89" y1="212.95" x2="873.37" y2="212.95" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-cls-lead-end-a" x1="593.89" y1="206.95" x2="593.89" y2="218.95" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-cls-lead-end-b" x1="873.37" y1="206.95" x2="873.37" y2="218.95" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<text data-object="row-cls-lead-text" x="475.96" y="212.95" font-family="Georgia,'Times New Roman',serif" font-size="23" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">+1.54</text>
+<text data-object="row-cls-lead-sub" font-style="italic" x="538.98" y="213.95" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">points</text>
+</g>
+<g data-object="row-cls-drbert">
+<circle data-object="row-cls-drbert-dot" cx="514.04" cy="251.49" r="15.0" fill="#96C0BC" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-cls-drbert-ring" cx="514.04" cy="251.49" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-cls-camembert">
+<circle data-object="row-cls-camembert-dot" cx="593.89" cy="251.49" r="15.0" fill="#fff" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-cls-camembert-ring" cx="593.89" cy="251.49" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-cls-transbert">
+<circle data-object="row-cls-transbert-dot" cx="873.37" cy="251.49" r="15.0" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-cls-transbert-ring" cx="873.37" cy="251.49" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4"/>
+</g>
+<g data-object="row-cls-drbert-value">
+<text data-object="row-cls-drbert-value-text" x="514.04" y="289.55" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">73.73</text>
+</g>
+<g data-object="row-cls-camembert-value">
+<text data-object="row-cls-camembert-value-text" x="593.89" y="289.55" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">74.17</text>
+</g>
+<g data-object="row-cls-transbert-value">
+<text data-object="row-cls-transbert-value-text" x="873.37" y="289.55" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">75.71</text>
+</g>
+</g>
+<g data-object="row-ner">
+<text data-object="row-ner-task" x="56" y="342.34" font-family="Georgia,'Times New Roman',serif" font-size="25" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">Named entities</text>
+<text data-object="row-ner-metric" font-style="italic" x="56" y="367.76" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">weighted F1 · 6 datasets</text>
+<g data-object="row-ner-ruler">
+<line data-object="row-ner-ruler-line" x1="381.56" y1="352.26" x2="926.00" y2="352.26" stroke="#302E2E" stroke-width="2.4" stroke-linecap="round"/>
+<line data-object="row-ner-tick-0" x1="381.56" y1="343.26" x2="381.56" y2="361.26" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-ner-tick-1" x1="472.30" y1="348.76" x2="472.30" y2="355.76" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-ner-tick-2" x1="563.04" y1="346.26" x2="563.04" y2="358.26" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-ner-tick-3" x1="653.78" y1="348.76" x2="653.78" y2="355.76" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-ner-tick-4" x1="744.52" y1="346.26" x2="744.52" y2="358.26" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-ner-tick-5" x1="835.26" y1="348.76" x2="835.26" y2="355.76" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-ner-tick-6" x1="926.00" y1="343.26" x2="926.00" y2="361.26" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<text data-object="row-ner-lo" x="381.56" y="313.72" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">80.5</text>
+<text data-object="row-ner-hi" x="926" y="313.72" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">83.5</text>
+</g>
+<g data-object="row-ner-lead" data-tie="0">
+<line data-object="row-ner-lead-line" x1="572.12" y1="313.72" x2="862.48" y2="313.72" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-ner-lead-end-a" x1="572.12" y1="307.72" x2="572.12" y2="319.72" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-ner-lead-end-b" x1="862.48" y1="307.72" x2="862.48" y2="319.72" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<text data-object="row-ner-lead-text" x="452.2" y="313.72" font-family="Georgia,'Times New Roman',serif" font-size="23" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">+1.60</text>
+<text data-object="row-ner-lead-sub" font-style="italic" x="517.2" y="314.72" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">points</text>
+</g>
+<g data-object="row-ner-drbert">
+<circle data-object="row-ner-drbert-dot" cx="450.52" cy="352.26" r="15.0" fill="#96C0BC" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-ner-drbert-ring" cx="450.52" cy="352.26" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-ner-camembert">
+<circle data-object="row-ner-camembert-dot" cx="572.12" cy="352.26" r="15.0" fill="#fff" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-ner-camembert-ring" cx="572.12" cy="352.26" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-ner-transbert">
+<circle data-object="row-ner-transbert-dot" cx="862.48" cy="352.26" r="15.0" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-ner-transbert-ring" cx="862.48" cy="352.26" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4"/>
+</g>
+<g data-object="row-ner-drbert-value">
+<text data-object="row-ner-drbert-value-text" x="450.52" y="390.32" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">80.88</text>
+</g>
+<g data-object="row-ner-camembert-value">
+<text data-object="row-ner-camembert-value-text" x="572.12" y="390.32" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">81.55</text>
+</g>
+<g data-object="row-ner-transbert-value">
+<text data-object="row-ner-transbert-value-text" x="862.48" y="390.32" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">83.15</text>
+</g>
+</g>
+<g data-object="row-sts">
+<text data-object="row-sts-task" x="56" y="443.11" font-family="Georgia,'Times New Roman',serif" font-size="25" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">Sentence similarity</text>
+<text data-object="row-sts-metric" font-style="italic" x="56" y="468.53" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">weighted R² · 2 datasets</text>
+<g data-object="row-sts-ruler">
+<line data-object="row-sts-ruler-line" x1="381.56" y1="453.03" x2="926.00" y2="453.03" stroke="#302E2E" stroke-width="2.4" stroke-linecap="round"/>
+<line data-object="row-sts-tick-0" x1="381.56" y1="444.03" x2="381.56" y2="462.03" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-sts-tick-1" x1="472.30" y1="449.53" x2="472.30" y2="456.53" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-sts-tick-2" x1="563.04" y1="447.03" x2="563.04" y2="459.03" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-sts-tick-3" x1="653.78" y1="449.53" x2="653.78" y2="456.53" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-sts-tick-4" x1="744.52" y1="447.03" x2="744.52" y2="459.03" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-sts-tick-5" x1="835.26" y1="449.53" x2="835.26" y2="456.53" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-sts-tick-6" x1="926.00" y1="444.03" x2="926.00" y2="462.03" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<text data-object="row-sts-lo" x="381.56" y="414.49" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">81</text>
+<text data-object="row-sts-hi" x="926" y="414.49" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">84</text>
+</g>
+<g data-object="row-sts-lead" data-tie="1">
+<line data-object="row-sts-lead-line" x1="751.78" y1="414.49" x2="813.48" y2="414.49" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-sts-lead-end-a" x1="751.78" y1="408.49" x2="751.78" y2="420.49" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-sts-lead-end-b" x1="813.48" y1="408.49" x2="813.48" y2="420.49" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<text data-object="row-sts-lead-text" font-style="italic" x="527.41" y="414.49" font-family="Georgia,'Times New Roman',serif" font-size="23" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">tie</text>
+<text data-object="row-sts-lead-sub" font-style="italic" x="561.92" y="415.49" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">0.34 apart, not significant</text>
+</g>
+<g data-object="row-sts-offscale-drbert">
+<line data-object="row-sts-offscale-drbert-link" x1="353.96" y1="453.03" x2="379.56" y2="453.03" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="4 4"/>
+<line data-object="row-sts-offscale-drbert-break-0" x1="359.06" y1="461.03" x2="365.06" y2="445.03" stroke="#302E2E" stroke-width="2.0" stroke-linecap="round"/>
+<line data-object="row-sts-offscale-drbert-break-1" x1="366.06" y1="461.03" x2="372.06" y2="445.03" stroke="#302E2E" stroke-width="2.0" stroke-linecap="round"/>
+</g>
+<g data-object="row-sts-drbert">
+<circle data-object="row-sts-drbert-dot" cx="329.56" cy="453.03" r="15.0" fill="#96C0BC" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-sts-drbert-ring" cx="329.56" cy="453.03" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4"/>
+</g>
+<g data-object="row-sts-camembert">
+<circle data-object="row-sts-camembert-dot" cx="813.48" cy="453.03" r="15.0" fill="#fff" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-sts-camembert-ring" cx="813.48" cy="453.03" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-sts-transbert">
+<circle data-object="row-sts-transbert-dot" cx="751.78" cy="453.03" r="15.0" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-sts-transbert-ring" cx="751.78" cy="453.03" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-sts-drbert-value">
+<text data-object="row-sts-drbert-value-text" x="329.56" y="491.09" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">73.56</text>
+</g>
+<g data-object="row-sts-transbert-value">
+<text data-object="row-sts-transbert-value-text" x="751.78" y="491.09" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">83.04</text>
+</g>
+<g data-object="row-sts-camembert-value">
+<text data-object="row-sts-camembert-value-text" x="813.48" y="491.09" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">83.38</text>
+</g>
+</g>
+<g data-object="row-pos">
+<text data-object="row-pos-task" x="56" y="543.88" font-family="Georgia,'Times New Roman',serif" font-size="25" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">Part of speech</text>
+<text data-object="row-pos-metric" font-style="italic" x="56" y="569.3" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">weighted F1 · 2 datasets</text>
+<g data-object="row-pos-ruler">
+<line data-object="row-pos-ruler-line" x1="381.56" y1="553.80" x2="926.00" y2="553.80" stroke="#302E2E" stroke-width="2.4" stroke-linecap="round"/>
+<line data-object="row-pos-tick-0" x1="381.56" y1="544.80" x2="381.56" y2="562.80" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-pos-tick-1" x1="472.30" y1="550.30" x2="472.30" y2="557.30" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-pos-tick-2" x1="563.04" y1="547.80" x2="563.04" y2="559.80" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-pos-tick-3" x1="653.78" y1="550.30" x2="653.78" y2="557.30" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-pos-tick-4" x1="744.52" y1="547.80" x2="744.52" y2="559.80" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-pos-tick-5" x1="835.26" y1="550.30" x2="835.26" y2="557.30" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<line data-object="row-pos-tick-6" x1="926.00" y1="544.80" x2="926.00" y2="562.80" stroke="#302E2E" stroke-width="1.6" stroke-linecap="round"/>
+<text data-object="row-pos-lo" x="381.56" y="515.26" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">96</text>
+<text data-object="row-pos-hi" x="926" y="515.26" font-family="Georgia,'Times New Roman',serif" font-size="14" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">99</text>
+</g>
+<g data-object="row-pos-lead" data-tie="1">
+<line data-object="row-pos-lead-line" x1="797.15" y1="515.26" x2="800.78" y2="515.26" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-pos-lead-end-a" x1="797.15" y1="509.26" x2="797.15" y2="521.26" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<line data-object="row-pos-lead-end-b" x1="800.78" y1="509.26" x2="800.78" y2="521.26" stroke="#302E2E" stroke-width="3.0" stroke-linecap="round"/>
+<text data-object="row-pos-lead-text" font-style="italic" x="571.94" y="515.26" font-family="Georgia,'Times New Roman',serif" font-size="23" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">tie</text>
+<text data-object="row-pos-lead-sub" font-style="italic" x="606.45" y="516.26" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">0.02 apart, not significant</text>
+</g>
+<g data-object="row-pos-drbert">
+<circle data-object="row-pos-drbert-dot" cx="777.19" cy="553.80" r="15.0" fill="#96C0BC" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-pos-drbert-ring" cx="777.19" cy="553.80" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4"/>
+</g>
+<g data-object="row-pos-camembert">
+<circle data-object="row-pos-camembert-dot" cx="797.15" cy="553.80" r="15.0" fill="#fff" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-pos-camembert-ring" cx="797.15" cy="553.80" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-pos-transbert">
+<circle data-object="row-pos-transbert-dot" cx="800.78" cy="553.80" r="15.0" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/>
+<circle data-object="row-pos-transbert-ring" cx="800.78" cy="553.80" r="20.00" fill="none" stroke="#302E2E" stroke-width="4.4" opacity="0"/>
+</g>
+<g data-object="row-pos-drbert-value">
+<text data-object="row-pos-drbert-value-text" x="739.21" y="591.86" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">98.18</text>
+<line data-object="row-pos-drbert-value-hair" x1="777.19" y1="579.20" x2="739.21" y2="581.00" stroke="#302E2E" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+<g data-object="row-pos-camembert-value">
+<text data-object="row-pos-camembert-value-text" x="791.83" y="591.86" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">98.29</text>
+<line data-object="row-pos-camembert-value-hair" x1="797.15" y1="579.20" x2="791.83" y2="581.00" stroke="#302E2E" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+<g data-object="row-pos-transbert-value">
+<text data-object="row-pos-transbert-value-text" x="844.07" y="591.86" font-family="Georgia,'Times New Roman',serif" font-size="17" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">98.31</text>
+<line data-object="row-pos-transbert-value-hair" x1="800.78" y1="579.20" x2="844.07" y2="581.00" stroke="#302E2E" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+</g>
+<g data-object="by-task-key">
+<circle data-object="by-task-key-ring" cx="80.40" cy="614.91" r="12.40" fill="none" stroke="#302E2E" stroke-width="3.30"/>
+<text data-object="by-task-key-text" x="104.8" y="614.91" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">ringed: significant at the 0.01 level (Friedman &amp; Nemenyi test), first or last</text>
+</g>
+</g>
+<g data-object="by-dataset">
+<text data-object="by-dataset-head" x="56" y="656.95" font-family="Georgia,'Times New Roman',serif" font-size="23" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">The best model on each of the 15 datasets</text>
+<g data-object="group-cls">
+<g data-object="cell-deft-2020-t2" data-winner="camembert"><rect data-object="cell-deft-2020-t2-fill" x="56.00" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-deft-2020-t2-empty" x="56.00" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-deft-2020-t2-score" opacity="0" x="80.4" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">98.91</text></g>
+<text data-object="cell-deft-2020-t2-name" x="80.40" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 80.40 741.09)">DEFT-2020/T2</text>
+<g data-object="cell-diamed" data-winner="transbert"><rect data-object="cell-diamed-fill" x="110.80" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><circle data-object="cell-diamed-sig" cx="135.20" cy="708.69" r="7.32" fill="#302E2E"/><rect data-object="cell-diamed-empty" x="110.80" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-diamed-score" opacity="0" x="135.2" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">75.32</text></g>
+<text data-object="cell-diamed-name" x="135.20" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 135.20 741.09)">DiaMed</text>
+<g data-object="cell-frmedmcqa" data-winner="transbert"><rect data-object="cell-frmedmcqa-fill" x="165.60" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-frmedmcqa-empty" x="165.60" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-frmedmcqa-score" opacity="0" x="190.0" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">57.25</text></g>
+<text data-object="cell-frmedmcqa-name" x="190.00" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 190.00 741.09)">FrMedMCQA</text>
+<g data-object="cell-morfitt" data-winner="transbert"><rect data-object="cell-morfitt-fill" x="220.40" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><circle data-object="cell-morfitt-sig" cx="244.80" cy="708.69" r="7.32" fill="#302E2E"/><rect data-object="cell-morfitt-empty" x="220.40" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-morfitt-score" opacity="0" x="244.8" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">75.36</text></g>
+<text data-object="cell-morfitt-name" x="244.80" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 244.80 741.09)">MorFITT</text>
+<g data-object="cell-pxcorpus-t2" data-winner="camembert"><rect data-object="cell-pxcorpus-t2-fill" x="275.20" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-pxcorpus-t2-empty" x="275.20" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-pxcorpus-t2-score" opacity="0" x="299.6" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">96.31</text></g>
+<text data-object="cell-pxcorpus-t2-name" x="299.60" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 299.60 741.09)">PxCorpus/T2</text>
+<text data-object="group-cls-label-0" x="190.0" y="865.56" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">Classification</text>
+</g>
+<g data-object="group-ner">
+<g data-object="cell-e3c-clinical" data-winner="transbert"><rect data-object="cell-e3c-clinical-fill" x="354.00" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-e3c-clinical-empty" x="354.00" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-e3c-clinical-score" opacity="0" x="378.4" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">76.83</text></g>
+<text data-object="cell-e3c-clinical-name" x="378.40" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 378.40 741.09)">E3C/Clinical</text>
+<g data-object="cell-e3c-temporal" data-winner="transbert"><rect data-object="cell-e3c-temporal-fill" x="408.80" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-e3c-temporal-empty" x="408.80" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-e3c-temporal-score" opacity="0" x="433.2" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">85.73</text></g>
+<text data-object="cell-e3c-temporal-name" x="433.20" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 433.20 741.09)">E3C/Temporal</text>
+<g data-object="cell-mantragsc" data-winner="transbert"><rect data-object="cell-mantragsc-fill" x="463.60" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-mantragsc-empty" x="463.60" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-mantragsc-score" opacity="0" x="488.0" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">62.83</text></g>
+<text data-object="cell-mantragsc-name" x="488.00" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 488.00 741.09)">MantraGSC</text>
+<g data-object="cell-pxcorpus-t1" data-winner="transbert"><rect data-object="cell-pxcorpus-t1-fill" x="518.40" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><circle data-object="cell-pxcorpus-t1-sig" cx="542.80" cy="708.69" r="7.32" fill="#302E2E"/><rect data-object="cell-pxcorpus-t1-empty" x="518.40" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-pxcorpus-t1-score" opacity="0" x="542.8" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">95.17</text></g>
+<text data-object="cell-pxcorpus-t1-name" x="542.80" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 542.80 741.09)">PxCorpus/T1</text>
+<g data-object="cell-quaero-emea" data-winner="transbert"><rect data-object="cell-quaero-emea-fill" x="573.20" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><circle data-object="cell-quaero-emea-sig" cx="597.60" cy="708.69" r="7.32" fill="#302E2E"/><rect data-object="cell-quaero-emea-empty" x="573.20" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-quaero-emea-score" opacity="0" x="597.6" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">85.67</text></g>
+<text data-object="cell-quaero-emea-name" x="597.60" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 597.60 741.09)">QUAERO/EMEA</text>
+<g data-object="cell-quaero-mdl" data-winner="transbert"><rect data-object="cell-quaero-mdl-fill" x="628.00" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-quaero-mdl-empty" x="628.00" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-quaero-mdl-score" opacity="0" x="652.4" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">64.06</text></g>
+<text data-object="cell-quaero-mdl-name" x="652.40" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 652.40 741.09)">QUAERO/MdL</text>
+<text data-object="group-ner-label-0" x="515.4" y="865.56" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">Named entities</text>
+</g>
+<g data-object="group-sts">
+<g data-object="cell-clister" data-winner="camembert"><rect data-object="cell-clister-fill" x="706.80" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-clister-empty" x="706.80" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-clister-score" opacity="0" x="731.2" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">82.80</text></g>
+<text data-object="cell-clister-name" x="731.20" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 731.20 741.09)">CLISTER</text>
+<g data-object="cell-deft-2020-t1" data-winner="camembert"><rect data-object="cell-deft-2020-t1-fill" x="761.60" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-deft-2020-t1-empty" x="761.60" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-deft-2020-t1-score" opacity="0" x="786.0" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">83.95</text></g>
+<text data-object="cell-deft-2020-t1-name" x="786.00" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 786.00 741.09)">DEFT-2020/T1</text>
+<text data-object="group-sts-label-0" x="758.6" y="865.56" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">Sentence</text>
+<text data-object="group-sts-label-1" x="758.6" y="884.76" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">similarity</text>
+</g>
+<g data-object="group-pos">
+<g data-object="cell-cas" data-winner="transbert"><rect data-object="cell-cas-fill" x="840.40" y="684.29" width="48.80" height="48.80" rx="6" fill="#DBCDE2" stroke="#302E2E" stroke-width="2.4"/><rect data-object="cell-cas-empty" x="840.40" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-cas-score" opacity="0" x="864.8" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">97.74</text></g>
+<text data-object="cell-cas-name" x="864.80" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 864.80 741.09)">CAS</text>
+<g data-object="cell-essai" data-winner="camembert"><rect data-object="cell-essai-fill" x="895.20" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4"/><circle data-object="cell-essai-sig" cx="919.60" cy="708.69" r="7.32" fill="#302E2E"/><rect data-object="cell-essai-empty" x="895.20" y="684.29" width="48.80" height="48.80" rx="6" fill="#fff" stroke="#302E2E" stroke-width="2.4" opacity="0"/><text data-object="cell-essai-score" opacity="0" x="919.6" y="722.35" font-family="Georgia,'Times New Roman',serif" font-size="12.5" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">98.66</text></g>
+<text data-object="cell-essai-name" x="919.60" y="741.09" font-family="Georgia,'Times New Roman',serif" font-size="13.5" fill="#302E2E" text-anchor="end" dominant-baseline="central" transform="rotate(-90 919.60 741.09)">ESSAI</text>
+<text data-object="group-pos-label-0" x="892.2" y="865.56" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">Part of</text>
+<text data-object="group-pos-label-1" x="892.2" y="884.76" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="middle" dominant-baseline="central">speech</text>
+</g>
+<text data-object="by-dataset-summary" x="56" y="913.32" font-family="Georgia,'Times New Roman',serif" font-size="16" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">TransBERT best on 10 (4 significant) · CamemBERT on 5 (1 significant) · DrBERT on none</text>
+<g data-object="by-dataset-key">
+<circle data-object="by-dataset-key-dot" cx="71.00" cy="935.30" r="7.32" fill="#302E2E"/>
+<text data-object="by-dataset-key-text" x="90.32" y="935.3" font-family="Georgia,'Times New Roman',serif" font-size="15" font-weight="400" fill="#302E2E" text-anchor="start" dominant-baseline="central">dot: best, significant at the 0.05 level (Friedman &amp; Nemenyi test)</text>
+</g>
+</g>
+</svg>
