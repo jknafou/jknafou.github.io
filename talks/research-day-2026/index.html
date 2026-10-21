@@ -26,7 +26,7 @@
     outline: 14px solid transparent; outline-offset: 10px; }
   .island:hover { box-shadow: 0 2px 40px rgba(48,46,46,.25); }
   .island.focused { outline-color: var(--focus); }
-  .island img { width: 100%; height: 100%; display: block; pointer-events: none; }
+  .island img, .island iframe { width: 100%; height: 100%; display: block; pointer-events: none; border: 0; }
   .island .tag { position: absolute; left: 22px; top: 18px; font-size: 44px; color: var(--ink);
     background: rgba(251,248,244,.85); padding: 4px 14px; border-radius: 10px; }
   .island.draft::after { content: "draft"; position: absolute; right: 22px; top: 22px;
@@ -46,7 +46,7 @@
   <p>Work in progress &middot; HES-SO research day 2026 &middot; <a href="../../">Julien Knafou</a></p>
 </header>
 <div id="viewport" tabindex="0" aria-label="The world of the talk: arrows move between islands, Enter opens one, Escape shows them all"><div id="world"></div></div>
-<footer><span>Drag and scroll, or arrows and Enter. Click an island to open its latest file.</span><span>Built 21 October 2026, 13:46 UTC &middot; sections left to right, islands top to bottom</span></footer>
+<footer><span>Drag and scroll, or arrows and Enter. Click an island to open its latest file.</span><span>Built 21 October 2026, 13:47 UTC &middot; sections left to right, islands top to bottom</span></footer>
 <script>
 (function () {
   "use strict";
@@ -70,6 +70,7 @@
   "id": "2.1",
   "kind": "live",
   "href": "islands/2.1/dynamic.html",
+  "frame": "islands/2.1/dynamic.html",
   "img": "islands/2.1/picture.svg",
   "from": "sections/2-methodology/2.1-translation-workflow/dynamic/dynamic.html"
  },
@@ -117,7 +118,13 @@
     el.className = "island " + isl.kind;
     el.style.left = x + "px"; el.style.top = y + "px";
     if (isl.href) { el.href = isl.href; el.target = "_blank"; el.rel = "noopener"; }
-    if (isl.img) { var im = document.createElement("img"); im.src = isl.img; im.alt = "island " + isl.id; im.loading = "lazy"; el.appendChild(im); }
+    if (isl.frame) {
+      // the island's own page, playing: a living view or a built island loops
+      // its idle on the map exactly as it does when entered
+      var fr = document.createElement("iframe"); fr.src = isl.frame; fr.title = "island " + isl.id;
+      fr.loading = "lazy"; fr.setAttribute("tabindex", "-1"); fr.setAttribute("scrolling", "no");
+      el.appendChild(fr);
+    } else if (isl.img) { var im = document.createElement("img"); im.src = isl.img; im.alt = "island " + isl.id; im.loading = "lazy"; el.appendChild(im); }
     var tag = document.createElement("span"); tag.className = "tag"; tag.textContent = isl.id; el.appendChild(tag);
     world.appendChild(el);
     els.push({ el: el, cx: x + 500, cy: y + 500, href: isl.href });
