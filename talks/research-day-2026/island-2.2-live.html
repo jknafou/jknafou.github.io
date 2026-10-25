@@ -5405,6 +5405,7 @@
     destroy();
     scale = px;
     decisions = [];
+    applyMasks(px);
     var gsap = G.gsap;
     if (!G.FIXED_VOCAB || typeof G.FIXED_VOCAB.bead !== "function" || typeof G.FIXED_VOCAB.lamp !== "function") {
       say("the shared vocabulary (1.1's anim/00-vocab.js, window.FIXED_VOCAB with bead and lamp) is not loaded; nothing is built");
@@ -5488,8 +5489,10 @@
     return true;
   }
   function stop() {
+    var was = !!driver;
     if (driver) { driver.kill(); driver = null; }
     rest();
+    if (was) settle();
   }
   /* the camera settled at another scale: the old tier is put back now, the new
    * one is built on the same clock and armed from the next rest, so a tier
@@ -5507,7 +5510,7 @@
     get scale() { return scale; }, get children() { return kids; },
     get decisions() { return decisions.slice(); }, get running() { return !!driver; },
     get driver() { return driver; }, log: LOG, probe: null,
-    masks: MASKS, boundMasks: boundMasks
+    masks: MASKS, boundMasks: boundMasks, applyMasks: applyMasks, settle: settle
   };
 
   /* ---- the signed drawing's 1,137 sheen masks, bounded to the shape each masks ----
@@ -5522,27 +5525,60 @@
    * PIXELS over 30 levels at 1.44, 0.48 and 0.072 with pad = max(8 local units,
    * half the shape's longer side); this island's proof is in FIXED-ANIMATION.md.
    * `?masks=signed` turns it off, which is how proof 1 compares the DOM. */
-  var PAD = (function () { var v = (params.get("maskpad") || "8,0.5").split(",").map(parseFloat); return (v.length === 2 && v[0] >= 0 && v[1] >= 0) ? v : [8, 0.5]; })();
-  function boundMasks() {
-    var ms = svg.querySelectorAll('mask[maskUnits="userSpaceOnUse"]'), n = 0, skipped = 0;
+  /* ⚠️ THE PAD IS CHOSEN PER TIER, AND AT 1/20 THE MASKS STAY AS DRAWN. Measured
+   * here (FIXED-ANIMATION.md, "The sheen masks"): 1.1's pad (8, 0.5) gives 60 fps
+   * at whole but is NOT 0 pixels on this drawing -- 4,614 px at 1.44 and 195 px
+   * of up to 10 levels at 1/20, a residual of the mask's offscreen raster that
+   * shrinks with the pad (40, 2: 2,378 / 40 px) and never reaches 0; a pad of
+   * (100, 3) costs the frame rate (B at 68 ms a frame). At 1/20 no module writes
+   * anything across a period (proof 2), so no mask needs bounding there and the
+   * world map is the signed render, pixel for pixel. `?maskpad=a,b` forces one
+   * pad at every tier (the measurements' knob); `?masks=signed` bounds none. */
+  var PADS = { whole: [8, 0.5], third: [40, 2] };
+  var FORCED_PAD = (function () { var v = (params.get("maskpad") || "").split(",").map(parseFloat); return (v.length === 2 && v[0] >= 0 && v[1] >= 0) ? v : null; })();
+  function padFor(px) { return FORCED_PAD || (px < 0.2 ? null : px < 0.75 ? PADS.third : PADS.whole); }
+  function signedRegion(m) {
+    var st = m.__fixedSigned || (m.__fixedSigned = { x: m.getAttribute("x"), y: m.getAttribute("y"), width: m.getAttribute("width"), height: m.getAttribute("height") });
+    return st;
+  }
+  function boundMasks(pad) {
+    var ms = svg.querySelectorAll('mask[maskUnits="userSpaceOnUse"]'), n = 0, skipped = 0, restored = 0;
     for (var i = 0; i < ms.length; i++) {
-      var m = ms[i];
-      if (m.getAttribute("width") !== "10000" || m.getAttribute("height") !== "10000") { skipped++; continue; }
+      var m = ms[i], sg = signedRegion(m);
+      if (sg.width !== "10000" || sg.height !== "10000") { skipped++; continue; }
+      if (!pad) {           /* as drawn */
+        if (m.getAttribute("width") !== "10000") { m.setAttribute("x", sg.x); m.setAttribute("y", sg.y); m.setAttribute("width", sg.width); m.setAttribute("height", sg.height); restored++; }
+        continue;
+      }
       var first = m.firstElementChild;
       if (!first || typeof first.getBBox !== "function") { skipped++; continue; }
       var b = first.getBBox();
       if (!(b.width >= 0 && b.height >= 0)) { skipped++; continue; }
-      var pad = Math.max(PAD[0], PAD[1] * Math.max(b.width, b.height));
-      m.setAttribute("x", (b.x - pad).toFixed(2)); m.setAttribute("y", (b.y - pad).toFixed(2));
-      m.setAttribute("width", (b.width + 2 * pad).toFixed(2)); m.setAttribute("height", (b.height + 2 * pad).toFixed(2));
+      var p = Math.max(pad[0], pad[1] * Math.max(b.width, b.height));
+      m.setAttribute("x", (b.x - p).toFixed(2)); m.setAttribute("y", (b.y - p).toFixed(2));
+      m.setAttribute("width", (b.width + 2 * p).toFixed(2)); m.setAttribute("height", (b.height + 2 * p).toFixed(2));
       n++;
     }
-    return { bounded: n, left: skipped };
+    return { bounded: n, left: skipped, restored: restored };
   }
-  MASKS.mode = params.get("masks") === "signed" ? "signed" : "bounded";
-  if (MASKS.mode === "bounded") { var mb = boundMasks(); MASKS.bounded = mb.bounded; MASKS.left = mb.left; }
-  MASKS.pad = PAD;
-  say("masks: " + MASKS.mode + (MASKS.mode === "bounded" ? " (" + MASKS.bounded + " sheen masks bounded to their shape, pad max(" + PAD[0] + ", " + PAD[1] + " x the longer side), " + MASKS.left + " other userSpaceOnUse masks left as drawn; ?masks=signed turns it off)" : " (as drawn: every write re-rasterises a 10000-unit mask region)"));
+  function applyMasks(px) {
+    var pad = params.get("masks") === "signed" ? null : padFor(px);
+    var r = boundMasks(pad);
+    MASKS.mode = pad ? "bounded" : "signed"; MASKS.pad = pad; MASKS.bounded = r.bounded; MASKS.left = r.left; MASKS.scale = px;
+    say("masks at " + px + " px/u: " + (pad ? r.bounded + " sheen masks bounded to their shape, pad max(" + pad[0] + ", " + pad[1] + " x the longer side), " + r.left + " other userSpaceOnUse masks left as drawn" : "as drawn (" + (px < 0.2 ? "the 1/20 tier writes nothing, so nothing needs bounding" : "?masks=signed") + ")"));
+  }
+  /* ⚠️ THE RENDERER IS SETTLED ON STOP. Measured 25 October 2026 (FIXED-ANIMATION.md,
+   * proof 3): after the driver has run and been stopped, the DOM is the signed one
+   * to the attribute, and the frame on screen still differs from the rest render
+   * by 4,435 px of up to 20 levels at 1.44 -- a raster state Chrome keeps for a
+   * layer that has animated (the same frame never changes with time, and a
+   * repaint alone does not clear it). A relayout of the drawing's container does:
+   * after it the frame is byte-identical to the rest render at every scale. So
+   * stop() ends with one, on the svg's parent and never on the svg itself. */
+  function settle() {
+    var host = svg.parentNode; if (!host || !host.style) return;
+    host.style.paddingTop = "1px"; void host.offsetWidth; host.style.paddingTop = ""; void host.offsetWidth;
+  }
 
   /* ⚠️ THE CLOCK KEEPS WALL TIME (1.1's mend). GSAP's default lagSmoothing(500,
    * 33) makes a frame slower than half a second advance the clock by 33 ms, so
@@ -5553,7 +5589,7 @@
   /* ---- boot ---- */
   var s = parseFloat(params.get("scale"));
   if (s > 0) place(s);
-  if (reducedNow()) { say("reduced motion: nothing is built and nothing is started"); }
+  if (reducedNow()) { say("reduced motion: nothing is built and nothing is started; the masks stay as drawn"); MASKS.mode = "signed"; }
   else {
     build(s > 0 ? s : measured());
     var auto = params.get("autostart") !== "0";
