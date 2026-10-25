@@ -580,7 +580,8 @@
  *               composer says `firstAct.by = "A"`, the ALONE branch below, for
  *               looking at the beat with no other module live.
  *   0.80-1.25   FLOW on 2.2-arrow-data-translator: the generator's spark, drawn
- *               as a BEAD of the arrow's own ink (1.1's `bead`), rides the
+ *               as a BEAD of the arrow's ink LIT (1.1's `bead` through 00-run's
+ *               `lightBead`, critique round 1), rides the
  *               generator's centreline from the data bank to the translator's
  *               English pages, `run` 0.45 s (V1's one parameter, the slate
  *               arrows' validated figure).
@@ -592,7 +593,8 @@
  *   FLOW (V1): `flowSlate.spark(u)` -> { s, a } (0.45 s, power1.inOut on the
  *     travel, 0.08-s edges, peak 0.75) and `bead(circle, path, { px })`: the
  *     radius max(the generator's r, 4 device px through the circle's own
- *     CTM), the fill the wrapper's darkest flat ink (#454768 here, measured),
+ *     CTM), the fill the wrapper's darkest flat ink (#454768 here, measured)
+ *     taken CORE_TOWARD_WHITE to white by 00-run's `lightBead` (#E3E3E8),
  *     every attribute back to its signed string at rest. The run is V1's
  *     0.45 s, which is `flowSlate.RUN`: this caller needs no `run` argument.
  *   STEP (V3) and LIGHT-UP in reverse (V5): only in the ALONE branch, as
@@ -1432,7 +1434,7 @@
  *
  * THE SENTENCE: "What comes out is TransCorpus-bio-fr, the translated corpus; and
  * that corpus is what the tokenizer is trained on, before it cuts anything."
- * A bead of the arrow's own ink leaves the translator's French pages and arrives
+ * A bead of light (00-run's lightBead: the arrow's ink taken to its light) leaves the translator's French pages and arrives
  * at the TransCorpus logo; the eye lands on the logo; a second bead leaves the
  * logo and goes straight down its arrow into the tokenizer's port; and at the
  * instant it lands the tokenizer's window lights in its own tint, holds, and
@@ -1453,9 +1455,11 @@
  *   flowSlate.spark(u) -> { s, a }   V1's envelope: RUN 0.45 s, FADE 0.08 s,
  *                                    PEAK 0.75, power1.inOut on the travel
  *   bead(circle, path, ...)          V1's renderer: the generator's spark grown to
- *                                    4 device px of radius in the arrow's darkest
- *                                    flat ink (#454768 here, as on 1.1), signed
- *                                    strings restored at rest
+ *                                    4 device px of radius, signed strings
+ *                                    restored at rest -- called through this
+ *                                    island's 00-run `lightBead`, which fills it
+ *                                    with the arrow's darkest ink (#454768) taken
+ *                                    CORE_TOWARD_WHITE (0.85) to white, #E3E3E8
  *   activation.level(t, on, off)     V2's envelope: 0.15 s half-cosine ramps
  *   lamp(group, ...)                 V2's renderer: the pool's core stop opened
  *                                    0.85 toward white at stop-opacity 1, the rim
@@ -1465,17 +1469,16 @@
  * agrees. Both arrows are slate arrows at RUN = 0.45 s, so the brief's EXTEND
  * (`spark(u, run)` for the belt's longer runs) is not needed here and not made.
  *
- * ⚠️ MEASURED, NOT FIXED HERE: ON THIS DRAWING THE SLATE BEAD DOES NOT READ.
+ * ⚠️ MEASURED, AND MENDED ONCE FOR THE ISLAND (26 October 2026, critique round 1).
  * 1.1's `bead` fills the spark with the arrow's own darkest ink because 1.1's
  * shafts are 2.05 u and the bead is wider than them. 2.2's two arrows have
  * shafts about as wide as the bead (5 u against 5.6 u at 1.44 px/u), so a slate
- * bead on a slate shaft changes about 60 px by at most 17-40 levels: nothing is
- * seen to travel. The generator's own white spark at the same envelope changes
- * the same ~60 px by 130 levels and reads (scratchpad c22-03C/shots/alt-*.png).
- * Not patched in this module, because a private variant of the bead is exactly
- * the fault the shared vocabulary exists to prevent and 01-A's bead is the same
- * word on the same kind of arrow: it is an EXTEND for a person to make in
- * 00-vocab.js, reported with the measurement.
+ * bead on a slate shaft changed about 60 px by at most 17-40 levels and the
+ * critique saw C's sentence carried by nothing. It is mended where every bead
+ * of this island is drawn, not here: 00-run's `lightBead` calls 1.1's `bead`
+ * unchanged and fills it with the arrow's ink taken to the same light `lamp`
+ * uses, so what travels is light down the wire. The EXTEND that makes it 1.1's
+ * own (`bead(..., { fill: "light" })`) is a person's to make.
  *
  * WHAT IT TOUCHES, AND NOTHING ELSE:
  *   2.2-arrow-translator-corpus-spark   transform, opacity, r, fill (through `bead`)
@@ -3472,7 +3475,7 @@
  *              crosses, one trunk down the channel and back left onto TransBERT,
  *              on ACTIVATION's half-cosine ramp over 0.30 s, and stays
  *   0.30-1.50  FLOW (V1) on BOTH tributaries' centrelines in the same frame,
- *              `run` 1.20 s: two beads of the ribbon's own red leave the two
+ *              `run` 1.20 s: two beads of the ribbon's red LIT (00-run lightBead) leave the two
  *              crosses, meet in the channel and ride down as one to the head
  *   1.50-1.65  LIGHT-UP (V5) of TransBERT's red network, at the beads' `off`
  *              (V1's one hand-off: a receiver lights when what feeds it has
@@ -5047,7 +5050,8 @@
  *   2.2-c-arrow-ner-spark, -cls-spark, -sts-spark, -qa-spark
  *       `transform` (a translate along the centreline, in the arrow's own
  *       units), `opacity`, `r` (grown to 4 device px, never under the
- *       generator's), `fill` (the arrow's own darkest flat ink, read)
+ *       generator's), `fill` (the arrow's darkest flat ink, read, taken to its light by
+ *       00-run's `lightBead`: ink on ink did not read, critique round 1)
  *   2.2-c-card-ner-lit, -cls-lit, -sts-lit, -qa-lit
  *       `opacity` on the group; `stop-color` and `stop-opacity` on the pool's
  *       core and rim stops while lit (the flood)
