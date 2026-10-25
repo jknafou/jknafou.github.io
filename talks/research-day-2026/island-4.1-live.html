@@ -608,7 +608,12 @@
  *     the generator's `...-spark` disc carried along the generator's `...-path`
  *     quadratic `M a Q c b`, evaluated here from the path's own `d`; while
  *     live the disc is max(the generator's r, 4 device px) in the arrow's own
- *     darkest flat ink, both put back to the signed strings at rest. The arrow
+ *     darkest flat ink, both put back to the signed strings at rest -- AND, since
+ *     25 October 2026 (the critique of round 1: that bead rode inside this
+ *     island's 6.2-u shafts unseen), re-dressed by anim/00-island-vocab.js, which
+ *     publishes itself as `FIXED_VOCAB.bead`: the spark's own white with a ring of
+ *     the arrow's ink, 1.75 shaft half-widths out; it writes r, fill, stroke and
+ *     stroke-width beside 1.1's transform and opacity, all six back at rest. The arrow
  *     itself is never written.
  *   ACTIVATION (V2): `activation.level(t, on, off)` (RAMP 0.15 s, half-cosine)
  *     drawn by `lamp(group)`: the `...-lit` layer's opacity, and its pool's two
@@ -950,8 +955,12 @@
  * 1.1's anim/00-vocab.js as the composer inlines it, `opts.vocab` or
  * `window.FIXED_VOCAB` -- and nothing here holds its own copy of any of them:
  *   FLOW        vocab.flowSlate.spark(u) -> { s, a }  (RUN 0.45, FADE 0.08, PEAK 0.75)
- *               drawn by vocab.bead(circle, path): the spark grown to 4 device px of
- *               radius in the arrow's own darkest flat ink, riding `M a Q c b`
+ *               drawn by vocab.bead(circle, path): 1.1's bead (the spark grown to 4
+ *               device px of radius in the arrow's own darkest flat ink), since 25
+ *               October 2026 re-dressed by anim/00-island-vocab.js against the shaft
+ *               it rides (the spark's own white, a ring of the arrow's ink, 1.75
+ *               shaft half-widths out; r, fill, stroke, stroke-width beside 1.1's
+ *               transform and opacity), riding `M a Q c b`
  *   ACTIVATION  vocab.activation.level(t, on, off)  (RAMP 0.15, half-cosine)
  *               drawn by vocab.lamp(group): the pool opened into the flood 1.1 validated
  *   STEP        vocab.step(t, at)  (0/1, no frame half-present)
@@ -1307,7 +1316,13 @@
  *     about 72 x 134 landmark units, 44 x 83 u. Close, and reported as measured
  *     in tl.data.measured rather than typed.
  *   - The body's "144 x 70 u batch": measured 143 x 69 u. Same.
- *   - ⚠️ THE SHARED BEAD DOES NOT READ ON THIS ISLAND'S ARROWS AT WHOLE, and this
+ *   - ⚠️ MENDED 25 October 2026 (the critique of round 1): the paragraph below was
+ *     true of 1.1's bead as dressed; since the mend `FIXED_VOCAB.bead` is that bead
+ *     re-dressed by anim/00-island-vocab.js against the shaft it rides (a disc of
+ *     the spark's own white, ringed with the arrow's ink, 1.75 shaft half-widths
+ *     out), and it reads at whole: 162 pixels at worst 139 of 255 on this arrow at
+ *     1.44 against 66 at 59 before. Nothing in this module changed for it.
+ *   - ⚠️ THE SHARED BEAD DID NOT READ ON THIS ISLAND'S ARROWS AT WHOLE, and this
  *     module does not fork the vocabulary to mend it (R034). Measured 25 October
  *     2026 in headless Chrome, the bead at the beat's midpoint against the
  *     bead-less frame: at 1.0 px/u 110 pixels change, 20 by more than 30 levels;
@@ -1640,6 +1655,8 @@
  *                               when the bead's envelope has ENDED, holds, goes dark
  * Beat-local (the plan's B4, Part 2): FLOW 0.00-0.45; the die on 0.45-0.60, held
  * to 1.20, off 1.20-1.35; home 1.50. The beat starts at 5.50 s of L = 28.40 s
+ * on the plan's table (L = 30.53 s on the composer's since 25 October 2026, the
+ * four case beats being longer; this beat's start is unchanged)
  * (Part 3). B4 has NO first act: nothing of its own is taken apart at the loop's
  * start, so from the seam to 5.50 s and from 7.00 s to L this module writes
  * nothing and the picture is the signed one wherever it looks.
@@ -1991,7 +2008,13 @@
  *                                  decision for all five, as 1.1's D1: a die that lights
  *                                  while its heads cannot says half the sentence)
  *   about 1/20 (0.05; 0.072)       stilled: 0 writes a period; the world map shows the signed system
- * ⚠️ AND THE BEAD DOES NOT READ AT WHOLE ON THIS ISLAND'S ARROWS -- measured,
+ * ⚠️ MENDED 25 October 2026 (the critique of round 1): the paragraph below was true
+ * of 1.1's bead as dressed; since the mend `FIXED_VOCAB.bead` is that bead
+ * re-dressed by anim/00-island-vocab.js against the shaft it rides (the spark's own
+ * white with a ring of the arrow's ink, 1.75 shaft half-widths out: 13.3 px across
+ * on this 7.6-px shaft at 1.44), `beadReads` below measures it true and the warning
+ * no longer fires. Nothing in this module changed for it.
+ * ⚠️ AND THE BEAD DID NOT READ AT WHOLE ON THIS ISLAND'S ARROWS -- measured,
  * said at build (`tl.data.warnings`, the log), and NOT mended here, because the
  * bead is one shared body (R034). See the block before `render` for the figures
  * and the one-line change in the vocabulary that would mend all ten arrows.
@@ -2534,6 +2557,9 @@
     if (B == null && ft && ft.start != null) { B = ft.start; source = "opts.beats"; }
     if (ft && ft.start != null) { total = ft.total; slot = ft.len; }
     if (B == null) { var fb = fromTable(FALLBACK_BEATS); B = fb.start; total = fb.total; slot = fb.len; source = "the module's own fallback table (plan Part 3)"; }
+    /* the beat's length is the table's slot unless `beat` was asked by name: the composer's C1 is 2.00 s (25 October 2026), the plan's 1.60 */
+    var beatGiven = ("beat" in opts) || (opts[SLUG] && typeof opts[SLUG] === "object" && "beat" in opts[SLUG]);
+    if (!beatGiven && slot != null) S.beat = slot;
     if (opts.beatsTotal != null) total = +opts.beatsTotal;
     if (total == null) total = fromTable(FALLBACK_BEATS).total;
     if (slot == null) slot = fromTable(FALLBACK_BEATS).len;
