@@ -296,6 +296,19 @@
  *                                  restore, dim, runsAt over flowSlate.spark + bead):
  *                                  07-C2's, moved here so that 09-C4 no longer carries
  *                                  a copy of another shape (critique, round 1).
+ *   lampOnPool(group, o)           V2 ACTIVATION's renderer ON THIS ISLAND'S LIT LAYERS: 1.1's
+ *                                  `lamp` called first for everything it does; on a pool the
+ *                                  generator CLIPPED to a face (the translator's screen, the
+ *                                  tokenizer's board, the three dies, the four cards) it is 1.1's
+ *                                  lamp untouched -- the flood the author validated, the whole
+ *                                  face pale in its own tint; on a pool the generator left
+ *                                  UNCLIPPED (the two drums' mouths: a glow laid OVER the pages
+ *                                  going in, `textual_data(lit=)`) the pool's two stops are kept
+ *                                  at their SIGNED colour and opacity (0.7 at the core, 0 at the
+ *                                  rim) and only the group's opacity is taken to the level: the
+ *                                  glow the generator already draws there, at full strength.
+ *                                  Published as FIXED_VOCAB.lamp; 1.1's body stays reachable as
+ *                                  FIXED_VOCAB.lamp11. See below for why.
  *   press(group, gsap, say, o)     V4 PRESS, the island's own word (plan V4): STEP of the
  *                                  stamp's presence, the stamp arriving at FROM = 1.10
  *                                  about its impression's own rotate(turn cx cy) centre
@@ -351,6 +364,45 @@
  * `flow_arrow`'s spark drawn at this size with a stroke of the arrow's ink -- a
  * person's, in world/concepts/flow_arrow.py; until then this module carries it.
  *
+ * ⚠️ WHY THE LAMP IS WRAPPED HERE, AND WHAT IT WRITES (round 3, 25 October 2026). The
+ * critique of round 2 found two blocking faults, one fault twice: 1.1's lamp opens a
+ * pool's two stops to stop-opacity 1 (the flood: core 0.85 and rim 0.30 toward
+ * white), which on a pool CLIPPED to a face floods that face and nothing else --
+ * but the two drums' mouth pools are UNCLIPPED ellipses (`textual_data(lit=)` draws
+ * the lit layer as `lit_pool(... STORE_LAMP)` with no clip, at mrx x 1.05 by mry x
+ * 2.4, over the pages going in), so at 1 they were an opaque gold dome 99 x 60 u
+ * (the recap's) and 160 x 98 u (the release's) sitting ABOVE the rim, hiding the
+ * pages and the drum's top edge: a lid, not a light, and a part hidden, which the
+ * five things an animated fixed view may not cost forbid. The pool cannot be moved
+ * below the pages (the DOM order is the signed drawing's) and no clip may be added
+ * (a module adds no element). So the rule, read off the DRAWING and not off taste:
+ *   a pool the generator clipped is a FACE and takes 1.1's flood unchanged;
+ *   a pool the generator left unclipped is a GLOW over whatever lies beneath it,
+ *   and a glow is lit by its own opacity: its stops stay the signed STORE_LAMP at
+ *   0.7 fading to 0, the group's opacity goes 0 -> 1 with the level, and nothing
+ *   beneath it is ever covered because the pool never has an edge.
+ * Rendered side by side at 1.44 px/u on both drums before the choice (scratchpad
+ * mend41b/shots/sheet-b.png, sheet-c.png): the dome (F); the signed pool at 1 (W1);
+ * the flood's colours at the signed opacities (W2, the pages washed pale); the gold
+ * taken 0.30 to white at 0.7 (W3); half strength (W4); a lit rim (W5). W1 is taken:
+ * it is the generator's own handle used exactly as the generator drew it, the mouth
+ * goes gold and every page stays legible; W3 is brighter by a constant nobody
+ * signed, W2 whitens the pages. How it is written: 1.1's lamp writes the flood's
+ * four stop attributes once at the first frame of each lit window; this wrapper,
+ * after every `level` call, reads the four and puts back the one that differs from
+ * its signed string, through its own writers (the same pattern as the bead's
+ * dressing), so the stops end every frame signed and the group's opacity is the one
+ * attribute that moves. At rest the five attributes are their signed strings.
+ * 1.1's lamp is NOT changed: the nine clipped faces take it byte for byte.
+ *
+ * DEPARTURE FROM THE REUSE BRIEF (R074) AND FROM PLAN DECIDED 16, named: both bind
+ * every lit layer to 1.1's lamp as validated. The two mouths take 1.1's lamp called
+ * and then its flood undone, because on an unclipped pool the flood hides a part.
+ * The one-line generator change that would make this the drawing's own is a `clip`
+ * on `textual_data`'s `lit_pool` (the mouth's own ellipse) -- a person's, in
+ * world/concepts/textual_data.py; after it the wrapper finds a clipped pool and
+ * writes nothing but what 1.1's lamp writes.
+ *
  * ⚠️ NOTHING THROWS AT LOAD. If 1.1's vocabulary is not there, this module says so
  * and publishes nothing; the composer reports every module that then returns null.
  */
@@ -360,9 +412,9 @@
   function say(m) { if (root.console) root.console.warn("[" + ID + "] " + m); }
 
   var V = root.FIXED_VOCAB;
-  if (!V || typeof V.bead !== "function" || typeof V.writer !== "function" || !V.flowSlate ||
+  if (!V || typeof V.bead !== "function" || typeof V.lamp !== "function" || typeof V.writer !== "function" || !V.flowSlate ||
       typeof V.flowSlate.spark !== "function" || typeof V.step !== "function") {
-    say("1.1's anim/00-vocab.js (bead, writer, flowSlate, step) is not loaded before this module; the island's words are not published");
+    say("1.1's anim/00-vocab.js (bead, lamp, writer, flowSlate, step) is not loaded before this module; the island's words are not published");
     return;
   }
   V.publishedBy = V.publishedBy || {};
@@ -425,6 +477,44 @@
       inner: inner,
       writes: ["transform | cx, cy", "opacity", "r", "fill", "stroke", "stroke-width"]
     };
+    api.rest();
+    return api;
+  }
+
+  /* ================= V2 ACTIVATION's renderer on this island: the lamp, a face flooded, a glow lit =================
+   * lampOnPool(group, o) -> 1.1's lamp's api, plus { kind: "face" | "glow", clipped, inner, lamp11 }.
+   * On a FACE (a clipped pool) it IS 1.1's api. On a GLOW (an unclipped pool) `level` and `rest`
+   * are wrapped so that the pool's stops stay signed and only the group's opacity moves. */
+  var lamp11 = V.lamp;
+  function lampOnPool(group, o) {
+    o = o || {};
+    var log = o.say || function () {};
+    var name = o.name || group.getAttribute("data-object") || "lit";
+    var inner = lamp11(group, o);                          /* 1.1's lamp: the flood, the signed strings, rest */
+    var pool = group.querySelector('[fill^="url("]');    /* the pool: the one shape painted with the gradient */
+    var clipped = false;
+    for (var p = pool; p && p !== group; p = p.parentNode) if (p.getAttribute && p.getAttribute("clip-path")) { clipped = true; break; }
+    if (!pool) { log(name + ": no gradient-filled pool inside the lit layer; 1.1's lamp is used as it stands"); clipped = true; }
+    inner.kind = clipped ? "face" : "glow"; inner.clipped = clipped; inner.inner = null; inner.lamp11 = lamp11;
+    if (clipped) return inner;
+    var stops = Array.prototype.slice.call(group.querySelectorAll("stop"));
+    var S = stops.map(function (s) { return { el: s, c: V.writer(s, "stop-color"), o: V.writer(s, "stop-opacity") }; });
+    function keepSigned() {                               /* put back whichever stop attribute the flood changed */
+      for (var i = 0; i < S.length; i++) {
+        var s = S[i];
+        if (s.el.getAttribute("stop-color") !== s.c.signed) { s.c.force(); s.c(null); }
+        if (s.el.getAttribute("stop-opacity") !== s.o.signed) { s.o.force(); s.o(null); }
+      }
+    }
+    var api = {};
+    for (var k in inner) api[k] = inner[k];
+    api.kind = "glow"; api.inner = inner;
+    api.core = S.length ? S[0].c.signed : null; api.rim = S.length ? S[S.length - 1].c.signed : null;   /* what is on screen while lit: the signed stops */
+    api.coreOpacity = S.length ? +S[0].o.signed : null; api.rimOpacity = S.length ? +S[S.length - 1].o.signed : null;
+    api.flood = { core: inner.core, rim: inner.rim, undone: true };
+    api.level = function (a) { inner.level(a); keepSigned(); };
+    api.rest = function (force) { inner.rest(force); keepSigned(); };
+    api.writes = ["opacity"];
     api.rest();
     return api;
   }
@@ -546,10 +636,14 @@
   /* ---- publish: the three words, once; 1.1's bead kept reachable ---- */
   V.bead11 = bead11;
   V.bead = beadOnShaft;
+  V.lamp11 = lamp11;
+  V.lamp = lampOnPool;
   V.sparkFlow = sparkFlow;
   V.press = press;
   V.publishedBy.bead11 = V.publishedBy.bead || "00-vocab";
+  V.publishedBy.lamp11 = V.publishedBy.lamp || "00-vocab";
   V.publishedBy.bead = ID;
+  V.publishedBy.lamp = ID;
   V.publishedBy.sparkFlow = ID;
   V.publishedBy.press = ID;
   V.island = { id: ID, SPARK_OF_HALF_WIDTH: SPARK_OF_HALF_WIDTH, BEAD_OUTER: BEAD_OUTER, BEAD_RING: BEAD_RING, FROM: FROM, SETTLE: SETTLE,
@@ -593,7 +687,11 @@
  *   1.70-2.15   FLOW   4.1-b-arrow-translator-xx: the lit translator is the
  *               source that has filled (R061); the bead runs out to the drum
  *   2.15-2.30   ACTIVATION 4.1-b-store-xx-lit rises at the bead's `off`: the
- *               translated drum's mouth floods gold; held to 2.45; off 2.45-2.60
+ *               translated drum's mouth GLOWS gold -- the generator's own pool
+ *               over the pages, lit by its opacity alone (round 3: 1.1's flood
+ *               made it an opaque dome over the pages; anim/00-island-vocab.js's
+ *               lamp keeps an unclipped pool's stops signed); held to 2.45; off
+ *               2.45-2.60
  *   2.60-2.75   the translator goes dark only when the mouth has (one thing at a
  *               time)
  *   2.75-2.90   HOME: the method's first three stations are the signed ones.
@@ -617,13 +715,19 @@
  *     itself is never written.
  *   ACTIVATION (V2): `activation.level(t, on, off)` (RAMP 0.15 s, half-cosine)
  *     drawn by `lamp(group)`: the `...-lit` layer's opacity, and its pool's two
- *     stops opened into the flood 1.1 validated while the level is above 0.
+ *     stops opened into the flood 1.1 validated while the level is above 0 --
+ *     on a CLIPPED pool (the translator's screen). On the drum's UNCLIPPED mouth
+ *     pool the island's lamp (anim/00-island-vocab.js, FIXED_VOCAB.lamp) keeps
+ *     the stops signed and moves the opacity alone, so the pages stay visible.
  *
  * WHAT IT TOUCHES, AND NOTHING ELSE (found by data-object at runtime):
  *   4.1-b-arrow-en-translator-spark   transform, opacity, r, fill  (the bead; signed at rest)
  *   4.1-b-arrow-translator-xx-spark   transform, opacity, r, fill  (the bead; signed at rest)
  *   4.1-b-translator-lit              opacity; its two <stop>s' stop-color, stop-opacity
- *   4.1-b-store-xx-lit                opacity; its two <stop>s' stop-color, stop-opacity
+ *   4.1-b-store-xx-lit                opacity (its two <stop>s are written by 1.1's lamp at
+ *                                     a window's first frame and put back signed in the
+ *                                     same frame by the island's lamp; they end every
+ *                                     frame signed)
  * It READS 4.1-b-arrow-en-translator, 4.1-b-arrow-translator-xx (the wrappers:
  * the arrow is there, and its ink), their `-path` (the quadratic), 4.1-b-translator
  * and 4.1-b-store-xx (the wrappers the lit layers must lie inside). It adds no
@@ -4454,10 +4558,15 @@
  * shoulder and the pages are never written.
  *
  * WHAT IT TOUCHES, AND NOTHING ELSE (all found by data-object at runtime):
- *   4.1-c-store-lit    `opacity` (signed "0"), and inside it the pool's two
- *                      gradient `stop`s' `stop-color` / `stop-opacity`, through
- *                      the shared LAMP of 1.1's anim/00-vocab.js (the flood the
- *                      author validated on 1.1's mouths, Decided 16).
+ *   4.1-c-store-lit    `opacity` (signed "0"), through the shared LAMP as this
+ *                      island publishes it (anim/00-island-vocab.js over 1.1's
+ *                      anim/00-vocab.js): the pool is UNCLIPPED, a glow over the
+ *                      pages going in, so its two `stop`s are kept at their signed
+ *                      colour and opacity (1.1's flood writes them at a window's
+ *                      first frame; the island's lamp puts them back in the same
+ *                      frame) and the opacity alone lights it. Round 3, 25 October
+ *                      2026: the critique of round 2 saw the flood as an opaque gold
+ *                      dome hiding the pages that are the corpus being released.
  *   4.1-c-sign-data    `opacity` (signed: ABSENT). "0" from the first act's
  *                      sign-out instant until this beat's STEP at 0.60; the
  *                      attribute is REMOVED again at 0.60 and at t = 0.
@@ -5086,7 +5195,7 @@
                "08-C3", "09-C4", "10-T", "11-D1", "12-D2", "13-D3"];
   var SLUG = {};
   ORDER.forEach(function (id) { SLUG[id] = id.split("-")[1]; });
-  var ISLAND_WORDS = ["bead", "sparkFlow", "press"];
+  var ISLAND_WORDS = ["bead", "lamp", "sparkFlow", "press"];
 
   var kids = [], decisions = [], scale = null, driver = null, clock = { t: 0 }, armedFrom = 0;
   var MASKS = { mode: "pending", bounded: 0, left: 0 };
@@ -5117,8 +5226,8 @@
     /* the island's words must be there before any module builds; a word missing is said, by name */
     var V = G.FIXED_VOCAB || {}, pb = V.publishedBy || {};
     var lacking = ISLAND_WORDS.filter(function (k) { return typeof V[k] !== "function" || pb[k] !== "00-island-vocab"; });
-    if (lacking.length) say("the island's words " + lacking.join(", ") + " are not published by anim/00-island-vocab.js (bead " + pb.bead + ", sparkFlow " + pb.sparkFlow + ", press " + pb.press + "); the modules that need them will say so");
-    else decisions.push("words: FLOW's envelope 00-vocab flowSlate.spark, its renderer 00-island-vocab bead (1.1's bead re-dressed against its shaft: outer " + V.island.BEAD_OUTER + " and ring " + V.island.BEAD_RING + " shaft half-widths, the spark's own white, the arrow's ink), its adapter 00-island-vocab sparkFlow; ACTIVATION 00-vocab activation + lamp; STEP 00-vocab step; PRESS 00-island-vocab press (ONE body, called by 06-C1, 07-C2, 08-C3, 09-C4); RADIATE 10-T radiate");
+    if (lacking.length) say("the island's words " + lacking.join(", ") + " are not published by anim/00-island-vocab.js (bead " + pb.bead + ", lamp " + pb.lamp + ", sparkFlow " + pb.sparkFlow + ", press " + pb.press + "); the modules that need them will say so");
+    else decisions.push("words: FLOW's envelope 00-vocab flowSlate.spark, its renderer 00-island-vocab bead (1.1's bead re-dressed against its shaft: outer " + V.island.BEAD_OUTER + " and ring " + V.island.BEAD_RING + " shaft half-widths, the spark's own white, the arrow's ink), its adapter 00-island-vocab sparkFlow; ACTIVATION 00-vocab activation, its renderer 00-island-vocab lamp (1.1's lamp: a CLIPPED pool is a face and floods as 1.1 validated; an UNCLIPPED pool -- the two drums' mouths -- is a glow over the pages and is lit by its group's opacity alone, its stops kept signed: the critique of round 2, the gold dome); STEP 00-vocab step; PRESS 00-island-vocab press (ONE body, called by 06-C1, 07-C2, 08-C3, 09-C4); RADIATE 10-T radiate");
     ORDER.forEach(function (id) {
       make(id, fa(id), HAS_FIRST_ACT[id] ? "handed the first act (" + HAS_FIRST_ACT[id] + ")" : null);
     });
