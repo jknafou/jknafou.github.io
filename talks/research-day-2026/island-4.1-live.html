@@ -275,6 +275,288 @@
 })(typeof window !== "undefined" ? window : this);
 
 </script>
+<script>/* anim/00-island-vocab.js */
+/* Island 4.1 "what is possible", living fixed view -- THE ISLAND'S OWN WORDS.
+ *
+ * Loaded by fixed-live.py AFTER island 1.1's anim/00-vocab.js (the shared
+ * vocabulary the author validated on 25 October 2026, read from 1.1's directory
+ * and never copied: plan Decided 15) and BEFORE every beat module. It defines
+ * nothing 1.1's vocabulary defines. It holds the three things this island needs
+ * that are not 1.1's, each ONE body called wherever it happens (R034):
+ *
+ *   beadOnShaft(circle, path, o)   V1 FLOW's renderer ON THIS ISLAND'S ARROWS: 1.1's
+ *                                  `bead` called first for everything it does (the
+ *                                  envelope's placement, the signed strings, the
+ *                                  device-pixel floor), then the circle re-dressed
+ *                                  against the shaft it rides -- see below. Published
+ *                                  as FIXED_VOCAB.bead, so the ten arrows' modules
+ *                                  call it under the name they already use; 1.1's
+ *                                  body stays reachable as FIXED_VOCAB.bead11.
+ *   sparkFlow(group, gsap, say)    the FLOW adapter two case modules read (paint,
+ *                                  restore, dim, runsAt over flowSlate.spark + bead):
+ *                                  07-C2's, moved here so that 09-C4 no longer carries
+ *                                  a copy of another shape (critique, round 1).
+ *   press(group, gsap, say, o)     V4 PRESS, the island's own word (plan V4): STEP of the
+ *                                  stamp's presence, the stamp arriving at FROM = 1.10
+ *                                  about its impression's own rotate(turn cx cy) centre
+ *                                  and settling to 1.00 over SETTLE = 0.20 s, power2.out.
+ *                                  07-C2's body, moved here; 06-C1, 07-C2, 08-C3 and
+ *                                  09-C4 call it and hold no body of their own (critique,
+ *                                  round 1: four bodies in three shapes were live).
+ *
+ * ⚠️ WHY THE BEAD IS RE-DRESSED HERE, AND WHAT IT WRITES. The critique of round 1
+ * (25 October 2026) measured the loop at the deck's whole scale, 1.44 px/u: 1.1's
+ * bead is a disc of the arrow's darkest ink, 4 device px of radius, and it reads on
+ * 1.1 because 1.1's shafts are about 2 u wide (drawn at k = 0.2), so the bead sits
+ * mostly on paper. This recap is drawn at k = 0.62: `flow_arrow`'s shaft is 10 k =
+ * 6.2 u, 8.9 px at 1.44, and the same 8-px bead of the same ink rode INSIDE the
+ * shaft -- "ink on ink; no bead is visible on any arrow; ten of the 31 motions say
+ * nothing". The critique's fix, inside this island and without touching 1.1's
+ * 00-vocab.js: a bead sized against its own shaft, a light fill with a dark ring.
+ * So while live the spark circle is:
+ *   r             BEAD_OUTER x the shaft's half-width, less half the ring (the
+ *                 stroke is centred on r), so the disc's outer edge is 1.75 shaft
+ *                 half-widths from the centreline: it stands proud of the shaft by
+ *                 three quarters of the shaft's half-width on either side;
+ *   fill          the spark's OWN signed fill, the generator's white (#FFFFFF),
+ *                 read off the circle, never typed;
+ *   stroke        the arrow's own darkest flat ink, the one 1.1's bead reads off the
+ *                 arrow's painted paths (the cast shadow excluded);
+ *   stroke-width  BEAD_RING x the shaft's half-width;
+ *   opacity, transform (or cx cy)   1.1's bead's, untouched: the plan's envelope.
+ * The shaft's half-width is read off the drawing through `flow_arrow`'s own
+ * contract (world/concepts/flow_arrow.py: the spark's r is 0.9 x the shaft's
+ * half-width), so nothing here is typed geometry. At rest every one of the six
+ * attributes is its signed string (1.1's bead puts back its four; this module
+ * removes the two it added and puts back r and fill once more). Rendered side by
+ * side at 1.44 and 1.0 px/u before the choice (scratchpad mend41/shots/true-*):
+ * 1.1's bead invisible on every arrow at both scales; a white disc with an ink
+ * ring at 1.5 half-widths visible at 1.44 and a dot at 1.0; at 1.75 a disc at both.
+ * The modules' floors are unchanged: the plan's Decided 13 stills every bead at
+ * about 1/3 and at 1/20, and this module does not decide what runs.
+ *
+ * HOW THE RE-DRESS IS WRITTEN, so that two writers never fight over one attribute:
+ * 1.1's bead writes r and fill with its own cached writers once per run (it writes
+ * only what changed); this module, after every pose, READS r, fill, stroke and
+ * stroke-width off the circle and writes only the one that differs. So a run costs
+ * one extra write per attribute at its first frame and one read-and-compare per
+ * attribute per frame afterwards, and whatever 1.1's bead writes on a rebuild is
+ * corrected on the next pose. Deterministic: nothing here keeps time; no
+ * Math.random, Date.now or performance.now.
+ *
+ * DEPARTURE FROM THE REUSE BRIEF (R074), named: the brief marks the bead REUSE from
+ * 1.1 "at the proportions it gives". It is called unchanged; what differs is the
+ * dressing (size against the shaft, light fill, ink ring), for the reason measured
+ * above. The one-line change that would make the dressing the drawing's own is
+ * `flow_arrow`'s spark drawn at this size with a stroke of the arrow's ink -- a
+ * person's, in world/concepts/flow_arrow.py; until then this module carries it.
+ *
+ * ⚠️ NOTHING THROWS AT LOAD. If 1.1's vocabulary is not there, this module says so
+ * and publishes nothing; the composer reports every module that then returns null.
+ */
+(function (root) {
+  "use strict";
+  var ID = "00-island-vocab";
+  function say(m) { if (root.console) root.console.warn("[" + ID + "] " + m); }
+
+  var V = root.FIXED_VOCAB;
+  if (!V || typeof V.bead !== "function" || typeof V.writer !== "function" || !V.flowSlate ||
+      typeof V.flowSlate.spark !== "function" || typeof V.step !== "function") {
+    say("1.1's anim/00-vocab.js (bead, writer, flowSlate, step) is not loaded before this module; the island's words are not published");
+    return;
+  }
+  V.publishedBy = V.publishedBy || {};
+  if (V.publishedBy.bead === ID) { say("already published; a second load changes nothing"); return; }
+
+  /* ---- the bead's dressing, in shaft half-widths (the critique's floor is 1.5) ---- */
+  var SPARK_OF_HALF_WIDTH = 0.9;   /* flow_arrow's contract: the spark's r over the shaft's half-width */
+  var BEAD_OUTER = 1.75;           /* the disc's outer edge, from the centreline, in shaft half-widths */
+  var BEAD_RING = 0.40;            /* the ring's width, in shaft half-widths */
+  /* ---- V4 PRESS (plan V4) ---- */
+  var FROM = 1.10, SETTLE = 0.20;
+  /* ---- the per-motion floors (2.1's, as 1.1 carried them), for sparkFlow.runsAt and press.*RunsAt ---- */
+  var MIN_OBJECT_PX = 10, MIN_TRAVEL_PX = 3, MIN_DISC_PX = 1.5;
+  var EPS = (V.constants && V.constants.EPS) || 0.0005;
+
+  function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function fmt(x) { return (+x).toFixed(3); }
+  function fmt4(x) { return (+x).toFixed(4); }
+  function hex(c) { return /^#[0-9a-fA-F]{6}$/.test(c || ""); }
+  function det(m) { return m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : NaN; }
+  function unitsPerLocal(el) {
+    var svg = el.ownerSVGElement;
+    var s = det(el.getScreenCTM && el.getScreenCTM()), r = det(svg && svg.getScreenCTM && svg.getScreenCTM());
+    return (s > 0 && r > 0) ? s / r : 1;
+  }
+
+  /* ================= V1 FLOW's renderer on this island: the bead, sized against its shaft ================= */
+  var bead11 = V.bead;
+  function beadOnShaft(circle, path, o) {
+    o = o || {};
+    var log = o.say || function () {};
+    var name = o.name || circle.getAttribute("data-object") || "spark";
+    var inner = bead11(circle, path, o);                   /* 1.1's bead: envelope placement, signed strings, floor */
+    var A = ["r", "fill", "stroke", "stroke-width"];
+    var W = {};
+    A.forEach(function (a) { W[a] = V.writer(circle, a); });
+    var light = W.fill.signed;
+    var ok = inner.signedR > 0 && hex(light) && hex(inner.ink);
+    if (!ok) log(name + ": " + (!(inner.signedR > 0) ? "no readable radius" : !hex(light) ? "its signed fill " + light + " is not a flat hex" : "no flat ink on its arrow") + "; the bead keeps 1.1's dressing");
+    var hw = ok ? inner.signedR / SPARK_OF_HALF_WIDTH : 0;  /* the shaft's half-width, local units */
+    var outer = BEAD_OUTER * hw, ring = BEAD_RING * hw, rr = outer - ring / 2;
+    var want = { r: fmt(rr), fill: light, stroke: inner.ink, "stroke-width": fmt(ring) };
+    function dress() {
+      if (!ok) return;
+      for (var i = 0; i < A.length; i++) {
+        var a = A[i];
+        if (circle.getAttribute(a) !== want[a]) { W[a].force(); W[a](want[a]); }
+      }
+    }
+    function undress() { for (var i = 0; i < A.length; i++) W[A[i]](null); }
+    var api = {
+      ink: inner.ink, light: light, signedR: inner.signedR, k: inner.k, beadPx: inner.beadPx,
+      shaftHalfWidthLocal: hw, shaftHalfWidthU: hw * inner.k, outerLocal: outer, ringLocal: ring, dressed: ok,
+      radiusLocal: function () { return ok ? outer : inner.radiusLocal(); },
+      radiusU: function () { return api.radiusLocal() * inner.k; },
+      setScale: function (p) { inner.setScale(p); return api; },
+      pose: function (dx, dy, a) { inner.pose(dx, dy, a); if (a > EPS) dress(); else undress(); },
+      at: function (x, y, a) { inner.at(x, y, a); if (a > EPS) dress(); else undress(); },
+      rest: function (force) { inner.rest(force); if (force !== false) A.forEach(function (a) { W[a].force(); }); undress(); },
+      inner: inner,
+      writes: ["transform | cx, cy", "opacity", "r", "fill", "stroke", "stroke-width"]
+    };
+    api.rest();
+    return api;
+  }
+
+  /* ================= the FLOW adapter two case modules read (07-C2's, moved here) =================
+   * sparkFlow(group, gsap, say) -> { ok, why, name, run, len, lenU, discU, radius, k,
+   *   paint(u), restore(), dim(f), runsAt(px, minDiscPx), bead, touches, reads, props }
+   * Pure in u: the same u always draws the same frame. */
+  function sparkFlow(group, gsap, log) {
+    log = log || function () {};
+    var name = group.getAttribute("data-object");
+    var path = group.querySelector('[data-object="' + name + '-path"]');
+    var spark = group.querySelector('[data-object="' + name + '-spark"]');
+    if (!path || !spark) return { ok: false, why: name + " has no " + (!path ? "-path" : "-spark") + " handle; not a slate arrow as flow_arrow(name=) draws it" };
+    if (path.parentNode !== group || spark.parentNode !== group)
+      return { ok: false, why: name + ": centreline and spark are not direct children of the arrow group, so they may not share its coordinates" };
+    if (path.getAttribute("transform")) log(name + ": the generator drew a transform on the centreline; this renderer assumes none");
+    /* the signed state is the generator's contract (plan 4b: the spark at opacity 0, no transform), not whatever a previous pose left (R064) */
+    var found = { opacity: spark.getAttribute("opacity"), transform: spark.getAttribute("transform") };
+    if (found.opacity !== "0" || found.transform !== null) {
+      log(name + "-spark was found at opacity " + found.opacity + " transform " + found.transform + ", not the generator's opacity 0 / none: a previous pose was left on it; clearing it before measuring");
+      spark.removeAttribute("transform"); spark.setAttribute("opacity", "0");
+    }
+    var bd = V.bead(spark, path, { say: log, name: name + "-spark" });
+    var lastPose = null;
+    function restore() { bd.rest(false); lastPose = null; }
+    restore();                                          /* measure the drawing, not a pose */
+    var len = path.getTotalLength();
+    var cx = parseFloat(spark.getAttribute("cx")), cy = parseFloat(spark.getAttribute("cy")), r = parseFloat(spark.getAttribute("r"));
+    if (!(len > 0) || !isFinite(cx) || !isFinite(cy) || !(r > 0))
+      return { ok: false, why: name + ": centreline length " + len + ", spark at (" + cx + "," + cy + ") r " + r + " cannot be read" };
+    var p0 = path.getPointAtLength(0);
+    if (Math.hypot(p0.x - cx, p0.y - cy) > 0.5) log(name + ": the spark is drawn " + Math.hypot(p0.x - cx, p0.y - cy).toFixed(2) + " local units from the centreline's tail; it rides from the tail regardless");
+    var k = unitsPerLocal(group);
+    var lenU = len * k, discU = 2 * r * k;
+    var F = V.flowSlate;
+    function paint(u) {
+      var e = F.spark(u);                               /* { s, a } or null outside (0, RUN) */
+      if (!e || !(e.a > 0)) { restore(); return; }
+      var pt = path.getPointAtLength(e.s * len);
+      lastPose = [pt.x - cx, pt.y - cy, e.a];
+      bd.pose(lastPose[0], lastPose[1], e.a);
+    }
+    function dim(f) {
+      if (!(f > 0) || !lastPose) { restore(); return; }
+      bd.pose(lastPose[0], lastPose[1], lastPose[2] * f);
+    }
+    function runsAt(px, minDiscPx) {
+      var md = minDiscPx != null ? minDiscPx : MIN_DISC_PX;
+      bd.setScale(px);
+      return lenU * px >= MIN_OBJECT_PX && lenU * px >= MIN_TRAVEL_PX && discU * px >= md;
+    }
+    return { ok: true, name: name, run: F.RUN, len: len, lenU: lenU, discU: discU, radius: r, k: k,
+             paint: paint, restore: restore, dim: dim, runsAt: runsAt, bead: bd,
+             touches: [name + "-spark"], reads: [name, name + "-path"], props: bd.writes };
+  }
+
+  /* ================= V4 PRESS: a stamp pressed onto a case (07-C2's body, the island's one) =================
+   * press(group, gsap, say, { from, settle }) -> { ok, why, name, centre, turn, sizeU, travelU, k,
+   *   from, settle, out(), at(s), pressed(u, withSettle), scaleAt(u), restore(),
+   *   stepRunsAt(px), settleRunsAt(px), touches, reads, props }
+   *   out()               the stamp lifted: opacity 0 (STEP), transform signed
+   *   at(s)               the stamp present (opacity signed) at scale s about its own centre;
+   *                       s null or 1 writes the signed transform
+   *   pressed(u, settle)  u s after the press: at(scaleAt(u)) while settle && 0 <= u < SETTLE, else at(null)
+   *   restore()           every attribute back to the signed string */
+  function press(group, gsap, log, o) {
+    o = o || {};
+    log = log || function () {};
+    var FROM_ = typeof o.from === "number" ? o.from : FROM, SETTLE_ = typeof o.settle === "number" ? o.settle : SETTLE;
+    var name = group.getAttribute("data-object");
+    /* the wrapper is a bare <g data-object> (PROOF.md); an opacity or a transform on it is a pose a previous instance left (R064) */
+    ["opacity", "transform"].forEach(function (a) {
+      if (group.hasAttribute(a)) { log(name + " was found with " + a + '="' + group.getAttribute(a) + '", not the bare wrapper the generator writes: a previous pose was left on it; clearing it before measuring'); group.removeAttribute(a); }
+    });
+    var W = { op: V.writer(group, "opacity"), tf: V.writer(group, "transform") };
+    function restore() { W.op(null); W.tf(null); }
+    restore();
+    /* the centre: the impression's own rotate(turn cx cy) */
+    var rot = null, el = null, gs = group.querySelectorAll("g[transform]");
+    for (var i = 0; i < gs.length && !rot; i++) {
+      var m = /rotate\(\s*([-+\d.eE]+)[\s,]+([-+\d.eE]+)[\s,]+([-+\d.eE]+)\s*\)/.exec(gs[i].getAttribute("transform") || "");
+      if (m) { rot = { turn: +m[1], cx: +m[2], cy: +m[3] }; el = gs[i]; }
+    }
+    if (!rot) return { ok: false, why: name + ": no rotate(turn cx cy) inside the stamp; the centre cannot be read (plan V4)" };
+    for (var p = el.parentNode; p && p !== group; p = p.parentNode)
+      if (p.getAttribute && p.getAttribute("transform")) return { ok: false, why: name + ": a group between the wrapper and the rotated impression carries transform " + p.getAttribute("transform") + "; the rotate's centre is not in the wrapper's space" };
+    var bb = null;
+    try { bb = group.getBBox(); } catch (e) { bb = null; }
+    if (!bb || !(bb.width > 0)) return { ok: false, why: name + ": the wrapper has an empty bounding box; it cannot be measured" };
+    var k = unitsPerLocal(group);
+    var sizeU = Math.max(bb.width, bb.height) * k;
+    var bbc = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 };
+    var off = Math.hypot(bbc.x - rot.cx, bbc.y - rot.cy);
+    if (off > 0.1 * Math.max(bb.width, bb.height)) log(name + ": the rotate's centre (" + rot.cx + ", " + rot.cy + ") lies " + off.toFixed(1) + " local units from the bbox centre (" + bbc.x.toFixed(1) + ", " + bbc.y.toFixed(1) + "); the rotate's centre is used, as the plan says");
+    var travelU = (FROM_ - 1) / 2 * sizeU;            /* what an edge moves during the settle, in drawing units */
+    var ease = (gsap && gsap.parseEase) ? gsap.parseEase("power2.out") : function (x) { return 1 - (1 - x) * (1 - x); };
+    var pre = W.tf.signed ? W.tf.signed + " " : "";
+    function scaleAt(u) { return FROM_ - (FROM_ - 1) * ease(clamp01(u / SETTLE_)); }
+    function at(s) {
+      W.op(null);
+      if (s == null || Math.abs(s - 1) < 1e-6) W.tf(null);
+      else W.tf(pre + "translate(" + fmt4(rot.cx) + " " + fmt4(rot.cy) + ") scale(" + fmt4(s) + ") translate(" + fmt4(-rot.cx) + " " + fmt4(-rot.cy) + ")");
+    }
+    return {
+      ok: true, name: name, centre: { x: rot.cx, y: rot.cy }, turn: rot.turn, sizeU: sizeU, travelU: travelU, k: k,
+      from: FROM_, settle: SETTLE_,
+      out: function () { W.op("0"); W.tf(null); },
+      at: at,
+      pressed: function (u, withSettle) { at(withSettle && u >= 0 && u < SETTLE_ ? scaleAt(u) : null); },
+      scaleAt: scaleAt,
+      restore: restore,
+      stepRunsAt: function (px) { return sizeU * px >= MIN_OBJECT_PX; },
+      settleRunsAt: function (px) { return sizeU * px >= MIN_OBJECT_PX && travelU * px >= MIN_TRAVEL_PX; },
+      touches: [name], reads: [name], props: ["opacity", "transform"]
+    };
+  }
+
+  /* ---- publish: the three words, once; 1.1's bead kept reachable ---- */
+  V.bead11 = bead11;
+  V.bead = beadOnShaft;
+  V.sparkFlow = sparkFlow;
+  V.press = press;
+  V.publishedBy.bead11 = V.publishedBy.bead || "00-vocab";
+  V.publishedBy.bead = ID;
+  V.publishedBy.sparkFlow = ID;
+  V.publishedBy.press = ID;
+  V.island = { id: ID, SPARK_OF_HALF_WIDTH: SPARK_OF_HALF_WIDTH, BEAD_OUTER: BEAD_OUTER, BEAD_RING: BEAD_RING, FROM: FROM, SETTLE: SETTLE,
+               MIN_OBJECT_PX: MIN_OBJECT_PX, MIN_TRAVEL_PX: MIN_TRAVEL_PX, MIN_DISC_PX: MIN_DISC_PX };
+})(typeof window !== "undefined" ? window : this);
+
+</script>
 <script>/* anim/01-B1.js */
 /* Island 4.1 "what is possible", living fixed view -- beat B1 of 13: TRANSLATION.
  *
@@ -2087,13 +2369,21 @@
  * plan asks for that module promoted to the deck's world/ before 4.1 calls
  * it; that is a person's move and until it is made this module takes whatever
  * is published under FIXED_VOCAB and reports who published it. PRESS is new
- * to the deck and is defined here, the first of its four calls (C2-C4 are the
- * same two words on the three orange stamps).
+ * to the deck and is the island's own word, defined ONCE in
+ * anim/00-island-vocab.js (`FIXED_VOCAB.press`) and called here, the first of
+ * its four calls (C2-C4 are the same two words on the three orange stamps);
+ * this module held an inline copy until 25 October 2026, when the critique
+ * found four PRESS bodies live, and holds none now. The bead it calls is 1.1's,
+ * re-dressed by the same module against the shaft it rides (a disc of the
+ * spark's own white, ringed with the arrow's darkest ink, 1.75 shaft
+ * half-widths out), because 1.1's 8-px bead of the shaft's own ink rode inside
+ * this island's 6.2-u shafts unseen.
  *
  * WHAT IT TOUCHES, AND NOTHING ELSE (every part found by data-object at runtime):
- *   4.1-b-arrow-case-medicine-spark   transform, opacity, r, fill  (through `bead`;
- *                                     signed: no transform, "0", the generator's
- *                                     r and "#FFFFFF"; all back at rest)
+ *   4.1-b-arrow-case-medicine-spark   transform, opacity, r, fill, stroke,
+ *                                     stroke-width (through `bead`; signed: no
+ *                                     transform, "0", the generator's r and
+ *                                     "#FFFFFF", no stroke; all back at rest)
  *   4.1-b-stamp-medicine              opacity   signed ABSENT; "0" from the first
  *                                               act's out-step to the press
  *                                     transform signed ABSENT; the settle's
@@ -2144,9 +2434,10 @@
  *
  * THE BEAT TABLE IS THE COMPOSER'S (`opts.beats`, `opts.at`, `opts.loop`);
  * the copy below is Part 3 of the signed plan and is the fallback for a
- * module built alone, never the authority. On that table C1 starts at 9.10 s:
- * the bead runs 9.10-9.55, the stamp is pressed at 9.55 and settled at 9.75,
- * the green case is held to 10.70. L = 28.40 s.
+ * module built alone, never the authority. On the plan's table C1 starts at
+ * 9.10 s: the bead runs 9.10-9.55, the stamp is pressed at 9.55 and settled at
+ * 9.75, the green case is held to 10.70; L = 28.40 s. On the composer's table
+ * (C1 2.00 s, 25 October 2026) it is held to 11.10 and L = 30.53 s.
  *
  * Usage:  var tl = motion06C1(svgRoot, gsap, { pxPerUnit: 1.44, loop: L, at: AT, beats: BEATS, firstAct: FIRST_ACT });
  *         tl.play() on arrival; tl.data.rest(); tl.kill() on leaving.
@@ -2292,13 +2583,10 @@
     if (P.path.getAttribute("transform")) say(NAMES.path + " carries a transform; this renderer assumes none");
     var d = P.path.getAttribute("d") || "";
     if (!/^M[^A-Za-z]+Q[^A-Za-z]+$/.test(d.trim())) { say(NAMES.path + " is not the one quadratic `M a Q c b` the bead rides (d=" + d.slice(0, 40) + "). Returning nothing."); return null; }
-    /* the stamp's centre: the `rotate(turn cx cy)` the impression already carries (plan V4) */
-    var rot = null, rotEl = null, gs = P.stamp.querySelectorAll("g[transform]");
-    for (var gi = 0; gi < gs.length && !rot; gi++) {
-      var m = /^\s*rotate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)[ ,]+(-?[\d.]+)\s*\)\s*$/.exec(gs[gi].getAttribute("transform") || "");
-      if (m) { rot = { turn: +m[1], cx: +m[2], cy: +m[3] }; rotEl = gs[gi]; }
-    }
-    if (!rot) { say(NAMES.stamp + " holds no `rotate(turn cx cy)` to read its centre from. Returning nothing."); return null; }
+    /* V4 PRESS: the island's one body (anim/00-island-vocab.js), handed down or published; it reads the centre */
+    var pressFactory = (typeof opts.press === "function") ? opts.press : VOC.press;
+    var pressSource = (typeof opts.press === "function") ? "composer" : (VOC.publishedBy && VOC.publishedBy.press) || "FIXED_VOCAB";
+    if (typeof pressFactory !== "function") { say("the island's PRESS (anim/00-island-vocab.js: press) is neither published nor handed down; this module holds no copy. Returning nothing."); return null; }
 
     /* ---- the signed state is the generator's contract (R064) ---- */
     var sg = VOC.signedOf;
@@ -2315,9 +2603,13 @@
     expectSigned(P.spark, "opacity", "0", NAMES.spark);
     expectSigned(P.spark, "transform", null, NAMES.spark);
 
-    var W = { stampOp: VOC.writer(P.stamp, "opacity"), stampTf: VOC.writer(P.stamp, "transform") };
+    var pr = pressFactory(P.stamp, gsap, say, { from: S.from, settle: S.settle });
+    if (!pr || !pr.ok) { say((pr && pr.why) || (NAMES.stamp + " could not be given PRESS") + ". Returning nothing."); return null; }
+    if (typeof pr.from === "number" && Math.abs(pr.from - S.from) > 1e-9) { say("the shared PRESS lands at " + pr.from + ", this beat asked " + S.from + "; the shared word's figure is used"); S.from = pr.from; }
+    if (typeof pr.settle === "number" && Math.abs(pr.settle - S.settle) > 1e-9) { say("the shared PRESS settles over " + pr.settle + " s, this beat asked " + S.settle + "; the shared word's figure is used"); S.settle = pr.settle; }
+    var rot = { cx: pr.centre.x, cy: pr.centre.y, turn: pr.turn };
     var bead = VOC.bead(P.spark, P.path, { say: say, name: NAMES.spark });
-    function restAll() { W.stampOp.force(); W.stampTf.force(); W.stampOp(null); W.stampTf(null); bead.rest(); }
+    function restAll() { pr.restore(); bead.rest(); }
     restAll();                                               /* clear what we own BEFORE measuring (R064) */
 
     /* ---- geometry, read off the drawing at rest ---- */
@@ -2332,11 +2624,8 @@
     if (!(len > 0) || !isFinite(sx) || !isFinite(sy)) { say(NAMES.path + " length " + len + " or the spark's rest (" + sx + "," + sy + ") cannot be read. Returning nothing."); return null; }
     if (Math.hypot(sx - p0.x, sy - p0.y) > 0.5) say("the spark rests " + Math.hypot(sx - p0.x, sy - p0.y).toFixed(2) + " native units from the centreline's tail; it is carried from where it rests");
     var bowW = Math.abs(p1.x - p0.x) * kArrow, bowH = Math.abs(p1.y - p0.y) * kArrow;
-    var box = P.stamp.getBBox();
-    var stampU = Math.max(box.width, box.height) * kStamp;   /* the impression's extent, u */
-    var settleTravelU = (S.from - 1) * stampU / 2;           /* how far the stamp's edge moves in the settle, u */
-    var centreOff = Math.hypot(rot.cx - (box.x + box.width / 2), rot.cy - (box.y + box.height / 2)) * kStamp;
-    if (centreOff > 2) say("the stamp's rotate centre is " + centreOff.toFixed(2) + " u from its bbox centre; the rotate centre is used, as the plan says");
+    var stampU = pr.sizeU;                                   /* the impression's extent, u (the press measured it) */
+    var settleTravelU = pr.travelU;                          /* how far the stamp's edge moves in the settle, u */
 
     /* ---- the scale, and what runs at it ---- */
     var px = opts.pxPerUnit != null ? +opts.pxPerUnit : (opts.scale != null ? +opts.scale : NaN);
@@ -2358,22 +2647,17 @@
     }
     decide(px);
 
-    var settleEase = gsap.parseEase("power2.out");
-
     /* ---- the frame at loop time t: a pure function ---- */
     var flowT = B + S.flowAt, pressT = B + pressAt, settledT = pressT + S.settle;
     function render(t) {
       t = ((t % L) + L) % L;
       var u;
-      /* STEP (inside PRESS): the stamp is out from the first act until the press; at t = 0 exactly, signed (the seam) */
-      if (live.step) W.stampOp((t > OUT && VOC.step(t, pressT) === 0) ? "0" : null);
-      /* the settle: 1.10 -> 1.00 about the stamp's own centre, power2.out */
-      if (live.settle) {
-        u = t - pressT;
-        if (u >= 0 && u < S.settle) {
-          var s = S.from - (S.from - 1) * settleEase(u / S.settle);
-          W.stampTf("translate(" + fmt3(rot.cx) + " " + fmt3(rot.cy) + ") scale(" + s.toFixed(4) + ") translate(" + fmt3(-rot.cx) + " " + fmt3(-rot.cy) + ")");
-        } else W.stampTf(null);
+      /* PRESS (the island's one body): STEP out from the first act until the press -- at t = 0 exactly, signed
+       * (the seam) -- then pressed, settling 1.10 -> 1.00 about the stamp's own centre where the settle runs */
+      if (live.step) {
+        if (t > OUT && VOC.step(t, pressT) === 0) pr.out();
+        else if (t >= pressT && t < B + S.beat) pr.pressed(t - pressT, live.settle);
+        else pr.restore();
       }
       /* FLOW, the bead: tail to head over RUN, the vocabulary's envelope */
       if (live.bead) {
@@ -2401,7 +2685,7 @@
         press: pressT, settled: settledT,
         home: B + S.beat
       },
-      press: { from: S.from, settle: S.settle, ease: "power2.out", centre: { cx: rot.cx, cy: rot.cy, turn: rot.turn, inLocalUnits: true } },
+      press: { from: S.from, settle: S.settle, ease: "power2.out", centre: { cx: rot.cx, cy: rot.cy, turn: rot.turn, inLocalUnits: true }, source: pressSource },
       measured: {
         arrowLen: +arrowLen.toFixed(2), bowW: +bowW.toFixed(2), bowH: +bowH.toFixed(2),
         discU: +discU.toFixed(2), stampU: +stampU.toFixed(2), settleTravelU: +settleTravelU.toFixed(2),
@@ -2413,9 +2697,9 @@
                 settleRunsFromPxPerUnit: +Math.max(OBJECT_PX / stampU, TRAVEL_PX / settleTravelU).toFixed(3) },
       touches: [NAMES.spark, NAMES.stamp],
       reads: [NAMES.arrow, NAMES.path, NAMES.stamp + " (its rotate centre)"],
-      props: { spark: bead.writes, stamp: ["opacity", "transform"] },
+      props: { spark: bead.writes, stamp: pr.props },
       vocab: { bead: VOC.publishedBy && VOC.publishedBy.bead, flowSlate: VOC.publishedBy && VOC.publishedBy.flowSlate,
-               step: VOC.publishedBy && VOC.publishedBy.step, press: ID },
+               step: VOC.publishedBy && VOC.publishedBy.step, press: pressSource },
       renderers: { bead: { ink: bead.ink, radiusU: +bead.radiusU().toFixed(2), writes: bead.writes } },
       render: render,
       setScale: function (p) { px = p; decide(p); restAll(); render(clock.t); tl.data.scale = p; },
@@ -2453,10 +2737,13 @@
  * THE TWO WORDS, both the plan's and neither of them this module's own:
  *   V1 FLOW, the slate renderer, call 7 of 10. The envelope is the shared
  *     vocabulary's `flowSlate.spark(u)` (0.45 s, 0.08-s edges, peak 0.75,
- *     power1.inOut travel) and the renderer is its `bead` (a disc of the arrow's
- *     darkest flat ink, 4 device px of radius, never under the generator's,
- *     riding the centreline `…-path`): island 1.1's validated build, which the
- *     author named as the model (25 October 2026, "animated 1.1 validated").
+ *     power1.inOut travel) and the renderer is `FIXED_VOCAB.bead`: island 1.1's
+ *     validated `bead` (the author's named model, 25 October 2026, "animated 1.1
+ *     validated"), re-dressed on this island by anim/00-island-vocab.js against
+ *     the shaft it rides -- a disc of the spark's own white, ringed with the
+ *     arrow's darkest ink, 1.75 shaft half-widths out -- because here the shaft
+ *     is 6.2 u and 1.1's 8-px bead of the shaft's own ink rode inside it unseen
+ *     (the critique of round 1). The circle's transform and opacity are 1.1's.
  *   V4 PRESS, call 2 of 4. STEP (the shared vocabulary's 0/1 threshold) on the
  *     stamp's wrapper, which arrives already scaled FROM = 1.10 about its own
  *     centre, then settles to 1.00 over SETTLE = 0.20 s, power2.out, so it comes
@@ -2466,23 +2753,23 @@
  * The press is scheduled at the bead's `off` (plan V1: "a case's stamp is
  * pressed at the same instant", one rule for every receiver).
  *
- * ⚠️ ONE DEFINITION, HANDED DOWN (R034). The plan says FLOW and PRESS are each
- * ONE function called wherever they happen, and this workflow builds one module
- * per beat. This module therefore takes each factory the composer hands it
- * (`opts.sparkFlow`, `opts.press`), else the one already published by whichever
- * sibling loaded first (`window.FIXED_VOCAB.sparkFlow`, `.press`), and only
- * otherwise its own, which it then publishes so the siblings after it take this
- * one. Both of its own factories lean on the shared vocabulary for the envelope,
- * the bead, the threshold and the writers, and hold no copy of any number the
- * vocabulary publishes. The shared vocabulary is REQUIRED: without it the
- * module returns nothing and says so rather than carrying a copy (plan Decided
- * 15; the promotion of 1.1's anim/00-vocab.js to the deck's world/ is a
- * person's move and is reported, not made here).
+ * ⚠️ ONE DEFINITION, READ AND NOT HELD (R034). The plan says FLOW and PRESS are
+ * each ONE function called wherever they happen. Until the mend of 25 October
+ * 2026 this module carried its own FLOW adapter and PRESS body and published
+ * them for its siblings, and three siblings carried their own in other shapes
+ * (the critique of round 1 found four PRESS bodies live). Both now live ONCE in
+ * anim/00-island-vocab.js (`FIXED_VOCAB.sparkFlow`, `.press`), the bodies this
+ * module had; it takes what the composer hands it (`opts.sparkFlow`,
+ * `opts.press`), else the published one, and holds no copy. The shared
+ * vocabulary is REQUIRED: without it the module returns nothing and says so
+ * (plan Decided 15; the promotion of 1.1's anim/00-vocab.js to the deck's
+ * world/ is a person's move and is reported, not made here).
  *
  * WHAT IT TOUCHES, AND NOTHING ELSE:
- *   4.1-b-arrow-case-professions-spark  transform, opacity, r, fill (the bead's
- *                                        writes; all back to the signed strings
- *                                        whenever the envelope is 0)
+ *   4.1-b-arrow-case-professions-spark  transform, opacity, r, fill, stroke,
+ *                                        stroke-width (the bead's writes; all back
+ *                                        to the signed strings whenever the
+ *                                        envelope is 0)
  *   4.1-b-stamp-professions              opacity (STEP: "0" while the stamp is
  *                                        lifted, the signed absence otherwise)
  *                                        and transform (the settle, the signed
@@ -2528,8 +2815,9 @@
  * THE CLOCK: one period L, t = 0 at the first act. The beat table is the
  * composer's (`opts.beats` / `opts.at` / `opts.loop`); the copy below is Part 3
  * of the signed plan and is the fallback for a module built alone, never the
- * authority. On that table C2 starts at 10.70 s: the bead runs 10.70-11.15, the
- * stamp lands at 11.15 and is settled by 11.35, the case is held to 12.10.
+ * authority. On the plan's table C2 starts at 10.70 s: the bead runs 10.70-11.15,
+ * the stamp lands at 11.15 and is settled by 11.35, the case is held to 12.10; on
+ * the composer's (C1 2.00, C2-C4 1.80 s) it starts at 11.10 and is held to 12.90.
  *
  * Usage:  var tl = motion07C2(svgRoot, gsap, { pxPerUnit: 1.0, at: {...}, loop: L, vocab: FIXED_VOCAB });
  *         tl.play() on arrival; tl.data.rest(); tl.kill() on leaving.
@@ -2555,7 +2843,8 @@
   var KNOWN = { pressAt: true, from: true, settle: true, out: true, decide: true };
 
   /* ⚠️ THE FALLBACK TABLE, Part 3 of the signed plan (21.30 s of beats, L 28.40).
-   * Used only when no composer hands one down. */
+   * Used only when no composer hands one down. The composer's table lengthens
+   * C1-C4 (fixed-live.py, 25 October 2026, on the critique's note on pace). */
   var FALLBACK_BEATS = [
     ["B1", 2.90], ["B2", 1.60], ["B3", 1.00], ["B4", 1.50], ["B5", 2.10],
     ["C1", 1.60], ["C2", 1.40], ["C3", 1.40], ["C4", 1.40],
@@ -2586,127 +2875,10 @@
     return (s > 0 && r > 0) ? s / r : 1;
   }
 
-  /* ================= V1 FLOW, slate renderer: the bead on its arrow =================
-   * makeSparkFlow(group, gsap, say) -> { ok, why, lenU, discU, paint(u), restore(),
-   * dim(f, env0), runsAt(px, minDiscPx), bead, touches, reads, props } -- the shape
-   * 1.1's modules read, so a sibling's factory and this one are interchangeable.
-   * Pure in u: the same u always draws the same frame. */
-  function makeSparkFlow(group, gsap, say) {
-    var V = root.FIXED_VOCAB;
-    if (!V || typeof V.bead !== "function" || !V.flowSlate) return { ok: false, why: "the shared vocabulary (anim/00-vocab.js: flowSlate, bead) is not loaded" };
-    var name = group.getAttribute("data-object");
-    var path = group.querySelector('[data-object="' + name + '-path"]');
-    var spark = group.querySelector('[data-object="' + name + '-spark"]');
-    if (!path || !spark) return { ok: false, why: name + " has no " + (!path ? "-path" : "-spark") + " handle; not a slate arrow as flow_arrow(name=) draws it" };
-    if (path.parentNode !== group || spark.parentNode !== group)
-      return { ok: false, why: name + ": centreline and spark are not direct children of the arrow group, so they may not share its coordinates" };
-    if (path.getAttribute("transform")) say(name + ": the generator drew a transform on the centreline; this renderer assumes none");
-    /* ⚠️ the signed state is the generator's contract (plan 4b: the spark at
-     * opacity 0, no transform), not whatever a previous pose left (R064) */
-    var found = { opacity: spark.getAttribute("opacity"), transform: spark.getAttribute("transform") };
-    if (found.opacity !== "0" || found.transform !== null) {
-      say(name + "-spark was found at opacity " + found.opacity + " transform " + found.transform + ", not the generator's opacity 0 / none: a previous pose was left on it; clearing it before measuring");
-      spark.removeAttribute("transform"); spark.setAttribute("opacity", "0");
-    }
-    var bd = V.bead(spark, path, { say: say, name: name + "-spark" });
-    var lastPose = null;
-    function restore() { bd.rest(false); lastPose = null; }
-    restore();                                          /* measure the drawing, not a pose */
-    var len = path.getTotalLength();
-    var cx = parseFloat(spark.getAttribute("cx")), cy = parseFloat(spark.getAttribute("cy")), r = parseFloat(spark.getAttribute("r"));
-    if (!(len > 0) || !isFinite(cx) || !isFinite(cy) || !(r > 0))
-      return { ok: false, why: name + ": centreline length " + len + ", spark at (" + cx + "," + cy + ") r " + r + " cannot be read" };
-    var p0 = path.getPointAtLength(0);
-    if (Math.hypot(p0.x - cx, p0.y - cy) > 0.5) say(name + ": the spark is drawn " + Math.hypot(p0.x - cx, p0.y - cy).toFixed(2) + " local units from the centreline's tail; it rides from the tail regardless");
-    var k = unitsPerLocal(group);
-    var lenU = len * k, discU = 2 * r * k;
-    var F = V.flowSlate;
-    function paint(u) {
-      var e = F.spark(u);                               /* { s, a } or null outside (0, RUN) */
-      if (!e || !(e.a > 0)) { restore(); return; }
-      var pt = path.getPointAtLength(e.s * len);
-      lastPose = [pt.x - cx, pt.y - cy, e.a];
-      bd.pose(lastPose[0], lastPose[1], e.a);
-    }
-    function dim(f) {
-      if (!(f > 0) || !lastPose) { restore(); return; }
-      bd.pose(lastPose[0], lastPose[1], lastPose[2] * f);
-    }
-    function runsAt(px, minDiscPx) {
-      var md = minDiscPx != null ? minDiscPx : MIN_DISC_PX;
-      bd.setScale(px);
-      return lenU * px >= MIN_OBJECT_PX && lenU * px >= MIN_TRAVEL_PX && discU * px >= md;
-    }
-    return { ok: true, name: name, run: F.RUN, len: len, lenU: lenU, discU: discU, radius: r, k: k,
-             paint: paint, restore: restore, dim: dim, runsAt: runsAt, bead: bd,
-             touches: [name + "-spark"], reads: [name, name + "-path"], props: bd.writes };
-  }
-
-  /* ================= V4 PRESS: a stamp pressed onto a case =================
-   * makePress(group, gsap, say, { from, settle }) -> { ok, why, name, centre,
-   * sizeU, travelU, from, settle, out(), at(s), pressed(u, withSettle),
-   * scaleAt(u), restore(), stepRunsAt(px), settleRunsAt(px), touches, reads, props }.
-   *   out()               the stamp lifted: opacity 0 (STEP), transform signed
-   *   at(s)               the stamp present (opacity signed) at scale s about its
-   *                       own centre; s null or 1 writes the signed transform
-   *   pressed(u, settle)  u s after the press: at(scaleAt(u)) while settle &&
-   *                       0 <= u < SETTLE, else at(null)
-   *   restore()           every attribute back to the signed string */
-  function makePress(group, gsap, say, o) {
-    o = o || {};
-    var FROM_ = typeof o.from === "number" ? o.from : FROM, SETTLE_ = typeof o.settle === "number" ? o.settle : SETTLE;
-    var V = root.FIXED_VOCAB;
-    if (!V || typeof V.writer !== "function") return { ok: false, why: "the shared vocabulary (anim/00-vocab.js: writer) is not loaded" };
-    var name = group.getAttribute("data-object");
-    /* ⚠️ the wrapper is a bare <g data-object> (PROOF.md); an opacity or a
-     * transform on it is a pose a previous instance left (R064): clear it before
-     * the writers record what is signed */
-    ["opacity", "transform"].forEach(function (a) {
-      if (group.hasAttribute(a)) { say(name + " was found with " + a + '="' + group.getAttribute(a) + '", not the bare wrapper the generator writes: a previous pose was left on it; clearing it before measuring'); group.removeAttribute(a); }
-    });
-    var W = { op: V.writer(group, "opacity"), tf: V.writer(group, "transform") };
-    function restore() { W.op(null); W.tf(null); }
-    restore();
-    /* the centre: the impression's own rotate(turn cx cy) */
-    var rot = null, el = null, gs = group.querySelectorAll("g[transform]");
-    for (var i = 0; i < gs.length && !rot; i++) {
-      var m = /rotate\(\s*([-+\d.eE]+)[\s,]+([-+\d.eE]+)[\s,]+([-+\d.eE]+)\s*\)/.exec(gs[i].getAttribute("transform") || "");
-      if (m) { rot = { turn: +m[1], cx: +m[2], cy: +m[3] }; el = gs[i]; }
-    }
-    if (!rot) return { ok: false, why: name + ": no rotate(turn cx cy) inside the stamp; the centre cannot be read (plan V4)" };
-    /* the centre must be in the wrapper's own space: nothing between may carry a transform */
-    for (var p = el.parentNode; p && p !== group; p = p.parentNode)
-      if (p.getAttribute && p.getAttribute("transform")) return { ok: false, why: name + ": a group between the wrapper and the rotated impression carries transform " + p.getAttribute("transform") + "; the rotate's centre is not in the wrapper's space" };
-    var bb = null;
-    try { bb = group.getBBox(); } catch (e) { bb = null; }
-    if (!bb || !(bb.width > 0)) return { ok: false, why: name + ": the wrapper has an empty bounding box; it cannot be measured" };
-    var k = unitsPerLocal(group);
-    var sizeU = Math.max(bb.width, bb.height) * k;
-    var bbc = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 };
-    var off = Math.hypot(bbc.x - rot.cx, bbc.y - rot.cy);
-    if (off > 0.1 * Math.max(bb.width, bb.height)) say(name + ": the rotate's centre (" + rot.cx + ", " + rot.cy + ") lies " + off.toFixed(1) + " local units from the bbox centre (" + bbc.x.toFixed(1) + ", " + bbc.y.toFixed(1) + "); the rotate's centre is used, as the plan says");
-    var travelU = (FROM_ - 1) / 2 * sizeU;            /* what an edge moves during the settle, in drawing units */
-    var ease = (gsap && gsap.parseEase) ? gsap.parseEase("power2.out") : function (x) { return 1 - (1 - x) * (1 - x); };
-    var pre = W.tf.signed ? W.tf.signed + " " : "";
-    function scaleAt(u) { return FROM_ - (FROM_ - 1) * ease(clamp01(u / SETTLE_)); }
-    function at(s) {
-      W.op(null);
-      if (s == null || Math.abs(s - 1) < 1e-6) W.tf(null);
-      else W.tf(pre + "translate(" + fmt(rot.cx) + " " + fmt(rot.cy) + ") scale(" + fmt(s) + ") translate(" + fmt(-rot.cx) + " " + fmt(-rot.cy) + ")");
-    }
-    return {
-      ok: true, name: name, centre: { x: rot.cx, y: rot.cy }, turn: rot.turn, sizeU: sizeU, travelU: travelU, k: k,
-      from: FROM_, settle: SETTLE_,
-      out: function () { W.op("0"); W.tf(null); },
-      at: at,
-      pressed: function (u, withSettle) { at(withSettle && u >= 0 && u < SETTLE_ ? scaleAt(u) : null); },
-      scaleAt: scaleAt,
-      restore: restore,
-      stepRunsAt: function (px) { return sizeU * px >= MIN_OBJECT_PX; },
-      settleRunsAt: function (px) { return sizeU * px >= MIN_OBJECT_PX && travelU * px >= MIN_TRAVEL_PX; },
-      touches: [name], reads: [name], props: ["opacity", "transform"]
-    };
-  }
+  /* V1 FLOW's adapter and V4 PRESS are the island's own words, defined ONCE in
+   * anim/00-island-vocab.js (FIXED_VOCAB.sparkFlow, FIXED_VOCAB.press) and read
+   * here; this module holds no body of either (R034). The composer may hand a
+   * body down as opts.sparkFlow / opts.press; otherwise the published one is taken. */
 
   function motion07C2(svg, gsap, opts) {
     opts = opts || {};
@@ -2754,33 +2926,17 @@
     if (!stampG) missing.push(STAMP);
     if (missing.length) { say("absent: " + missing.join(", ") + ". Returning nothing."); return null; }
 
-    /* ⚠️ the one FLOW and the one PRESS: handed down, else a sibling's, else ours (then published) */
+    /* the one FLOW adapter and the one PRESS: handed down, else the island vocabulary's */
     var vocab = root.FIXED_VOCAB;
-    function pick(key, own) {
-      var src = (typeof opts[key] === "function") ? "composer" : (typeof vocab[key] === "function") ? "sibling" : ID;
-      var f = src === "composer" ? opts[key] : src === "sibling" ? vocab[key] : own;
-      if (typeof vocab[key] !== "function") { vocab[key] = f; vocab.publishedBy = vocab.publishedBy || {}; vocab.publishedBy[key] = vocab.publishedBy[key] || ID; }
-      return { src: src, f: f };
+    var flowPick = (typeof opts.sparkFlow === "function") ? { src: "composer", f: opts.sparkFlow } : { src: (vocab.publishedBy && vocab.publishedBy.sparkFlow) || "FIXED_VOCAB", f: vocab.sparkFlow };
+    var pressPick = (typeof opts.press === "function") ? { src: "composer", f: opts.press } : { src: (vocab.publishedBy && vocab.publishedBy.press) || "FIXED_VOCAB", f: vocab.press };
+    if (typeof flowPick.f !== "function" || typeof pressPick.f !== "function") {
+      say("the island's words (anim/00-island-vocab.js: sparkFlow, press) are neither published nor handed down; this module holds no copy and returns nothing");
+      return null;
     }
-    var flowPick = pick("sparkFlow", makeSparkFlow), pressPick = pick("press", makePress);
     var flow = flowPick.f(group, gsap, say);
-    if (flow && flow.ok && flowPick.src !== ID && (typeof flow.paint !== "function" || typeof flow.restore !== "function" || typeof flow.runsAt !== "function")) {
-      /* ⚠️ a sibling's FLOW of another shape: this module cannot call it. It
-       * builds with its own and SAYS SO, because dropping the beat would lose
-       * more than the duplicate costs; the composer's duplicate pass (R034)
-       * and tl.data.vocab.sparkFlow both name the two bodies. */
-      say("the FLOW published by " + flowPick.src + " has not the shape this module reads (paint, restore, runsAt); building with this module's own -- TWO FLOW bodies are live, which R034 forbids and a person must reconcile");
-      flowPick = { src: ID + " (the " + flowPick.src + "'s refused: shape)", f: makeSparkFlow };
-      flow = makeSparkFlow(group, gsap, say);
-    }
     if (!flow || !flow.ok) { say((flow && flow.why) || (ARROW + " could not be given FLOW") + ". Returning nothing."); return null; }
     var press = pressPick.f(stampG, gsap, say, { from: from, settle: settle });
-    if (press && press.ok && pressPick.src !== ID && (typeof press.at !== "function" || typeof press.out !== "function" || typeof press.pressed !== "function" || typeof press.restore !== "function")) {
-      say("the PRESS published by " + pressPick.src + " has not the shape this module reads (out, at, pressed, restore); building with this module's own -- TWO PRESS bodies are live, which R034 forbids and a person must reconcile");
-      if (typeof press.restore === "function") press.restore();
-      pressPick = { src: ID + " (the " + pressPick.src + "'s refused: shape)", f: makePress };
-      press = makePress(stampG, gsap, say, { from: from, settle: settle });
-    }
     if (!press || !press.ok) { say((press && press.why) || (STAMP + " could not be given PRESS") + ". Returning nothing."); flow.restore(); return null; }
     if (typeof press.from === "number" && Math.abs(press.from - from) > 1e-9) say("the PRESS handed down by " + pressPick.src + " lands at " + press.from + ", not the " + from + " asked here; its own number stands (one definition)");
     if (typeof press.settle === "number" && Math.abs(press.settle - settle) > 1e-9) { say("the PRESS handed down by " + pressPick.src + " settles over " + press.settle + " s, not the " + settle + " asked here; its own number stands (one definition)"); settle = press.settle; }
@@ -2955,8 +3111,9 @@
  * WHAT IT TOUCHES, AND NOTHING ELSE (found by data-object at runtime):
  *     4.1-b-arrow-case-languages-spark   the generator's spark circle at the arrow's
  *                                        tail (opacity="0"): V1 FLOW through the
- *                                        shared BEAD (transform, opacity, r, fill;
- *                                        every string put back at rest)
+ *                                        shared BEAD (transform, opacity, r, fill,
+ *                                        stroke, stroke-width; every string put
+ *                                        back at rest)
  *     4.1-b-stamp-languages              the <g data-object> wrapper round the orange
  *                                        stamp (no attributes of its own in the
  *                                        signed file): V4 PRESS = V3 STEP on its
@@ -2973,12 +3130,15 @@
  *
  * THE WORDS ARE THE SHARED ONES, CALLED AND NOT COPIED (R034, WORLD.md 1.3.1):
  *   V1 FLOW    `vocab.flowSlate.spark(u)` (RUN 0.45 s, FADE 0.08, PEAK 0.75,
- *              power1.inOut travel) rendered by `vocab.bead(circle, path)`: the
- *              arrow's darkest flat ink at max(generator's r, 4 device px).
+ *              power1.inOut travel) rendered by `vocab.bead(circle, path)`: 1.1's
+ *              bead re-dressed by anim/00-island-vocab.js against the shaft it
+ *              rides (a disc of the spark's own white, ringed with the arrow's
+ *              darkest ink, 1.75 shaft half-widths out; writes r, fill, stroke,
+ *              stroke-width beside 1.1's transform and opacity).
  *   V3 STEP    `vocab.step(t, at)` written through `vocab.writer(el, "opacity")`.
- *   V4 PRESS   defined ONCE for the four stamps and published as
- *              `vocab.press` / `vocab.pressEnvelope` by whichever of C1-C4 loads
- *              first; a module finding it published takes it and defines nothing
+ *   V4 PRESS   defined ONCE for the four stamps in anim/00-island-vocab.js
+ *              (`vocab.press`; this module held its own until 25 October 2026,
+ *              when the critique found four bodies live) and read here
  *              (`tl.data.vocab.press` says which). The envelope: at u = 0 the
  *              stamp STEPS in at scale OVERSHOOT (1.10), and over SETTLE (0.20 s)
  *              the scale goes to 1.00 on power2.out, zero velocity at arrival
@@ -2992,10 +3152,10 @@
  * THE SCHEDULE, beat-local (plan Beat C3, unchanged by both prunes):
  *     bead   0.00 -> 0.45 along the bow, tail to head
  *     stamp  STEPS in at 0.45 at 1.10, settled to 1.00 at 0.65
- *     home   held to 1.40.                                             BEAT = 1.40 s
- * At 12.10 s of a 28.40 s loop in the plan's Part 3; THOSE FIGURES ARE THE
- * FALLBACK ONLY, the composer's table (`opts.at`, `opts.loop`, `opts.beats`) is
- * taken when handed down (R063).
+ *     home   held to the beat's end.           BEAT = 1.40 s (the plan), 1.80 s (the composer, 25 October 2026)
+ * At 12.10 s of a 28.40 s loop in the plan's Part 3 (12.90 s of 30.53 on the
+ * composer's table); THOSE FIGURES ARE THE FALLBACK ONLY, the composer's table
+ * (`opts.at`, `opts.loop`, `opts.beats`) is taken when handed down (R063).
  *
  * THE FIRST ACT (plan V6): the four stamps STEP OUT in book order at 0.00+, 0.10,
  * 0.20, 0.30 of the loop; this one, the third, at 0.20, and it stays out until this
@@ -3092,64 +3252,10 @@
     return null;
   }
 
-  /* ================= V4 PRESS, defined once, published once =================
-   * pressEnvelope(u, o) -> { present: 0|1, scale }   u = seconds since the press
-   * press(group, { say, name, writer }) -> { cx, cy, k, widthU, pose(u, settleLive), rest(), writes }
-   *   pose(null)            the stamp absent (opacity "0", transform signed)
-   *   pose(u, settleLive)   present; scaled by the envelope about (cx, cy) while settleLive and 0 <= u < SETTLE
-   * The centre is the impression's own `rotate(turn cx cy)`, in the wrapper's coordinates. */
-  function pressEnvelope(u, o) {
-    o = o || {};
-    var over = o.overshoot != null ? +o.overshoot : OVERSHOOT, settle = o.settle != null ? +o.settle : SETTLE;
-    if (u == null || u < 0) return { present: 0, scale: 1 };
-    if (u >= settle || !(settle > 0)) return { present: 1, scale: 1 };
-    var x = clamp01(u / settle), eased = 1 - (1 - x) * (1 - x);          /* power2.out */
-    return { present: 1, scale: 1 + (over - 1) * (1 - eased) };
-  }
-  function press(group, o) {
-    o = o || {};
-    var log = o.say || function () {};
-    var name = o.name || group.getAttribute("data-object") || "stamp";
-    var mkWriter = o.writer;
-    if (typeof mkWriter !== "function") return { ok: false, why: "press needs the shared writer" };
-    var W = { op: mkWriter(group, "opacity"), tf: mkWriter(group, "transform") };
-    /* ⚠️ the wrapper is drawn bare by the generator (cells.stamped(name=)): anything on it is a pose left behind (R064) */
-    if (W.op.signed !== null || W.tf.signed !== null)
-      log(name + " was found with opacity " + W.op.signed + " / transform " + W.tf.signed + ", not bare as the generator draws it: a previous pose; cleared before measuring");
-    W.op.signed = null; W.tf.signed = null;
-    function rest(force) { if (force !== false) { W.op.force(); W.tf.force(); } W.op(null); W.tf(null); }
-    rest();
-    /* the impression: the generator's `rotate(turn cx cy)` group, reached through no other transform */
-    var imp = null, all = group.querySelectorAll("[transform]");
-    for (var i = 0; i < all.length && !imp; i++) {
-      var tr = all[i].getAttribute("transform") || "";
-      if (/^\s*rotate\(\s*[-\d.e]+[\s,]+[-\d.e]+[\s,]+[-\d.e]+\s*\)\s*$/.test(tr)) imp = all[i];
-    }
-    if (!imp) return { ok: false, why: name + ": no impression with rotate(turn cx cy) inside it; not a stamp as stamp() draws it" };
-    for (var p = imp.parentNode; p && p !== group; p = p.parentNode)
-      if (p.getAttribute && p.getAttribute("transform")) return { ok: false, why: name + ": a transform between the wrapper and the impression; the centre would not be in the wrapper's coordinates" };
-    var m = /rotate\(\s*([-\d.e]+)[\s,]+([-\d.e]+)[\s,]+([-\d.e]+)\s*\)/.exec(imp.getAttribute("transform"));
-    var cx = parseFloat(m[2]), cy = parseFloat(m[3]);
-    if (!isFinite(cx) || !isFinite(cy)) return { ok: false, why: name + ": the impression's centre cannot be read" };
-    var k = unitsPerLocal(group), bb = null;
-    try { bb = imp.getBBox(); } catch (e) { bb = null; }
-    var widthU = bb ? Math.max(bb.width, bb.height) * k : NaN;
-    var api = {
-      ok: true, cx: cx, cy: cy, k: k, widthU: widthU, signedOpacity: null,
-      pose: function (u, settleLive) {
-        if (u == null) { W.op("0"); W.tf(null); return; }
-        var e = pressEnvelope(u, o);
-        if (!e.present) { W.op("0"); W.tf(null); return; }
-        W.op(null);
-        if (settleLive && Math.abs(e.scale - 1) > 1e-6)
-          W.tf("translate(" + fmt(cx) + " " + fmt(cy) + ") scale(" + fmt(e.scale) + ") translate(" + fmt(-cx) + " " + fmt(-cy) + ")");
-        else W.tf(null);
-      },
-      rest: rest,
-      writes: ["opacity", "transform"]
-    };
-    return api;
-  }
+  /* V4 PRESS is the island's own word, defined ONCE in anim/00-island-vocab.js
+   * (FIXED_VOCAB.press) and read here; this module held its own `press` and
+   * `pressEnvelope` until the mend of 25 October 2026 (the critique of round 1
+   * found four PRESS bodies live) and holds none now (R034). */
 
   function motion08(svg, gsap, opts) {
     opts = typeof opts === "number" ? { scale: opts } : (opts || {});
@@ -3183,10 +3289,10 @@
     if (!VOC || !VOC.flowSlate || typeof VOC.flowSlate.spark !== "function") lack.push("flowSlate.spark");
     if (lack.length) { log("the shared vocabulary (anim/00-vocab.js: " + lack.join(", ") + ") is neither loaded nor handed down; returning nothing"); return null; }
     var RUN = VOC.flowSlate.RUN > 0 ? VOC.flowSlate.RUN : 0.45;
-    /* V4 PRESS: one body for the four stamps. Published by the first of C1-C4 to build; taken by the rest. */
-    var pressSource = ID;
-    if (typeof VOC.press === "function" && typeof VOC.pressEnvelope === "function") pressSource = (VOC.publishedBy && VOC.publishedBy.press) || "sibling";
-    else { VOC.press = press; VOC.pressEnvelope = pressEnvelope; VOC.publishedBy = VOC.publishedBy || {}; VOC.publishedBy.press = ID; VOC.publishedBy.pressEnvelope = ID; }
+    /* V4 PRESS: the island's one body, handed down or published by anim/00-island-vocab.js */
+    var pressFactory = (typeof opts.press === "function") ? opts.press : VOC.press;
+    var pressSource = (typeof opts.press === "function") ? "composer" : (VOC.publishedBy && VOC.publishedBy.press) || "FIXED_VOCAB";
+    if (typeof pressFactory !== "function") { log("the island's PRESS (anim/00-island-vocab.js: press) is neither published nor handed down; this module holds no copy; returning nothing"); return null; }
 
     /* ---- the beat's parameters, every handed-down key taken or named ------ */
     var P = {};
@@ -3249,12 +3355,11 @@
     var p0 = path.getPointAtLength(0);
     if (Math.hypot(p0.x - cx0, p0.y - cy0) > 0.5) log(N.spark + " is drawn " + Math.hypot(p0.x - cx0, p0.y - cy0).toFixed(2) + " local units from the centreline's tail; it rides from the tail regardless");
     var kA = unitsPerLocal(arrow), lenU = len * kA, discU = 2 * r0 * kA;
-    var pr = (pressSource === ID ? press : VOC.press)(stamp, { say: log, name: N.stamp, writer: VOC.writer, overshoot: OVER, settle: SET });
-    if (!pr || !pr.ok || typeof pr.pose !== "function" || typeof pr.rest !== "function") {
-      if (pressSource !== ID) { log("the published PRESS (" + pressSource + ") did not take " + N.stamp + " (" + ((pr && pr.why) || "no pose/rest") + "); this module's own is used"); pr = press(stamp, { say: log, name: N.stamp, writer: VOC.writer, overshoot: OVER, settle: SET }); pressSource = ID + " (own, sibling's refused)"; }
-      if (!pr || !pr.ok) { log("not built: " + ((pr && pr.why) || N.stamp + " could not be given PRESS") + "; returning nothing"); return null; }
-    }
-    var stampU = pr.widthU;
+    var pr = pressFactory(stamp, gsap, log, { from: OVER, settle: SET });
+    if (!pr || !pr.ok) { log("not built: " + ((pr && pr.why) || N.stamp + " could not be given PRESS") + "; returning nothing"); return null; }
+    if (typeof pr.settle === "number" && Math.abs(pr.settle - SET) > 1e-9) { log("the shared PRESS settles over " + pr.settle + " s, this beat asked " + SET + "; the shared word's figure is used"); SET = pr.settle; }
+    if (typeof pr.from === "number" && Math.abs(pr.from - OVER) > 1e-9) { log("the shared PRESS lands at " + pr.from + ", this beat asked " + OVER + "; the shared word's figure is used"); OVER = pr.from; }
+    var stampU = pr.sizeU;
     if (!(stampU > 0)) { log("not built: " + N.stamp + " has no measurable size; returning nothing"); return null; }
 
     /* ---- the scale and the three tiers ------------------------------------ */
@@ -3278,7 +3383,7 @@
     };
 
     /* ---- the frame, a pure function of the loop's time -------------------- */
-    function rest() { bead.rest(); pr.rest(); }
+    function rest() { bead.rest(); pr.restore(); }
     function render(t) {
       t = ((t % L) + L) % L;
       if (live.bead) {
@@ -3289,9 +3394,9 @@
       if (live.step) {
         /* STEP: out from the first act's step until this beat's press (1), else present (0) */
         var out = VOC.step(t, stampOut) - VOC.step(t, pressT);
-        if (out > 0) pr.pose(null);                                   /* lifted: opacity 0, transform signed */
-        else if (t >= pressT) pr.pose(t - pressT, live.settle);       /* pressed: present, settling, then signed */
-        else pr.pose(SET + 1, false);                                 /* before the first act: signed */
+        if (out > 0) pr.out();                                        /* lifted: opacity 0, transform signed */
+        else if (t >= pressT && t < C3 + BEAT) pr.pressed(t - pressT, live.settle);   /* pressed: present, settling, then signed */
+        else pr.restore();                                            /* before the first act, and after the beat: signed */
       }
     }
 
@@ -3308,11 +3413,11 @@
       get live() { return live; }, get stilled() { return !(live.bead || live.step); }, reduced: reduced, scale: scale, floors: floors,
       touches: [N.spark, N.stamp],
       reads: [N.arrow, N.path],
-      props: { spark: bead.writes, stamp: pr.writes },
+      props: { spark: bead.writes, stamp: pr.props },
       vocab: { bead: VOC.publishedBy && VOC.publishedBy.bead, flowSlate: VOC.publishedBy && VOC.publishedBy.flowSlate,
                step: VOC.publishedBy && VOC.publishedBy.step, press: pressSource },
       renderers: { bead: { ink: bead.ink, signedR: bead.signedR, radiusU: +bead.radiusU().toFixed(2), lengthU: +lenU.toFixed(2), discU: +discU.toFixed(2) },
-                   press: { centre: [pr.cx, pr.cy], widthU: +stampU.toFixed(2), overshoot: OVER, settle: SET } },
+                   press: { centre: [pr.centre.x, pr.centre.y], widthU: +stampU.toFixed(2), overshoot: OVER, settle: SET } },
       firstAct: { stampOut: stampOut, from: stampOutKey, hold: faHold },
       schedule: {
         bead: { from: +C3.toFixed(3), to: +(C3 + RUN).toFixed(3) },
@@ -3352,20 +3457,27 @@
  *
  * THE WORDS (plan Part 1, as pruned twice; the prunes change nothing in C4):
  *   V1 FLOW   on `4.1-b-arrow-case-both`: the slate renderer, the BEAD of
- *             anim/00-vocab.js (island 1.1's, validated 25 October 2026), the
- *             tenth and last of the plan's ten calls. 0.45 s, opacity 0 -> 0.75
- *             over the first 0.08 s and 0.75 -> 0 over the last, power1.inOut
- *             on the travel (R060). The generator's `-spark` disc rides the
- *             generator's `-path` centreline with getPointAtLength, in the
- *             arrow's own coordinates; no MotionPath plugin.
+ *             anim/00-vocab.js (island 1.1's, validated 25 October 2026),
+ *             re-dressed against its shaft by anim/00-island-vocab.js (a disc of
+ *             the spark's own white with a ring of the arrow's ink, 1.75 shaft
+ *             half-widths out, because 1.1's 8-px bead of the shaft's own ink
+ *             rode inside this island's 6.2-u shafts unseen: the critique of
+ *             round 1), the tenth and last of the plan's ten calls. 0.45 s,
+ *             opacity 0 -> 0.75 over the first 0.08 s and 0.75 -> 0 over the
+ *             last, power1.inOut on the travel (R060). The generator's `-spark`
+ *             disc rides the generator's `-path` centreline with
+ *             getPointAtLength, in the arrow's own coordinates; no MotionPath
+ *             plugin. The envelope and the adapter are read from the vocabulary
+ *             (`FIXED_VOCAB.flowSlate`, `.sparkFlow`): this module held a copy
+ *             of another shape until 25 October 2026, found by the critique.
  *   V4 PRESS  on `4.1-b-stamp-both`: V3 STEP (opacity 0 -> signed in ONE frame,
  *             R059) at the FLOW's off, the group already scaled 1.10 about the
  *             stamp's own centre, then 0.20 s power2.out to 1.00 (R060). The
  *             centre is read off the impression's own `rotate(turn cx cy)`,
- *             never typed. The fourth and last of four calls: ONE function,
- *             handed down by the composer (`opts.press`), else the one a sibling
- *             published (`FIXED_VOCAB.press`), else this module's, which it then
- *             publishes (R034, as 1.1's modules do for `sparkFlow`).
+ *             never typed. The fourth and last of four calls of ONE function,
+ *             anim/00-island-vocab.js's `press` (`FIXED_VOCAB.press`, or
+ *             `opts.press` when the composer hands one down); this module holds
+ *             no body (R034).
  *
  * ⚠️ WHO OWNS THE STAMP'S OPACITY ACROSS THE LOOP. The plan's first act (V6)
  * steps the four stamps out at 0.00+, 0.10, 0.20, 0.30 and each is pressed back
@@ -3379,9 +3491,10 @@
  * another owner, by name, and is said in `tl.data`.
  *
  * WHAT IT TOUCHES, AND NOTHING ELSE:
- *   `4.1-b-arrow-case-both-spark`  transform, opacity, r, fill (the bead's writes,
- *                                  00-vocab.js), every one put back to its signed
- *                                  string whenever the envelope is 0;
+ *   `4.1-b-arrow-case-both-spark`  transform, opacity, r, fill, stroke, stroke-width
+ *                                  (the bead's writes, 00-vocab.js re-dressed by
+ *                                  00-island-vocab.js), every one put back to its
+ *                                  signed string whenever the envelope is 0;
  *   `4.1-b-stamp-both`             opacity (signed: absent) and transform
  *                                  (signed: absent).
  * It READS `4.1-b-arrow-case-both`, `…-path`, and the stamp's impression group
@@ -3420,9 +3533,10 @@
  * THE CLOCK: one period L, t = 0 at the first act. The beat table is the
  * composer's (`opts.beats` / `opts.at` / `opts.loop`); the copy below is Part 3
  * of the signed plan and is the fallback for a module built alone, never the
- * authority. On that table C4 starts at 13.50 s: the bead runs 13.50-13.95, the
- * stamp is pressed at 13.95 and settled by 14.15, the recap is held signed to
- * 14.90. The frame is a pure function of the timeline's own time: one setter
+ * authority. On the plan's table C4 starts at 13.50 s: the bead runs 13.50-13.95,
+ * the stamp is pressed at 13.95 and settled by 14.15, the recap is held signed to
+ * 14.90; on the composer's (C1 2.00, C2-C4 1.80 s, 25 October 2026) it starts at
+ * 14.70 and is held to 16.50. The frame is a pure function of the timeline's own time: one setter
  * over the whole period, so a seek, a scrub and the composer's `sync(t)` all
  * draw the same frame for the same t, and `sync(0)` = `sync(L)` = the signed DOM.
  *
@@ -3438,9 +3552,8 @@
   var STAMP = "4.1-b-stamp-both";
   var CASE = "both";
 
-  /* ---- V1 FLOW, the slate renderer's numbers (plan V1; 00-vocab's flowSlate) ---- */
-  var RUN = 0.45, FADE = 0.08, PEAK = 0.75;
-  var MIN_OBJECT_PX = 10, MIN_TRAVEL_PX = 3;       /* 2.1's floor, as 1.1 carried it */
+  /* ---- the floors (2.1's, as 1.1 carried them); the envelope's numbers are the vocabulary's ---- */
+  var MIN_OBJECT_PX = 10, MIN_TRAVEL_PX = 3;
   var MIN_DISC_PX = 2.5;                           /* see the header: the plan's Decided 13 as a figure the drawing can measure */
   /* ---- V4 PRESS (plan V4) ---- */
   var PRESS_FROM = 1.10, PRESS_SETTLE = 0.20;
@@ -3474,132 +3587,13 @@
     return null;
   }
 
-  function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
-  function smooth(x) { x = clamp01(x); return x * x * (3 - 2 * x); }
-  function fmt(x) { return (+x).toFixed(3); }
-  /* this element's local unit, in the root's drawing units (its screen matrix over the root's) */
-  function unitsPerLocal(el) {
-    var svg = el.ownerSVGElement;
-    function det(m) { return m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : NaN; }
-    var s = det(el.getScreenCTM && el.getScreenCTM()), r = det(svg && svg.getScreenCTM && svg.getScreenCTM());
-    return (s > 0 && r > 0) ? s / r : 1;
-  }
 
-  /* ================= V1 FLOW, slate renderer: the spark =================
-   * 1.1's validated factory, verbatim in behaviour (11-C1.js): taken from the
-   * composer or a sibling when one is live, so ONE body runs the ten arrows.
-   * sparkFlow(group, gsap, say) -> { ok, lenU, discU, runsAt(px, minDiscPx),
-   * paint(u), restore(), dim(f, env0), bead, touches, reads, props } */
-  function makeSparkFlow(group, gsap, say) {
-    var name = group.getAttribute("data-object");
-    var path = group.querySelector('[data-object="' + name + '-path"]');
-    var spark = group.querySelector('[data-object="' + name + '-spark"]');
-    if (!path || !spark) return { ok: false, why: name + " has no " + (!path ? "-path" : "-spark") + " handle; not a slate arrow as flow_arrow(name=) draws it" };
-    if (path.parentNode !== group || spark.parentNode !== group)
-      return { ok: false, why: name + ": centreline and spark are not direct children of the arrow group, so they may not share its coordinates" };
-    if (path.getAttribute("transform"))
-      say(name + ": the generator drew a transform on the centreline; this renderer assumes none");
-    /* the signed state is the generator's contract (opacity 0, no transform), not whatever a previous pose left (R064) */
-    var found = { opacity: spark.getAttribute("opacity"), transform: spark.getAttribute("transform") };
-    if (found.opacity !== "0" || found.transform !== null) {
-      say(name + "-spark was found at opacity " + found.opacity + " transform " + found.transform + ", not the generator's opacity 0 / none: a previous pose was left on it; clearing it before measuring");
-      spark.removeAttribute("transform");
-      spark.setAttribute("opacity", "0");
-    }
-    var VOC = root.FIXED_VOCAB;
-    if (!VOC || typeof VOC.bead !== "function") return { ok: false, why: "the shared vocabulary (anim/00-vocab.js: bead) is not loaded" };
-    var bd = VOC.bead(spark, path, { say: say, name: name + "-spark" });
-    var lastPose = null;
-    function restore() { bd.rest(false); lastPose = null; }
-    restore();                                          /* measure the drawing, not a pose */
-
-    var len = path.getTotalLength();
-    var cx = parseFloat(spark.getAttribute("cx")), cy = parseFloat(spark.getAttribute("cy"));
-    var r = parseFloat(spark.getAttribute("r"));
-    if (!(len > 0) || !isFinite(cx) || !isFinite(cy) || !(r > 0))
-      return { ok: false, why: name + ": centreline length " + len + ", spark at (" + cx + "," + cy + ") r " + r + " cannot be read" };
-    var p0 = path.getPointAtLength(0);
-    if (Math.hypot(p0.x - cx, p0.y - cy) > 0.5)
-      say(name + ": the spark is drawn " + Math.hypot(p0.x - cx, p0.y - cy).toFixed(2) + " native units from the centreline's tail; it rides from the tail regardless");
-    var k = unitsPerLocal(group);
-    var lenU = len * k, discU = 2 * r * k;             /* in drawing units */
-    var travel = (gsap && gsap.parseEase) ? gsap.parseEase("power1.inOut") : function (p) { return p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p); };
-    function paint(u) {
-      var env = smooth(u / FADE) * smooth((RUN - u) / FADE);
-      if (!(env > 0)) { restore(); return; }
-      var pt = path.getPointAtLength(travel(clamp01(u / RUN)) * len);
-      lastPose = [pt.x - cx, pt.y - cy];
-      bd.pose(lastPose[0], lastPose[1], PEAK * env);
-    }
-    function dim(f, env0) {
-      if (!(f > 0) || !(env0 > 0) || !lastPose) { restore(); return; }
-      bd.pose(lastPose[0], lastPose[1], PEAK * env0 * f);
-    }
-    function runsAt(px, minDiscPx) {
-      var md = minDiscPx != null ? minDiscPx : MIN_DISC_PX;
-      bd.setScale(px);
-      return lenU * px >= MIN_OBJECT_PX && lenU * px >= MIN_TRAVEL_PX && discU * px >= md;
-    }
-    return { ok: true, name: name, len: len, lenU: lenU, discU: discU, radius: r, k: k,
-             paint: paint, restore: restore, dim: dim, runsAt: runsAt, bead: bd,
-             touches: [name + "-spark"], reads: [name, name + "-path"], props: bd.writes };
-  }
-
-  /* ================= V4 PRESS: a stamp pressed onto a case =================
-   * press(group, gsap, say) -> { ok, why, cx, cy, extentU, k, runsStepAt(px),
-   * runsSettleAt(px), present(on), settle(v), restore(), touches, reads, props }
-   *   present(on)  STEP: the group's opacity, 0 or its signed string, in one frame
-   *   settle(v)    the scale about (cx, cy): v in [0, 1) -> FROM - (FROM - 1) * power2.out(v); v >= 1 or < 0 -> signed (no transform)
-   * Pure in its arguments: the same call always draws the same frame. */
-  function makePress(group, gsap, say) {
-    var name = group.getAttribute("data-object");
-    var VOC = root.FIXED_VOCAB;
-    if (!VOC || typeof VOC.writer !== "function") return { ok: false, why: "the shared vocabulary (anim/00-vocab.js: writer) is not loaded" };
-    var concept = group.querySelector('[data-concept="stamp"]');
-    if (!concept) return { ok: false, why: name + " holds no data-concept=\"stamp\" group; not a stamp as cells.stamped(name=) wraps it" };
-    /* the impression: the first group turned by the generator's rotate(turn cx cy) */
-    var turned = null, gs = concept.querySelectorAll("g[transform]");
-    for (var i = 0; i < gs.length && !turned; i++) if (/^\s*rotate\(/.test(gs[i].getAttribute("transform"))) turned = gs[i];
-    if (!turned) return { ok: false, why: name + ": no group carries the impression's rotate(turn cx cy); the centre cannot be read" };
-    var m = /rotate\(\s*([-\d.]+)[\s,]+([-\d.]+)[\s,]+([-\d.]+)\s*\)/.exec(turned.getAttribute("transform"));
-    if (!m) return { ok: false, why: name + ": the impression's transform '" + turned.getAttribute("transform") + "' is not rotate(turn cx cy)" };
-    var cx = parseFloat(m[2]), cy = parseFloat(m[3]), turn = parseFloat(m[1]);
-    /* the wrapper and the impression must share one coordinate system, or the centre is in the wrong one */
-    for (var a = turned.parentNode; a && a !== group; a = a.parentNode)
-      if (a.getAttribute && a.getAttribute("transform")) return { ok: false, why: name + ": a transform sits between the wrapper and the impression; the centre read off rotate() is not in the wrapper's coordinates" };
-    var W = { op: VOC.writer(group, "opacity"), tf: VOC.writer(group, "transform") };
-    if (W.op.signed !== null || W.tf.signed !== null)
-      say(name + " was found at opacity " + W.op.signed + " transform " + W.tf.signed + ", not the generator's bare wrapper: a previous pose may have been left on it");
-    function restore() { W.op(null); W.tf(null); }
-    restore();                                          /* measure the drawing, not a pose */
-    var box = group.getBBox();
-    var k = unitsPerLocal(group);
-    var extentU = Math.max(box.width, box.height) * k;  /* the stamp across, drawing units */
-    var travelU = (PRESS_FROM - 1) * extentU / 2;        /* the edge's travel over the settle */
-    if (!(extentU > 0)) return { ok: false, why: name + ": an empty bounding box; nothing to press" };
-    var bc = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-    if (Math.hypot(bc.x - cx, bc.y - cy) > box.width * 0.1)
-      say(name + ": the impression's centre (" + cx + "," + cy + ") is " + Math.hypot(bc.x - cx, bc.y - cy).toFixed(1) + " native units from its bbox centre; scaling about rotate()'s centre regardless");
-    var ease = (gsap && gsap.parseEase) ? gsap.parseEase("power2.out") : function (p) { p = 1 - p; return 1 - p * p * p; };
-    return {
-      ok: true, name: name, cx: cx, cy: cy, turn: turn, k: k, extentU: extentU, travelU: travelU,
-      from: PRESS_FROM, settleS: PRESS_SETTLE,
-      present: function (on) { W.op(on ? null : "0"); },
-      settle: function (v) {
-        if (!(v >= 0) || v >= 1) { W.tf(null); return; }
-        var s = PRESS_FROM - (PRESS_FROM - 1) * ease(v);
-        W.tf("translate(" + fmt(cx) + " " + fmt(cy) + ") scale(" + s.toFixed(5) + ") translate(" + fmt(-cx) + " " + fmt(-cy) + ")");
-      },
-      restore: restore,
-      /* the floor is "about 10 px / about 3 px" (2.1's, as validated); device pixels are
-       * whole, so the figures are compared at a tenth of a pixel. Measured here: the
-       * settle's travel is 2.974 u, which at 1.0 px/u a strict >= 3 would still by
-       * 0.026 px -- a verdict of measurement noise, not of visibility. */
-      runsStepAt: function (px) { return Math.round(extentU * px * 10) / 10 >= MIN_OBJECT_PX; },
-      runsSettleAt: function (px) { return Math.round(extentU * px * 10) / 10 >= MIN_OBJECT_PX && Math.round(travelU * px * 10) / 10 >= MIN_TRAVEL_PX; },
-      touches: [name], reads: [name], props: ["opacity", "transform"]
-    };
-  }
+  /* V1 FLOW's adapter and V4 PRESS are the island's own words, defined ONCE in
+   * anim/00-island-vocab.js (FIXED_VOCAB.sparkFlow, FIXED_VOCAB.press) and read
+   * here; this module holds no body of either (R034). Until the mend of 25
+   * October 2026 it carried a FLOW envelope of another shape (a smoothstep
+   * product where the vocabulary's is a linear clamp) and its own PRESS; both
+   * were found by the critique of round 1 and are gone. */
 
   function motion09C4(svg, gsap, opts) {
     opts = opts || {};
@@ -3628,7 +3622,7 @@
       else say("opts.firstAct carries no step-out time for this stamp (stamps." + CASE + " / stamps." + BEAT + " / stamps[3]); the fallback " + FA.out + " s stands");
       if (typeof f.hold === "number") fa.hold = f.hold;
     }
-    var pressAt = RUN, settle = PRESS_SETTLE, from = PRESS_FROM, hold = LEN != null ? LEN : 1.40, owns = true;
+    var pressAt = (VOC.flowSlate && VOC.flowSlate.RUN > 0) ? VOC.flowSlate.RUN : 0.45, settle = PRESS_SETTLE, from = PRESS_FROM, hold = LEN != null ? LEN : 1.40, owns = true;
     if (opts.C4 && typeof opts.C4 === "object") {
       for (var ck in opts.C4) if (!KNOWN[ck]) say("override '" + ck + "' under opts.C4 is not a field this module has (out, from, settle, hold, ownsFirstAct); it does nothing");
       if (typeof opts.C4.out === "number") { fa.out = opts.C4.out; fa.source = "opts.C4"; }
@@ -3654,25 +3648,25 @@
     if (!stampG) missing.push(STAMP);
     if (missing.length) { say("absent: " + missing.join(", ") + ". Returning nothing."); return null; }
 
-    /* ⚠️ one definition per word: handed down, else published by a sibling, else ours (then published) */
-    var vocab = (root.FIXED_VOCAB = root.FIXED_VOCAB || {});
-    var flowSource = (typeof opts.sparkFlow === "function") ? "composer" : (typeof vocab.sparkFlow === "function") ? "sibling" : ID;
-    var flowFactory = flowSource === "composer" ? opts.sparkFlow : flowSource === "sibling" ? vocab.sparkFlow : makeSparkFlow;
-    if (typeof vocab.sparkFlow !== "function") vocab.sparkFlow = flowFactory;
-    var pressSource = (typeof opts.press === "function") ? "composer" : (typeof vocab.press === "function") ? "sibling" : ID;
-    var pressFactory = pressSource === "composer" ? opts.press : pressSource === "sibling" ? vocab.press : makePress;
-    if (typeof vocab.press !== "function") vocab.press = pressFactory;
-    vocab.publishedBy = vocab.publishedBy || {};
-    vocab.publishedBy.sparkFlow = vocab.publishedBy.sparkFlow || flowSource;
-    vocab.publishedBy.press = vocab.publishedBy.press || pressSource;
-
+    /* one definition per word: handed down, else the island vocabulary's (anim/00-island-vocab.js) */
+    var vocab = root.FIXED_VOCAB;
+    var flowSource = (typeof opts.sparkFlow === "function") ? "composer" : (vocab.publishedBy && vocab.publishedBy.sparkFlow) || "FIXED_VOCAB";
+    var flowFactory = flowSource === "composer" ? opts.sparkFlow : vocab.sparkFlow;
+    var pressSource = (typeof opts.press === "function") ? "composer" : (vocab.publishedBy && vocab.publishedBy.press) || "FIXED_VOCAB";
+    var pressFactory = pressSource === "composer" ? opts.press : vocab.press;
+    if (typeof flowFactory !== "function" || typeof pressFactory !== "function") {
+      say("the island's words (anim/00-island-vocab.js: sparkFlow, press) are neither published nor handed down; this module holds no copy and returns nothing");
+      return null;
+    }
     var flow = flowFactory(group, gsap, say);
     if (!flow || !flow.ok) { say(((flow && flow.why) || (ARROW + " could not be given FLOW")) + ". Returning nothing."); return null; }
-    var press = pressFactory(stampG, gsap, say);
+    var press = pressFactory(stampG, gsap, say, { from: from, settle: settle });
     if (!press || !press.ok) { flow.restore(); say(((press && press.why) || (STAMP + " could not be given PRESS")) + ". Returning nothing."); return null; }
     if (typeof press.from === "number" && Math.abs(press.from - from) > 1e-9) say("the PRESS handed down starts at " + press.from + ", this beat asked " + from + "; the shared word's figure is used");
-    if (typeof press.settleS === "number" && Math.abs(press.settleS - settle) > 1e-9) say("the PRESS handed down settles over " + press.settleS + " s, this beat asked " + settle + "; the shared word's figure is used");
-    if (typeof press.settleS === "number") settle = press.settleS;
+    if (typeof press.settle === "number" && Math.abs(press.settle - settle) > 1e-9) say("the PRESS handed down settles over " + press.settle + " s, this beat asked " + settle + "; the shared word's figure is used");
+    if (typeof press.settle === "number") settle = press.settle;
+    var RUN = flow.run != null ? +flow.run : VOC.flowSlate.RUN;
+    if (Math.abs(RUN - pressAt) > 1e-9) { say("the press is at the bead's off, " + RUN + " s (the vocabulary's RUN), not " + pressAt); pressAt = RUN; }
 
     /* ---- the scale, handed in or measured ---- */
     var p = opts.pxPerUnit != null ? opts.pxPerUnit : opts.scale;
@@ -3687,8 +3681,8 @@
     var live = { flow: false, step: false, settle: false }, scale = p;
     function decideTiers(px) {
       live.flow = !reduced && flow.runsAt(px, minDisc);
-      live.step = !reduced && press.runsStepAt(px);
-      live.settle = live.step && press.runsSettleAt(px);
+      live.step = !reduced && press.stepRunsAt(px);
+      live.settle = live.step && press.settleRunsAt(px);
     }
     decideTiers(p);
 
@@ -3703,8 +3697,9 @@
       /* V4 PRESS: STEP, with the first act's step-out when this module owns it */
       if (live.step) {
         var gone = owns ? (step(t, fa.out) === 1 && step(t, PRESS_T) === 0) : false;
-        press.present(!gone);
-        if (live.settle) press.settle((t - PRESS_T) / settle); else press.settle(-1);
+        if (gone) press.out();                                            /* lifted (first act to the press) */
+        else if (step(t, PRESS_T) === 1 && t < AT + hold) press.pressed(t - PRESS_T, live.settle);
+        else press.restore();                                             /* signed */
       } else press.restore();
     }
     var clock = { _t: 0 };
@@ -3736,15 +3731,12 @@
       var wasFlow = live.flow;
       decideTiers(px);
       if (wasFlow && !live.flow) {
-        /* a tier change mid-flight: the bead goes out where it stands over 0.15 s (R066) */
-        var u0 = clock._t - AT, env0 = smooth(u0 / FADE) * smooth((RUN - u0) / FADE);
-        if (env0 > 0) {
-          var o = { e: 1 };
-          if (fading) fading.kill();
-          fading = gsap.to(o, { e: 0, duration: 0.15, ease: "none",
-            onUpdate: function () { flow.dim(o.e, env0); },
-            onComplete: function () { fading = null; flow.restore(); } });
-        } else flow.restore();
+        /* a tier change mid-flight: the bead goes out where it stands over 0.15 s (R066); dim() restores when nothing is posed */
+        var o = { e: 1 };
+        if (fading) fading.kill();
+        fading = gsap.to(o, { e: 0, duration: 0.15, ease: "none",
+          onUpdate: function () { flow.dim(o.e); },
+          onComplete: function () { fading = null; flow.restore(); } });
       }
       frame(clock._t);
       publish();
@@ -3761,7 +3753,7 @@
           lengthU: +flow.lenU.toFixed(3), discU: +flow.discU.toFixed(3), runs: live.flow },
         { part: STAMP, word: "PRESS", at: +PRESS_T.toFixed(3), from: from, runs: live.step },
         { part: STAMP, word: "SETTLE", from: +PRESS_T.toFixed(3), to: +(PRESS_T + settle).toFixed(3),
-          extentU: +press.extentU.toFixed(3), travelU: +press.travelU.toFixed(3), runs: live.settle },
+          extentU: +press.sizeU.toFixed(3), travelU: +press.travelU.toFixed(3), runs: live.settle },
         { part: "the recap", word: "HOME", from: +(PRESS_T + settle).toFixed(3), to: +(AT + hold).toFixed(3) }
       ],
       firstAct: { out: fa.out, hold: fa.hold, source: fa.source, owns: owns },
@@ -3769,14 +3761,14 @@
       floor: {
         objectPx: MIN_OBJECT_PX, travelPx: MIN_TRAVEL_PX, discPx: minDisc,
         flowRunsFromPxPerUnit: +Math.max(MIN_OBJECT_PX / flow.lenU, MIN_TRAVEL_PX / flow.lenU, minDisc / flow.discU).toFixed(3),
-        stepRunsFromPxPerUnit: +(MIN_OBJECT_PX / press.extentU).toFixed(3),
-        settleRunsFromPxPerUnit: +Math.max(MIN_OBJECT_PX / press.extentU, MIN_TRAVEL_PX / press.travelU).toFixed(3)
+        stepRunsFromPxPerUnit: +(MIN_OBJECT_PX / press.sizeU).toFixed(3),
+        settleRunsFromPxPerUnit: +Math.max(MIN_OBJECT_PX / press.sizeU, MIN_TRAVEL_PX / press.travelU).toFixed(3)
       },
-      press: { cx: press.cx, cy: press.cy, turn: press.turn, k: press.k, extentU: press.extentU, travelU: press.travelU, from: from, settle: settle },
+      press: { cx: press.centre.x, cy: press.centre.y, turn: press.turn, k: press.k, extentU: press.sizeU, travelU: press.travelU, from: from, settle: settle },
       vocab: { bead: VOC.publishedBy && VOC.publishedBy.bead, step: VOC.publishedBy && VOC.publishedBy.step, sparkFlow: flowSource, press: pressSource },
       renderers: { bead: { ink: flow.bead.ink, radiusU: +flow.bead.radiusU().toFixed(2), writes: flow.bead.writes } },
       setScale: decide,
-      runsAt: function (px) { return !reduced && (flow.runsAt(px, minDisc) || press.runsStepAt(px)); },
+      runsAt: function (px) { return !reduced && (flow.runsAt(px, minDisc) || press.stepRunsAt(px)); },
       rest: settleAll,
       touches: flow.touches.concat(press.touches),
       reads: flow.reads.concat(press.reads),
@@ -5006,9 +4998,18 @@
 
 (function (G) {
   "use strict";
-  /* ---- the island's one clock: the plan's Part 3 as pruned, thirteen beats, no length changed ---- */
+  /* ---- the island's one clock: the plan's Part 3 as pruned, thirteen beats ----
+   * ⚠️ ONE DEPARTURE FROM THE PLAN'S LENGTHS, 25 October 2026, on the critique of
+   * round 1 ("the pace is faster than the validated example ... each stamp gets
+   * about 0.95 s on screen before the next arrow starts; the three orange stamps
+   * come 1.4 s apart, in three different corners"): the four case beats are
+   * lengthened by 0.40 s each -- C1 1.60 -> 2.00, C2-C4 1.40 -> 1.80 -- so a stamp
+   * stands settled 1.35 s (green) / 1.15 s (orange) before the next arrow leaves,
+   * and Decided 7's "the green held 0.20 s longer" is kept. The beats total 22.90
+   * s and L = 30.53 s (the plan: 21.30, 28.40). Every other length is the plan's.
+   * This is the ONLY place the tempo lives: the modules take this table. */
   var BEATS = [["B1", 2.90], ["B2", 1.60], ["B3", 1.00], ["B4", 1.50], ["B5", 2.10],
-               ["C1", 1.60], ["C2", 1.40], ["C3", 1.40], ["C4", 1.40],
+               ["C1", 2.00], ["C2", 1.80], ["C3", 1.80], ["C4", 1.80],
                ["T", 1.80], ["D1", 1.50], ["D2", 1.50], ["D3", 1.60]];
   var NAMES = { B1: "translation", B2: "the tokenizer", B3: "the masked batch", B4: "pre-training",
                 B5: "fine-tuning", C1: "medicine in French, tested", C2: "other professions, open",
@@ -5016,8 +5017,8 @@
                 D1: "the model, released", D2: "the data, released", D3: "the lock opens" };
   var AT = {}, acc = 0, BOUNDARIES = [0];
   BEATS.forEach(function (b) { AT[b[0]] = acc; acc = Math.round((acc + b[1]) * 100) / 100; BOUNDARIES.push(acc); });
-  var TOTAL = acc;                                   /* 21.30 */
-  var L = Math.round(TOTAL / 0.75 * 1e6) / 1e6;      /* a quarter at rest, by construction: 28.40 */
+  var TOTAL = acc;                                   /* 22.90 */
+  var L = Math.round(TOTAL / 0.75 * 1e6) / 1e6;      /* a quarter at rest, by construction: 30.533333 */
   /* ⚠️ THE FIRST ACT (plan V6), ONE TABLE, THE COMPOSER'S. Over half a second,
    * in book order, each discrete thing in one frame: the four stamps out at
    * 0.00+, 0.10, 0.20, 0.30; the tokens at 0.05, the batch at 0.15; the two
@@ -5051,23 +5052,19 @@
   function reducedNow() { return forced === "1" || (forced !== "0" && !!(mq && mq.matches)); }
 
   var REG = G.FIXED_MOTIONS || {};
-  /* The order each is BUILT in: 07-C2 first (it publishes the FLOW adapter
-   * handed to 09-C4), then 09-C4, then beat order. Sync order is irrelevant:
-   * no two modules share a property (proof 2). */
-  var ORDER = ["07-C2", "09-C4", "01-B1", "02-B2", "03-B3", "04-B4", "05-B5", "06-C1",
-               "08-C3", "10-T", "11-D1", "12-D2", "13-D3"];
+  /* Built in beat order. The island's own words (anim/00-island-vocab.js: the
+   * bead re-dressed against its shaft, the one FLOW adapter, the one PRESS) are
+   * published into FIXED_VOCAB before any module loads, so no module publishes
+   * anything and build order carries nothing. Sync order is irrelevant: no two
+   * modules share a property (proof 2). */
+  var ORDER = ["01-B1", "02-B2", "03-B3", "04-B4", "05-B5", "06-C1", "07-C2",
+               "08-C3", "09-C4", "10-T", "11-D1", "12-D2", "13-D3"];
   var SLUG = {};
   ORDER.forEach(function (id) { SLUG[id] = id.split("-")[1]; });
-  var SELF_PUBLISHED = ["sparkFlow", "press", "pressEnvelope"];
+  var ISLAND_WORDS = ["bead", "sparkFlow", "press"];
 
   var kids = [], decisions = [], scale = null, driver = null, clock = { t: 0 }, armedFrom = 0;
   var MASKS = { mode: "pending", bounded: 0, left: 0 };
-
-  function forget(keys) {
-    var V = G.FIXED_VOCAB;
-    if (!V) return;
-    keys.forEach(function (k) { delete V[k]; if (V.publishedBy) delete V.publishedBy[k]; });
-  }
 
   function build(px) {
     destroy();
@@ -5092,21 +5089,16 @@
       return tl;
     }
     function fa(id) { return HAS_FIRST_ACT[id] ? { firstAct: FIRST_ACT } : null; }
-    /* the words three modules publish themselves: cleared, so no build inherits one by order */
-    forget(SELF_PUBLISHED);
-    make("07-C2", fa("07-C2"), "built first: publishes sparkFlow (flowSlate.spark + bead) and its own press");
-    var FLOW = G.FIXED_VOCAB && G.FIXED_VOCAB.sparkFlow;
-    forget(["press", "pressEnvelope"]);
-    var e9 = fa("09-C4") || {};
-    if (typeof FLOW === "function") e9.sparkFlow = FLOW;
-    make("09-C4", e9, typeof FLOW === "function" ? "handed 07-C2's sparkFlow, the one FLOW envelope; its own press, 07-C2's withheld (another shape)" : "07-C2 published no sparkFlow: 09-C4 rides its OWN envelope copy");
-    forget(["press", "pressEnvelope"]);
-    ORDER.slice(2).forEach(function (id) {
+    /* the island's words must be there before any module builds; a word missing is said, by name */
+    var V = G.FIXED_VOCAB || {}, pb = V.publishedBy || {};
+    var lacking = ISLAND_WORDS.filter(function (k) { return typeof V[k] !== "function" || pb[k] !== "00-island-vocab"; });
+    if (lacking.length) say("the island's words " + lacking.join(", ") + " are not published by anim/00-island-vocab.js (bead " + pb.bead + ", sparkFlow " + pb.sparkFlow + ", press " + pb.press + "); the modules that need them will say so");
+    else decisions.push("words: FLOW's envelope 00-vocab flowSlate.spark, its renderer 00-island-vocab bead (1.1's bead re-dressed against its shaft: outer " + V.island.BEAD_OUTER + " and ring " + V.island.BEAD_RING + " shaft half-widths, the spark's own white, the arrow's ink), its adapter 00-island-vocab sparkFlow; ACTIVATION 00-vocab activation + lamp; STEP 00-vocab step; PRESS 00-island-vocab press (ONE body, called by 06-C1, 07-C2, 08-C3, 09-C4); RADIATE 10-T radiate");
+    ORDER.forEach(function (id) {
       make(id, fa(id), HAS_FIRST_ACT[id] ? "handed the first act (" + HAS_FIRST_ACT[id] + ")" : null);
     });
-    forget(SELF_PUBLISHED);
     decisions.push("first act: " + JSON.stringify(FIRST_ACT) + " -- one table, handed to " + Object.keys(HAS_FIRST_ACT).join(", "));
-    decisions.push("PRESS: four bodies live (06-C1 inline, 07-C2 makePress, 08-C3 press/pressEnvelope, 09-C4 makePress), three shapes -- R034 fault, a person reconciles");
+    decisions.push("tempo: C1 2.00, C2-C4 1.80 s (the plan's 1.60, 1.40 x3), on the critique of round 1; beats " + TOTAL.toFixed(2) + " s, L " + L.toFixed(2) + " s");
     /* ⚠️ SAY THE CASCADE: a beat whose module is missing loses its sentence and
      * leaves a part the first act took away never put back by anyone else. */
     var CASCADE = { "02-B2": "the tokens", "03-B3": "the batch", "06-C1": "the green stamp", "07-C2": "an orange stamp",
