@@ -514,7 +514,7 @@
     api.flood = { core: inner.core, rim: inner.rim, undone: true };
     api.level = function (a) { inner.level(a); keepSigned(); };
     api.rest = function (force) { inner.rest(force); keepSigned(); };
-    api.writes = ["opacity"];
+    api.writes = ["opacity", "stop-color, stop-opacity (core, rim): written by 1.1's lamp at a window's first frame and put back signed in the same frame"];
     api.rest();
     return api;
   }
