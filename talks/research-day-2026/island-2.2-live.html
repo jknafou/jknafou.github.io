@@ -5399,6 +5399,7 @@
   ORDER.forEach(function (id) { SLUG[id] = id.split("-")[1]; });
 
   var kids = [], decisions = [], scale = null, driver = null, clock = { t: 0 }, armedFrom = 0;
+  var MASKS = { mode: "pending", bounded: 0, left: 0 };
 
   function build(px) {
     destroy();
@@ -5505,8 +5506,43 @@
     destroy: destroy, reducedNow: reducedNow,
     get scale() { return scale; }, get children() { return kids; },
     get decisions() { return decisions.slice(); }, get running() { return !!driver; },
-    get driver() { return driver; }, log: LOG, probe: null
+    get driver() { return driver; }, log: LOG, probe: null,
+    masks: MASKS, boundMasks: boundMasks
   };
+
+  /* ---- the signed drawing's 1,137 sheen masks, bounded to the shape each masks ----
+   * 1.1's fixed-live.py, verbatim but for the count: the generator's mask regions
+   * (`maskUnits="userSpaceOnUse" x="-5000" y="-5000" width="10000" height="10000"`,
+   * written by the sheen's crescent masks on every illustrated shape) make one
+   * attribute write re-rasterise a 10000-unit region; bounded to their own shape
+   * plus a pad the same writes cost a frame. The generator's one-line change --
+   * the sheen masks sized to their shape in `world/illustration` -- is a person's
+   * to make and is reported in FIXED-ANIMATION.md; until then this composer
+   * applies the same bound AT RUNTIME, to the live DOM only. 1.1 PROVED it 0
+   * PIXELS over 30 levels at 1.44, 0.48 and 0.072 with pad = max(8 local units,
+   * half the shape's longer side); this island's proof is in FIXED-ANIMATION.md.
+   * `?masks=signed` turns it off, which is how proof 1 compares the DOM. */
+  var PAD = (function () { var v = (params.get("maskpad") || "8,0.5").split(",").map(parseFloat); return (v.length === 2 && v[0] >= 0 && v[1] >= 0) ? v : [8, 0.5]; })();
+  function boundMasks() {
+    var ms = svg.querySelectorAll('mask[maskUnits="userSpaceOnUse"]'), n = 0, skipped = 0;
+    for (var i = 0; i < ms.length; i++) {
+      var m = ms[i];
+      if (m.getAttribute("width") !== "10000" || m.getAttribute("height") !== "10000") { skipped++; continue; }
+      var first = m.firstElementChild;
+      if (!first || typeof first.getBBox !== "function") { skipped++; continue; }
+      var b = first.getBBox();
+      if (!(b.width >= 0 && b.height >= 0)) { skipped++; continue; }
+      var pad = Math.max(PAD[0], PAD[1] * Math.max(b.width, b.height));
+      m.setAttribute("x", (b.x - pad).toFixed(2)); m.setAttribute("y", (b.y - pad).toFixed(2));
+      m.setAttribute("width", (b.width + 2 * pad).toFixed(2)); m.setAttribute("height", (b.height + 2 * pad).toFixed(2));
+      n++;
+    }
+    return { bounded: n, left: skipped };
+  }
+  MASKS.mode = params.get("masks") === "signed" ? "signed" : "bounded";
+  if (MASKS.mode === "bounded") { var mb = boundMasks(); MASKS.bounded = mb.bounded; MASKS.left = mb.left; }
+  MASKS.pad = PAD;
+  say("masks: " + MASKS.mode + (MASKS.mode === "bounded" ? " (" + MASKS.bounded + " sheen masks bounded to their shape, pad max(" + PAD[0] + ", " + PAD[1] + " x the longer side), " + MASKS.left + " other userSpaceOnUse masks left as drawn; ?masks=signed turns it off)" : " (as drawn: every write re-rasterises a 10000-unit mask region)"));
 
   /* ⚠️ THE CLOCK KEEPS WALL TIME (1.1's mend). GSAP's default lagSmoothing(500,
    * 33) makes a frame slower than half a second advance the clock by 33 ms, so
