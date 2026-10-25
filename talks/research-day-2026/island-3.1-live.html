@@ -3656,18 +3656,17 @@
       made[id] = tl;
       var d = tl && tl.data;
       var src = d && d.vocab && typeof d.vocab === "object" && !Array.isArray(d.vocab) ? d.vocab : null;
-      var live = d ? (d.live != null ? d.live : (d.runs != null ? d.runs : (d.stilled != null ? !d.stilled : null))) : null;
       decisions.push(id + " " + NAMES[SLUG[id]] + ": " +
                      (threw ? "THREW while building (" + threw + ")" : tl ? "built" : "returned null (its reason is in the log)") +
                      (clash.length ? " -- REFUSED: it republished " + clash.join(", ") + ", already published; put back" : "") +
                      (added.length ? " -- published a new top-level word " + added.join(", ") + " (R034: words live in 00-race.js)" : "") +
-                     (live === null ? "" : live ? " [moves at " + px + " px/u]" : " [stilled at " + px + " px/u]") +
+                     " [built at " + px + " px/u; whether it moves there is the module's own floor, said in its log]" +
                      (src ? " [words: " + JSON.stringify(src) + "]" : ""));
       if (threw) say(id + " threw while building: " + threw);
     });
     decisions.push("first act: " + JSON.stringify(FIRST_ACT) + " -- one table, handed to all seven; each module owns the departure of what it brings back");
     var pb = (G.FIXED_VOCAB || {}).publishedBy || {};
-    decisions.push("words: ACTIVATION, STEP, lamp, writer, signedOf " + (pb.step || "00-vocab") + " (1.1's, read from 1.1's directory); RUN, FLASH, FIRE, LIFT, HOP " + (pb.race || "NOT PUBLISHED") + " (FIXED_VOCAB.race, one body each)");
+    decisions.push("words: ACTIVATION, STEP, lamp, writer, signedOf " + (pb.step || "00-vocab") + " (1.1's, read from 1.1's directory); RUN, FLASH, FIRE, LIFT, HOP " + (pb.race || "NOT PUBLISHED") + " (FIXED_VOCAB.race: one ENVELOPE each; RUN and FLASH are RENDERED by race.run.trio / race.flash.place in 02-C1, 03-C2, 04-C3 and by their own renderers in 05-C4 and 06-F -- FIXED-ANIMATION.md proof 2b)");
     kids = ORDER.filter(function (id) { return made[id]; }).map(function (id) { return { id: id, tl: made[id] }; });
     kids.forEach(function (k) {
       if (typeof k.tl.data.rest !== "function") say(k.id + " offers no rest(); the composer cannot put it back on stop");
