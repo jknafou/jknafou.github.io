@@ -317,6 +317,7 @@
  *
  *   flowRun(u, run)                 V1 FLOW's envelope at any duration -> { s, a } | null
  *   laneRun(svg, runName, t0, run, o)  V1's one poser of a four-lane belt run, by ROUTE ARC-LENGTH
+ *   lightBead(circle, path, o)      1.1's `bead`, filled with its own ink's LIGHT (A, C, H, L; below)
  *
  * ⚠️ `carry` IS NOT HERE YET, AND THAT IS SAID, NOT HIDDEN. The author's notes on
  * this round rebuild only the belt beats E, I and K and keep B, D, G and J "as
@@ -482,6 +483,51 @@
     };
   }
 
+  /* ---- lightBead: 1.1's `bead`, lit -- V1's bead on THIS drawing's arrows and river ----
+   * ⚠️ ADDED 26 OCTOBER 2026 (step 5, critique round 1, notes C, L, A and H). 1.1's
+   * `bead` fills the spark with the arrow's OWN darkest ink, which reads on 1.1's
+   * 2.05-u shafts because the 8-px bead is wider than them and its ink lands on
+   * paper. 2.2's slate arrows have shafts as wide as the bead or wider, and the
+   * river is a ribbon whose darkest red IS the bead's ink: ink on ink, so the
+   * critique saw C's two beads "just discernible at 3 px/u", L's four "not even
+   * at 3 px/u", A's "a 4-px dark dot inside the arrow", H's "nearly invisible".
+   * So on this island the bead is a LIGHT riding its path -- the plan's own
+   * "kind of motion meant", a pulse of light travelling down a wire -- and its
+   * light is the one ACTIVATION already uses: the path's ink taken
+   * CORE_TOWARD_WHITE (1.1's published constant, 0.85) of the way to white,
+   * exactly as `lamp` lights a face in its own tint. Nothing else of `bead`
+   * changes: the envelope, the radius, the pose, the rest are its, called and
+   * not copied; this only replaces the one fill it writes while live. Read,
+   * never typed: the ink is what `bead` read, the mix is the vocabulary's.
+   * The one-argument EXTEND a person makes in 1.1's 00-vocab.js, after which
+   * this is one line: `bead(circle, path, { fill: "light" })`. */
+  function hex6(c) { return /^#[0-9a-fA-F]{6}$/.test(c || ""); }
+  function towardWhite(c, w) {
+    var v = [1, 3, 5].map(function (i) { var x = parseInt(c.slice(i, i + 2), 16); x = Math.round(x + (255 - x) * w); return (x < 16 ? "0" : "") + x.toString(16).toUpperCase(); });
+    return "#" + v.join("");
+  }
+  function lightBead(circle, path, o) {
+    o = o || {};
+    var say = o.say || function () {};
+    var b = V.bead(circle, path, o);
+    var w = V.constants && V.constants.CORE_TOWARD_WHITE;
+    if (!b || !hex6(b.ink) || !(w > 0 && w < 1)) { say((o.name || "spark") + ": lightBead has no flat ink or no CORE_TOWARD_WHITE to light it with; the bead keeps 1.1's ink"); return b; }
+    var light = towardWhite(b.ink, w), live = false;
+    function lit(a) {
+      live = a > EPS;
+      if (live && circle.getAttribute("fill") !== light) circle.setAttribute("fill", light);
+    }
+    var api = {};
+    for (var key in b) if (Object.prototype.hasOwnProperty.call(b, key)) api[key] = b[key];
+    api.ink = light; api.shaftInk = b.ink; api.light = light;
+    api.pose = function (dx, dy, a) { b.pose(dx, dy, a); lit(a); };
+    api.at = function (x, y, a) { b.at(x, y, a); lit(a); };
+    api.rest = function (force) { b.rest(force); live = false; };
+    api.setScale = function (p) { b.setScale(p); return api; };
+    api.radiusLocal = b.radiusLocal; api.radiusU = b.radiusU;
+    return api;
+  }
+
   /* when the person's EXTEND lands, flowRun is the vocabulary's own (said, not silent) */
   var extended = false;
   try {
@@ -493,7 +539,9 @@
   } catch (e) { extended = false; }
   V.flowRun = extended ? function (u, run) { return V.flowSlate.spark(u, run); } : flowRun;
   V.laneRun = laneRun;
+  if (typeof V.bead === "function") V.lightBead = lightBead;
   V.publishedBy = V.publishedBy || {};
+  if (V.lightBead) V.publishedBy.lightBead = ID + " (1.1's bead, filled with its ink taken CORE_TOWARD_WHITE to white)";
   V.publishedBy.flowRun = extended ? "1.1/00-vocab flowSlate.spark(u, run), via " + ID : ID;
   V.publishedBy.laneRun = ID;
 })(typeof window !== "undefined" ? window : this);
@@ -760,7 +808,9 @@
     var sigOp = spark.getAttribute("opacity"), sigTf = spark.getAttribute("transform");
     if (sigOp !== "0") say(NAME + "-spark carries opacity=" + JSON.stringify(sigOp) + " where the signed drawing has \"0\"; what is restored at rest is what was found");
     if (sigTf !== null) say(NAME + "-spark carries a transform where the signed drawing has none");
-    var bead = VOC.bead(spark, path, { say: say, name: NAME + "-spark" });
+    /* V1's bead on this drawing: 2.2/anim/00-run's lightBead (1.1's bead, filled with its ink's light; critique round 1) */
+    if (typeof VOC.lightBead !== "function") say("the vocabulary has no lightBead (2.2/anim/00-run): the bead is 1.1's slate ink, which does not read inside this arrow");
+    var bead = (VOC.lightBead || VOC.bead)(spark, path, { say: say, name: NAME + "-spark" });
     outs.forEach(function (x) {
       var found = x.el.getAttribute("opacity");
       if (found !== null) say(x.name + " carries opacity=" + JSON.stringify(found) + " where the signed drawing has none");
@@ -1643,8 +1693,11 @@
     }
 
     /* ---- the renderers, one body each (00-vocab.js) ---- */
-    var bead1 = VOC.bead(P.spark1, P.path1, { say: say, name: NAMES.spark1 });
-    var bead2 = VOC.bead(P.spark2, P.path2, { say: say, name: NAMES.spark2 });
+    /* V1's bead on this drawing: 2.2/anim/00-run's lightBead (1.1's bead, filled with its ink's light; critique round 1) */
+    if (typeof VOC.lightBead !== "function") say("the vocabulary has no lightBead (2.2/anim/00-run): the beads are 1.1's slate ink, which does not read inside these arrows");
+    var BEAD = VOC.lightBead || VOC.bead;
+    var bead1 = BEAD(P.spark1, P.path1, { say: say, name: NAMES.spark1 });
+    var bead2 = BEAD(P.spark2, P.path2, { say: say, name: NAMES.spark2 });
     var lamp = VOC.lamp(P.lit, { say: say, name: NAMES.lit });
     function restAll() { bead1.rest(); bead2.rest(); lamp.rest(); }
     restAll();                                   /* clear what we own BEFORE measuring (R064) */
@@ -3462,15 +3515,13 @@
  * ACTIVATION's ramp and the attribute writer are taken from `opts.vocab` (the
  * composer) or the page registry `window.FIXED_VOCAB`, which island 1.1's
  * anim/00-vocab.js publishes (validated 25 October 2026). Nothing is copied.
- *   - THE ONE PARAMETER `run` (V1, Decided 9). 1.1's `flowSlate.spark(u)` reads
- *     the constant RUN = 0.45 s; the river's run is 1.20 s. The reuse brief's
- *     EXTEND is `spark(u, run = RUN)` in the shared module, which is another
- *     island's file and not this module's to edit. So this module CALLS
- *     `spark(u, run)` and checks at build whether the vocabulary it was handed
- *     honours the second argument; if it does not, it evaluates the SAME
- *     envelope -- the vocabulary's own FADE, PEAK and `travel` -- over `run`
- *     (the C3 fallback), and says which in tl.data.vocab.run. No second
- *     envelope: the three constants and the ease are read off the registry.
+ *   - THE ONE PARAMETER `run` (V1, Decided 9). Since 26 October 2026 this
+ *     module calls the vocabulary's `flowRun(u, run)`, published ONCE by this
+ *     island's anim/00-run.js (the plan's "one body of that envelope at any
+ *     run"); its own copy (the "C3 fallback") is gone, and without `flowRun` it
+ *     returns nothing and says so. The beads are 00-run's `lightBead`: 1.1's
+ *     `bead`, its fill the ribbon's red taken to its light (critique round 1:
+ *     red on red did not read).
  *   - LIGHT-UP (V5) is ACTIVATION's `ease` over the caller's duration with no
  *     `off`, as the plan defines it; no new function.
  *
@@ -3684,7 +3735,10 @@
       { name: NAMES.spark1, el: E.spark1, path: E.path1, pathName: NAMES.path1 },
       { name: NAMES.spark2, el: E.spark2, path: E.path2, pathName: NAMES.path2 }
     ];
-    sparks.forEach(function (s) { s.bead = VOC.bead(s.el, s.path, { say: say, name: s.name }); });
+    /* V1's bead on this drawing: 2.2/anim/00-run's lightBead (1.1's bead, filled with its ink's light: the
+     * ribbon's darkest red on the red ribbon did not read; critique round 1) */
+    if (typeof VOC.lightBead !== "function") say("the vocabulary has no lightBead (2.2/anim/00-run): the beads are the ribbon's own red, which does not read on the ribbon");
+    sparks.forEach(function (s) { s.bead = (VOC.lightBead || VOC.bead)(s.el, s.path, { say: say, name: s.name }); });
 
     function rest() {
       sparks.forEach(function (s) { s.bead.rest(); });
@@ -3727,24 +3781,14 @@
     lights.forEach(function (g) { if (!(g.short > 0)) bad.push(g.name + " has no box"); });
     if (bad.length) { say("the drawing is not what this beat needs: " + bad.join("; ") + ". Returning nothing."); return null; }
 
-    /* ---- the one parameter `run`: does the vocabulary's spark take it? ---- */
-    var sparkTakesRun = false;
-    if (Math.abs(S.run - FLOW.RUN) < 1e-9) sparkTakesRun = true;                 /* nothing to pass */
-    else {
-      var probeU = S.run - FADE / 2, f = null;
-      try { f = FLOW.spark(probeU, S.run); } catch (e) { f = null; }
-      sparkTakesRun = !!(f && f.s > 0.9 && f.a > 0);
-    }
-    function envelope(u) {
-      if (sparkTakesRun) return FLOW.spark(u, S.run);
-      /* the C3 fallback: the vocabulary's own FADE, PEAK and travel over this call's run */
-      if (!(u > 0) || u >= S.run) return null;
-      var a = PEAK * Math.min(1, u / FADE, (S.run - u) / FADE);
-      return { s: FLOW.travel(u / S.run), a: a < 0 ? 0 : a };
-    }
-    var runSource = sparkTakesRun
-      ? (Math.abs(S.run - FLOW.RUN) < 1e-9 ? "flowSlate.spark(u) (run = RUN)" : "flowSlate.spark(u, run): the vocabulary honours `run`")
-      : "flowSlate.spark reads the constant RUN " + FLOW.RUN + " s (1.1's); this call's run " + S.run + " s is evaluated by this module on the vocabulary's own FADE " + FADE + ", PEAK " + PEAK + " and travel (the reuse brief's C3 fallback)";
+    /* ---- the one parameter `run`: V1's ONE envelope at any run, `flowRun` ----
+     * ⚠️ 26 October 2026 (step 5, critique round 1): this module held its own copy
+     * of the envelope (`FADE`, `PEAK`, `travel` over `run`), the R034 fault proof 2b
+     * named. It now calls the vocabulary's `flowRun`, published once by
+     * 2.2/anim/00-run.js; with none published it returns nothing and says so. */
+    if (typeof VOC.flowRun !== "function") { say("the vocabulary has no flowRun (2.2/anim/00-run.js): a private copy of V1's envelope is the fault, so returning nothing"); sparks.forEach(function (s) { s.bead.rest(); }); return null; }
+    function envelope(u) { return VOC.flowRun(u, S.run); }
+    var runSource = "flowRun(u, " + S.run + ") from " + (pub.flowRun || "the registry");
 
     /* ---- the scale, and what runs at it ---- */
     var px = opts.pxPerUnit != null ? +opts.pxPerUnit : (opts.scale != null ? +opts.scale : NaN);
@@ -3836,7 +3880,7 @@
       firstAct: { down: FA.down, hold: FA.hold, source: FA.source },
       vocab: { flowSlate: pub.flowSlate || "registry", activation: pub.activation || "registry", bead: pub.bead || "registry",
                writer: typeof VOC.writer === "function" ? (pub.writer || "registry") : "this module's (the registry publishes none)",
-               run: runSource, sparkTakesRun: sparkTakesRun },
+               run: runSource, flowRun: pub.flowRun || "registry" },
       renderers: { bead: sparks.map(function (s) { return { name: s.name, ink: s.bead.ink, radiusU: r3(s.bead.radiusU()), writes: s.bead.writes }; }),
                    lightUp: { writes: ["opacity"], ramps: { river: S.riverRamp, network: RAMP, down: RAMP } } },
       measured: { pathLengthU: sparks.map(function (s) { return r3(s.len); }), unitsPerLocal: r3(sparks[0].k),
@@ -5121,6 +5165,7 @@
     if (VOC && !(VOC.flowSlate && typeof VOC.flowSlate.spark === "function" && VOC.flowSlate.RUN > 0)) lacking.push("flowSlate.spark");
     if (VOC && !(VOC.activation && typeof VOC.activation.level === "function" && VOC.activation.RAMP > 0)) lacking.push("activation.level");
     if (lacking.length) { say("the shared vocabulary is neither handed down nor loaded (" + lacking.join(", ") + "); returning nothing"); return null; }
+    if (typeof VOC.lightBead !== "function") say("the vocabulary has no lightBead (2.2/anim/00-run): the beads are 1.1's slate ink, which does not read inside these arrows");
     var FLOW = VOC.flowSlate, ACT = VOC.activation;
     var RUN = FLOW.RUN, RAMP = ACT.RAMP;
 
@@ -5187,7 +5232,7 @@
 
     /* the shared renderers: one body for every bead and every lit face */
     parts.forEach(function (p) {
-      p.bead = VOC.bead(p.spark, p.path, { say: say, name: p.arrowName + "-spark" });
+      p.bead = (VOC.lightBead || VOC.bead)(p.spark, p.path, { say: say, name: p.arrowName + "-spark" });   /* lightBead: 2.2/anim/00-run (critique round 1) */
       p.lamp = VOC.lamp(p.lit, { say: say, name: p.litName });
     });
     /* clear what this module owns BEFORE measuring anything (R064) */
@@ -5464,6 +5509,16 @@
     return kids.length;
   }
 
+  /* ⚠️ THE REST WINDOW IS SETTLED TOO (26 October 2026, critique round 1). The
+   * critique measured the signed-picture window of a running loop (sync(30)
+   * after the beats) against the rest frame: 31,506 px of up to 21 levels, in
+   * rectangles over every part that had been written -- the raster state
+   * settle() already clears on stop(), kept by Chrome while the loop runs. The
+   * DOM is the signed one there to the attribute (proof 3); the pixels were not.
+   * So the frame the clock first enters the rest window, after every module
+   * has put its parts back, ends with the same settle(): one relayout of the
+   * drawing's container a loop, in a window where nothing moves. */
+  var lastT = null;
   function sync(t) {
     var armed = t >= armedFrom;
     for (var i = 0; i < kids.length; i++) {
@@ -5472,6 +5527,8 @@
       if (API.probe) API.probe(k.id, t);
     }
     if (!armed && t >= TOTAL) armedFrom = 0;   /* reached the rest: arm */
+    if (armed && t >= TOTAL && !(lastT >= TOTAL && lastT <= t)) { settle(); API.settled++; }
+    lastT = t;
   }
   function rest() { kids.forEach(function (k) { if (typeof k.tl.data.rest === "function") k.tl.data.rest(); }); }
   function destroy() {
@@ -5512,7 +5569,7 @@
     get scale() { return scale; }, get children() { return kids; },
     get decisions() { return decisions.slice(); }, get running() { return !!driver; },
     get driver() { return driver; }, log: LOG, probe: null,
-    masks: MASKS, boundMasks: boundMasks, applyMasks: applyMasks, settle: settle
+    masks: MASKS, boundMasks: boundMasks, applyMasks: applyMasks, settle: settle, settled: 0
   };
 
   /* ---- the signed drawing's 1,137 sheen masks, bounded to the shape each masks ----
