@@ -5360,14 +5360,16 @@
   var L = TOTAL / 0.75;                              /* a quarter at rest, by construction: 36.00 */
   /* ⚠️ THE FIRST ACT (V7), ONE TABLE, THE COMPOSER'S. The shape is the one
    * 01-A publishes as its fallback (`out` keyed by data-object, `down` with
-   * [from, to]); `steps` is the same map under the name 09-I reads (it reads
-   * outputs/steps/<name> and not `out`; named in FIXED-ANIMATION.md), one
-   * object, two names. Handed to the eight modules with a part in it and to
-   * no other (C, F, K, L say so themselves when handed one). */
+   * [from, to]). Handed to the eight modules with a part in it and to no
+   * other (C, F, K, L say so themselves when handed one). */
   var FIRST_ACT_OUT = { "2.2-translator-pages-out": 0.00, "2.2-tokens": 0.08, "2.2-batch-masked-2": 0.16,
                         "2.2-batch-graded-2": 0.24, "2.2-batch-masked-3": 0.32, "2.2-batch-graded-3": 0.40 };
-  var FIRST_ACT = { by: "owners", move: 0.50, hold: 0.80, out: FIRST_ACT_OUT, steps: FIRST_ACT_OUT,
+  var FIRST_ACT = { by: "owners", move: 0.50, hold: 0.80, out: FIRST_ACT_OUT,
                     down: { "2.2-river": [0.24, 0.39], "2.2-transbert-network": [0.24, 0.39] } };
+  /* 09-I reads outputs/steps/<name> and not `out`: it is handed the same table
+   * with `out` also under the name `steps` (one object, two names; 01-A would
+   * name `steps` as a field it has not, so the alias goes to 09-I alone) */
+  var FIRST_ACT_FOR_I = Object.assign({ steps: FIRST_ACT_OUT }, FIRST_ACT);
   var HAS_FIRST_ACT = { "01-A": 1, "02-B": 1, "04-D": 1, "05-E": 1, "07-G": 1, "08-H": 1, "09-I": 1, "10-J": 1 };
 
   var svg = document.querySelector("body > svg");
@@ -5435,10 +5437,11 @@
     ORDER.forEach(function (id) {
       var extra = HAS_FIRST_ACT[id] ? { firstAct: FIRST_ACT } : null;
       var why = HAS_FIRST_ACT[id] ? "handed the table and the first act (by: owners)" : "handed the table; no part in the first act";
+      if (id === "09-I") { extra.firstAct = FIRST_ACT_FOR_I; why += "; the table's `out` also under `steps`, the name 09-I reads"; }
       if (id === "10-J") { extra.lampOff = "K"; why += "; lampOff: K -- 11-K writes TransBERT's off-ramp [19.85, 20.00), J stops at 19.85"; }
       make(id, extra, why);
     });
-    decisions.push("first act: " + JSON.stringify(FIRST_ACT) + " -- one table (steps is the same object as out, under the name 09-I reads), handed to " + Object.keys(HAS_FIRST_ACT).join(", "));
+    decisions.push("first act: " + JSON.stringify(FIRST_ACT) + " -- one table, handed to " + Object.keys(HAS_FIRST_ACT).join(", ") + " (09-I: its `out` also as `steps`)");
     /* ⚠️ SAID, NOT HIDDEN: four parts have two writers in disjoint windows, by
      * the plan's own design, and FIXED-ANIMATION.md's proof 2 measures that the
      * windows never meet: `2.2-tokenizer-lit` (C then D), `2.2-batch-masked-2`'s
