@@ -4156,7 +4156,12 @@
     /* ---- the frame at t, a pure function ---- */
     function render(t) {
       if (t < 0 || t >= L) t = ((t % L) + L) % L;
-      if (live.beads) lanes.pose(t); else lanes.rest();
+      /* ⚠️ a stilled tier writes NOTHING per frame: decide() and setScale() put the four
+       * sparks back once (restore), and pose() rests them itself when its envelope ends.
+       * Measured by the composer, 25 October 2026: `else lanes.rest()` here rewrote cx,
+       * cy, r, fill and opacity on all four sparks every frame at 1/3 -- 43,762 writes
+       * a period where the plan says 0, geometry attributes among them. */
+      if (live.beads) lanes.pose(t);
       /* the STEP: 0 or 1 on the whole batch, never between (R059); t = 0 itself is signed */
       var shown = !live.step || t <= 0 || !(VOC.step(t, FA.at) && !VOC.step(t, stepAt));
       wBatch(shown ? null : "0");
