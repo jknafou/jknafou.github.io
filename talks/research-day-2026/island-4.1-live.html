@@ -2484,7 +2484,6 @@
                   beatsTotal: 1, start: 1, boundaries: 1, seams: 1, firstAct: 1, vocab: 1, minDiscPx: 1 };
   var OURS = { flowAt: 1, settle: 1, from: 1, beat: 1 };
 
-  function fmt3(x) { return (+x).toFixed(3); }
   function det(m) { return m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : NaN; }
 
   function motion06C1(svg, gsap, opts) {
@@ -2615,7 +2614,7 @@
     /* ---- geometry, read off the drawing at rest ---- */
     var rootK = det(svg.getScreenCTM && svg.getScreenCTM());
     function unitScale(el) { var k2 = det(el.getScreenCTM && el.getScreenCTM()) / rootK; return k2 > 0 && isFinite(k2) ? k2 : 1; }
-    var kArrow = unitScale(P.path), kStamp = unitScale(P.stamp);
+    var kArrow = unitScale(P.path);
     var len = P.path.getTotalLength();
     var arrowLen = len * kArrow;
     var sx = parseFloat(sg ? sg(P.spark, "cx") : P.spark.getAttribute("cx")), sy = parseFloat(sg ? sg(P.spark, "cy") : P.spark.getAttribute("cy"));
