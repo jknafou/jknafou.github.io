@@ -14,13 +14,19 @@
  *
  * The talk, as one line (→ forwards, ← exactly backwards):
  *   1.1 slides … 1.1 last → 2.2 island view → (zoom into the translator)
- *   2.1 island view → 2.1 slides … 2.1 last → 2.2 slide 1 (tokenizer) … 2.2 last
- *   → 3.1 slides … → 4.1 slides.
- * ↓/Enter goes in, ↑/Escape goes out a layer (from 2.1: its island view, then
- * 2.2's island view with the translator marked, then the world).
- * Hash: #/ (world), #/@3.1 (world, focus), #/2.2 (island), #/2.2/3 (slide 3),
- * #/2.2/translation (2.1's island view), #/2.2/translation/4 (2.1's slide 4);
- * #/2.1 and #/2.1/4 are aliases. ?chrome=0 hides the strip.
+ *   2.1's LIVING VIEW, playing its loop (step 1 of 2.2) → (back out) 2.2 slide 1
+ *   (tokenizer) … 2.2 last → 3.1 slides … → 4.1 slides.
+ * ⚠️ THE TRANSLATION IS 2.1'S LIVING VIEW, NOT ITS SLIDES (the author, 26 October
+ * 2026, the eve of the talk: "The first slide should be the translation live
+ * animated fix view (let's not use for the moment the slide of the
+ * translation)"). 2.1's island view and its nine slides are out of the walk;
+ * they stay reachable by deep link, #/2.2/translation/slides (2.1's slides
+ * page at its island view) and #/2.2/translation/4 (2.1's slide 4).
+ * ↓/Enter goes in, ↑/Escape goes out a layer (from 2.1's living view: 2.2's
+ * island view with the translator marked, then the world).
+ * Hash: #/ (world), #/@3.1 (world, focus), #/2.2 (island), #/2.2/3 (2.2's own
+ * slide 3), #/2.2/translation (2.1's living view); #/2.1 is an alias.
+ * ?chrome=0 hides the strip.
  */
 (function () {
   "use strict";
@@ -36,6 +42,10 @@
   var BASE = "../";
   var liveUrl = function (id) { return BASE + "island-" + id + "-live.html?autostart=0"; };
   var slidesUrl = function (id) { return BASE + "island-" + id + "-slides.html?autostart=0"; };
+  /* a nested island's LIVING VIEW is mounted under its own key, beside (never instead of) its slides page */
+  var LIVE = "live:";
+  var liveKey = function (id) { return LIVE + id; };
+  var isLive = function (key) { return typeof key === "string" && key.indexOf(LIVE) === 0; };
 
   var params = new URLSearchParams(location.search);
   if (params.get("chrome") === "0") document.body.classList.add("nochrome");
@@ -44,8 +54,9 @@
   var viewEl = $("view"), worldEl = $("world"), stageEl = $("stage"), veil = $("veil"), loading = $("loading");
   var crumb = $("crumb"), pos = $("pos"), strip = $("strip"), mark = $("mark");
 
-  /* island: the world island on stage; sub: "2.1" when inside 2.2's translator */
-  var S = { layer: "world", focus: 0, island: null, sub: null, busy: false };
+  /* island: the world island on stage; sub: "2.1" when inside 2.2's translator;
+     subLive: true when that is 2.1's living view (the walk), false for its slides page (a deep link) */
+  var S = { layer: "world", focus: 0, island: null, sub: null, subLive: false, busy: false };
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
   function bump() { strip.classList.remove("bump"); void strip.offsetWidth; strip.classList.add("bump"); }
@@ -110,15 +121,15 @@
   var frames = {};                       /* id -> {el, win, ready} */
   function frameFor(id) {
     if (frames[id]) return frames[id];
-    var el = document.createElement("iframe");
-    el.src = slidesUrl(id); el.title = id; el.setAttribute("tabindex", "-1");
-    var rec = { id: id, el: el, win: null };
+    var el = document.createElement("iframe"), live = isLive(id);
+    el.src = live ? liveUrl(id.slice(LIVE.length)) : slidesUrl(id); el.title = id; el.setAttribute("tabindex", "-1");
+    var rec = { id: id, el: el, win: null, live: live };
     rec.ready = new Promise(function (res) {
       el.addEventListener("load", function () {
         var w = el.contentWindow; rec.win = w;
         hookFrame(rec);
         (function wait(n) {
-          if ((w.EntryStage && w.EntryStage.order) || n > 300) { res(rec); return; }
+          if ((live ? w.FixedLive : (w.EntryStage && w.EntryStage.order)) || n > 300) { res(rec); return; }
           setTimeout(function () { wait(n + 1); }, 50);
         })(0);
       });
@@ -153,7 +164,7 @@
     }, true);
   }
   function stage(rec) { try { return rec && rec.win && rec.win.EntryStage; } catch (e) { return null; } }
-  function activeId() { return S.sub || S.island; }
+  function activeId() { return S.sub ? (S.subLive ? liveKey(S.sub) : S.sub) : S.island; }
   function cur() { var a = activeId(); return a ? frames[a] : null; }
   function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
   function prevW(id) { var i = WORLD.indexOf(id); return i > 0 ? WORLD[i - 1] : null; }
@@ -168,7 +179,10 @@
   /* the island on stage, its nested island (2.1 is small), and the next one */
   function keepSet(id) {
     var k = [id];
-    if (ISL[id].sub) k.push(ISL[id].sub);
+    if (ISL[id].sub) {
+      k.push(liveKey(ISL[id].sub));                      /* the walk's translation */
+      if (S.sub && !S.subLive) k.push(S.sub);           /* 2.1's slides, only while a deep link holds them */
+    }
     var n = nextW(id);
     if (n) k.push(n);
     prune(k);
@@ -178,6 +192,7 @@
   }
   /* a page out of sight: back to its island view, its tour stopped */
   function hush(rec) {
+    if (rec.live) { stopTour(rec); return; }
     var E = stage(rec);
     if (E && E.phase !== "map") { try { E.leave(); } catch (e) {} }
     var t = 0;
@@ -267,7 +282,7 @@
     var old = activeId();
     var rec = await loaded(id);
     await atMap(rec);
-    S.island = id; S.sub = null; S.layer = "island";
+    S.island = id; S.sub = null; S.subLive = false; S.layer = "island";
     showFrame(id);
     document.body.classList.add("in");
     playWorld();
@@ -285,39 +300,52 @@
   function openIsland(id) { return mount(id, null, false); }
   function crossTo(id, slide) { return mount(id, slide, true); }
 
-  /* into 2.2's translator: 2.1's island view, or straight to one of its slides */
+  /* into 2.2's translator. slide = null: 2.1's LIVING VIEW, its loop playing (the walk);
+     "map": 2.1's slides page at its island view, or an index: one of its slides (deep links only) */
   async function zoomIn(slide) {
-    var parent = S.island, sub = ISL[parent].sub;
+    var parent = S.island, sub = ISL[parent].sub, live = slide === null || slide === undefined;
     S.busy = true;
-    var outer = frames[parent], inner = await loaded(sub);
-    await atMap(outer); await atMap(inner);
+    var outer = frames[parent], inner = await loaded(live ? liveKey(sub) : sub);
+    await atMap(outer); if (!live) await atMap(inner);
     stopTour(outer);
+    if (live) { stopTour(inner); try { fl(inner.win).sync(0); } catch (e) {} }
     await zoom(outer, inner, true, 650);
-    S.sub = sub;
-    showFrame(sub);
+    S.sub = sub; S.subLive = live;
+    showFrame(inner.id);
     var E = stage(inner);
-    if (slide !== null && slide !== undefined) E.enter(pick(E, slide));
+    if (live) startTour(inner);
+    else if (slide !== "map") E.enter(pick(E, slide));
     else startTour(inner);
     refocus();
     S.busy = false;
     update();
   }
-  /* out of the translator, back to 2.2's island view with the translator marked */
-  async function zoomOut() {
-    var parent = S.island, sub = S.sub;
+  /* out of the translator, back to 2.2's island view: with the translator marked,
+     or (then = "first") straight on to 2.2's first own slide, the walk's next step */
+  async function zoomOut(then) {
+    var parent = S.island;
     S.busy = true;
-    var outer = frames[parent], inner = frames[sub];
-    await atMap(inner);
+    var outer = frames[parent], inner = cur();
+    if (!inner.live) await atMap(inner);
     stopTour(inner);
     await zoom(outer, inner, false, 550);
-    S.sub = null;
+    S.sub = null; S.subLive = false;
     showFrame(parent);
-    startTour(outer);
     hush(inner);
+    var E = stage(outer);
+    if (then === "first" && E) E.enter(E.order[0]);
+    else startTour(outer);
     refocus();
     S.busy = false;
     update();
-    markDoor();
+    if (then !== "first") markDoor();
+  }
+  /* 2.2's first own slide ← : back to the island view, then into the translator again */
+  async function backIntoTranslator() {
+    S.busy = true;
+    await atMap(cur());
+    S.busy = false;
+    return zoomIn(null);
   }
   /* between 2.1 and 2.2's own slides, inside the same island: a short fade */
   async function swapTo(id, slide, sub) {
@@ -325,7 +353,7 @@
     veil.classList.add("on"); await sleep(280);
     var old = cur(), rec = await loaded(id);
     await atMap(rec);
-    S.sub = sub;
+    S.sub = sub; S.subLive = false;
     showFrame(id);
     if (old && old !== rec) hush(old);
     var E = stage(rec);
@@ -347,7 +375,7 @@
     if (rec) hush(rec);
     playWorld();
     await sleep(300);
-    S.island = null; S.sub = null; showFrame(null);
+    S.island = null; S.sub = null; S.subLive = false; showFrame(null);
     S.busy = false;
     update();
   }
@@ -370,6 +398,13 @@
         if (j < 0 || j >= WORLD.length) return bump();
         S.focus = j; playWorld(); update();
       } else if (down) openIsland(WORLD[S.focus]);
+      else bump();
+      return;
+    }
+    /* 2.1's living view, inside 2.2's translator: step 1 of 2.2 */
+    if (S.sub && S.subLive) {
+      if (fwd) zoomOut("first");                /* back out, on to 2.2's first own slide */
+      else if (back || up) zoomOut(null);       /* back to 2.2's island view, the translator marked */
       else bump();
       return;
     }
@@ -399,8 +434,8 @@
     }
     if (back) {
       if (i > 0) return E.goto(order[i - 1]);
-      if (sub) { E.leave(); return; }                          /* 2.1's first ← 2.1's island view */
-      if (ISL[island].sub) return swapTo(ISL[island].sub, "last", ISL[island].sub);   /* 2.2's first ← 2.1's last */
+      if (sub) { E.leave(); return; }                          /* (deep link) 2.1's first ← 2.1's island view */
+      if (ISL[island].sub) return backIntoTranslator();        /* 2.2's first ← 2.1's living view */
       var p = prevW(island); p ? crossBack(p) : bump();
     }
   }
@@ -414,18 +449,17 @@
   var lastHash = null;
   function where() {
     if (S.layer === "world" || !S.island) return { layer: "world", id: WORLD[S.focus] };
-    var E = stage(cur()), base = { id: S.island, sub: S.sub };
+    var E = stage(cur()), base = { id: S.island, sub: S.sub, live: !!(S.sub && S.subLive) };
     if (!E || E.phase === "map") return Object.assign(base, { layer: S.sub ? "sub" : "island" });
     var here = E.aim !== null && E.aim !== undefined ? E.aim : E.id;
     var name = "";
     try { name = (E.slides[here] && E.slides[here].name) || ""; } catch (e) {}
     return Object.assign(base, { layer: "slide", k: E.order.indexOf(here), n: E.order.length, name: name });
   }
-  /* the island's whole count: a nested island's slides count as its parent's */
+  /* the island's whole count: the nested island's living view is step 1 of its parent */
   function total(id) {
-    var n = 0, me = frames[id], sb = ISL[id].sub && frames[ISL[id].sub];
-    var E = stage(me), Es = stage(sb);
-    return { own: E ? E.order.length : 0, sub: ISL[id].sub ? (Es ? Es.order.length : 0) : 0 };
+    var E = stage(frames[id]);
+    return { own: E ? E.order.length : 0, sub: ISL[id].sub ? 1 : 0 };
   }
   function update() {
     var w = where(), I = ISL[w.id], path;
@@ -437,12 +471,22 @@
       var trail = I.sec + " › " + I.name + (w.sub ? " › " + SUBNAME[w.sub] : "");
       var T = total(w.id), all = T.own + T.sub;
       if (w.layer === "island") { crumb.textContent = trail; pos.textContent = "island view"; path = "#/" + w.id; }
-      else if (w.layer === "sub") { crumb.textContent = trail; pos.textContent = "translator · island view"; path = "#/" + w.id + "/translation"; }
+      else if (w.layer === "sub" && w.live) {          /* 2.1's living view: step 1 of 2.2 */
+        crumb.textContent = trail + " › step 1 / " + all;
+        pos.textContent = w.id + " · 1 / " + all;
+        path = "#/" + w.id + "/translation";
+      }
+      else if (w.layer === "sub") { crumb.textContent = trail + " › its slides (not in the walk)"; pos.textContent = "translator · 2.1's island view"; path = "#/" + w.id + "/translation/slides"; }
+      else if (w.sub) {                                 /* a deep link into 2.1's slides, out of the walk */
+        crumb.textContent = trail + " › 2.1's slide " + (w.k + 1) + " / " + w.n + (w.name ? " · " + w.name : "") + " (not in the walk)";
+        pos.textContent = w.sub + " · " + (w.k + 1) + " / " + w.n;
+        path = "#/" + w.id + "/translation/" + (w.k + 1);
+      }
       else {
-        crumb.textContent = trail + " › slide " + (w.k + 1) + " / " + w.n + (w.name ? " · " + w.name : "");
-        var at = w.sub ? w.k + 1 : T.sub + w.k + 1;
+        var at = T.sub + w.k + 1;
+        crumb.textContent = trail + (T.sub ? " › step " + at + " / " + all : " › slide " + (w.k + 1) + " / " + w.n) + (w.name ? " · " + w.name : "");
         pos.textContent = w.id + " · " + at + " / " + all;
-        path = "#/" + w.id + (w.sub ? "/translation/" : "/") + (w.k + 1);
+        path = "#/" + w.id + "/" + (w.k + 1);
       }
     }
     if (path !== lastHash) { lastHash = path; try { history.replaceState(null, "", path); } catch (e) {} }
@@ -458,7 +502,10 @@
     if (p[0] === "2.1") p = ["2.2", "translation"].concat(p.slice(1));      /* the alias */
     if (!ISL[p[0]]) return { layer: "world", id: WORLD[0] };
     var r = { id: p[0], layer: "island", k: null };
-    if (p[1] === "translation" && ISL[p[0]].sub) { r.sub = true; p = [p[0]].concat(p.slice(2)); }
+    if (p[1] === "translation" && ISL[p[0]].sub) {
+      r.sub = true; p = [p[0]].concat(p.slice(2));
+      if (p[1] === "slides") { r.k = "map"; return r; }
+    }
     if (p.length > 1 && /^\d+$/.test(p[1])) r.k = +p[1] - 1;
     return r;
   }
