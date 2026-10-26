@@ -1,0 +1,39 @@
+:root { --paper: #FBF8F4; --ink: #302E2E; --strip: 26px; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); overflow: hidden; }
+body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New Roman", serif; }
+#view { position: relative; flex: 1 1 auto; min-height: 0; }
+#strip { flex: 0 0 var(--strip); display: flex; justify-content: space-between; align-items: center;
+         padding: 0 16px; opacity: .72; white-space: nowrap; overflow: hidden; }
+#strip.bump { animation: bump .12s ease-out; }
+@keyframes bump { 50% { transform: translateX(4px); } }
+body.nochrome #strip { display: none; }
+
+/* the world: one row, in talk order */
+#world { position: absolute; inset: 0; display: flex; gap: 1.2vw; padding: 2vh 1.5vw; box-sizing: border-box;
+         align-items: center; transition: opacity .3s; }
+.cell { position: relative; flex: 1 1 0; height: 100%; display: flex; flex-direction: column; min-width: 0; }
+.cell .frame { position: relative; flex: 1 1 auto; border: 2px solid transparent; border-radius: 12px; overflow: hidden;
+               transition: border-color .15s; }
+.cell iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--paper); }
+.cell .hit { position: absolute; inset: 0; cursor: pointer; }
+.cell .label { flex: 0 0 auto; text-align: center; padding-top: 6px; opacity: .55; transition: opacity .15s; }
+.cell.focus .frame { border-color: var(--ink); }
+.cell.focus .label { opacity: 1; }
+.cell:hover .frame { border-style: dashed; border-color: rgba(48,46,46,.55); }
+.cell.focus:hover .frame { border-style: solid; border-color: var(--ink); }
+
+/* the island: its slides page, whole */
+#stage { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .3s; }
+#stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--paper);
+                opacity: 0; pointer-events: none; }
+#stage iframe.on { opacity: 1; pointer-events: auto; }
+body.in #stage { opacity: 1; pointer-events: auto; }
+body.in #world { opacity: 0; pointer-events: none; }
+
+/* the crossing between islands: a short fade through paper */
+#veil { position: absolute; inset: 0; background: var(--paper); opacity: 0; pointer-events: none; transition: opacity .28s; }
+#veil.on { opacity: 1; pointer-events: auto; }
+#loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
+           transition: opacity .2s; }
+#loading.on { opacity: .6; }
+@media (prefers-reduced-motion: reduce) { #world, #stage, #veil { transition: none; } }

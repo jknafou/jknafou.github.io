@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research day talk</title>
+<!-- The talk, joined: the four islands on one row (the world), each island's
+     slides page (the island and its slides). A pragmatic shell, 26 October 2026,
+     standing in for world/FINAL-PLAN.md section 1. It only USES the published
+     per-island pages (island-<id>-live.html, island-<id>-slides.html) and never
+     edits them: every hook is taken from outside, through same-origin access. -->
+<link rel="stylesheet" href="talk.css">
+</head>
+<body>
+<div id="view">
+  <div id="world" aria-label="the world"></div>
+  <div id="stage" aria-label="the island"></div>
+  <div id="veil"></div>
+  <div id="loading">loading…</div>
+</div>
+<div id="strip"><span id="crumb"></span><span id="pos"></span></div>
+<script src="talk.js"></script>
+</body>
+</html>
