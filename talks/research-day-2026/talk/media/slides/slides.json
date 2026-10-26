@@ -569,5 +569,1899 @@
    }
   },
   "bytes": 8534665
+ },
+ "1.1": {
+  "order": [
+   "1",
+   "1.1",
+   "2",
+   "3.3",
+   "4"
+  ],
+  "names": [
+   "Use cases",
+   "The clinician's case",
+   "A few languages",
+   "The experiment",
+   "Ready to plug"
+  ],
+  "bg": "rgb(245, 243, 239)",
+  "frame": [
+   -332.8333,
+   -24,
+   1464.6667,
+   1098.5
+  ],
+  "svgFrac": [
+   0.13999837239583332,
+   0.020008680555555554,
+   0.7199951171875,
+   0.9599826388888889
+  ],
+  "hits": [
+   {
+    "rid": "1",
+    "part": "",
+    "box": [
+     80.3,
+     57.29,
+     249.52,
+     295.81
+    ]
+   },
+   {
+    "rid": "4",
+    "part": "",
+    "box": [
+     468.61,
+     742.67,
+     276.9,
+     261.17
+    ]
+   },
+   {
+    "rid": "2",
+    "part": "",
+    "box": [
+     71.68,
+     418.67,
+     268.22,
+     244.53
+    ]
+   },
+   {
+    "rid": "3.3",
+    "part": "",
+    "box": [
+     81.86,
+     859.36,
+     223.85,
+     115.71
+    ]
+   },
+   {
+    "rid": "1.1",
+    "part": "",
+    "box": [
+     80.3,
+     95.85,
+     127.52,
+     105.12
+    ]
+   },
+   {
+    "rid": "1.1",
+    "part": "",
+    "box": [
+     124.72,
+     191,
+     54.17,
+     50.86
+    ]
+   }
+  ],
+  "door": null,
+  "regions": [
+   {
+    "id": "1",
+    "name": "Use cases",
+    "hit": [
+     "1.1-a-card-taxonomist",
+     "1.1-a-output-taxonomist",
+     "1.1-a-card-lawyer",
+     "1.1-a-output-lawyer",
+     "1.1-a-arrow-taxonomist-1",
+     "1.1-a-arrow-taxonomist-2",
+     "1.1-a-arrow-taxonomist-3",
+     "1.1-a-arrow-lawyer-1",
+     "1.1-a-arrow-lawyer-2",
+     "1.1-a-arrow-lawyer-3"
+    ]
+   },
+   {
+    "id": "1.1",
+    "name": "The clinician's case",
+    "hit": [
+     "1.1-a-card-doctor",
+     "1.1-a-output-doctor",
+     "1.1-a-arrow-doctor-1",
+     "1.1-a-arrow-doctor-2",
+     "1.1-a-arrow-doctor-3"
+    ]
+   },
+   {
+    "id": "2",
+    "name": "A few languages",
+    "hit": [
+     "1.1-b-pile",
+     "1.1-b-bar-people",
+     "1.1-b-bar-web",
+     "1.1-b-bar-ai",
+     "1.1-b-bar-science",
+     "1.1-b-arrow-medicine",
+     "1.1-b-arrow-web",
+     "1.1-b-arrow-ai",
+     "1.1-b-arrow-science"
+    ]
+   },
+   {
+    "id": "3.3",
+    "name": "The experiment",
+    "hit": [
+     "1.1-c-beam",
+     "1.1-c-pan-left",
+     "1.1-c-pan-right",
+     "1.1-c-board-native",
+     "1.1-c-board-translated",
+     "1.1-c-arrow-native-board",
+     "1.1-c-arrow-translated-board"
+    ]
+   },
+   {
+    "id": "4",
+    "name": "Ready to plug",
+    "hit": [
+     "1.1-d-task-ner",
+     "1.1-d-task-cls",
+     "1.1-d-task-sts",
+     "1.1-d-task-qa",
+     "1.1-d-task-pos",
+     "1.1-d-camembert",
+     "1.1-d-drbert"
+    ]
+   }
+  ],
+  "parts": {
+   "1.1-a-card-taxonomist": [
+    207.62,
+    170.83,
+    27.05,
+    24.14
+   ],
+   "1.1-a-output-taxonomist": [
+    249.52,
+    197.93,
+    65.59,
+    35.01
+   ],
+   "1.1-a-card-lawyer": [
+    193.45,
+    233.21,
+    27.05,
+    24.14
+   ],
+   "1.1-a-output-lawyer": [
+    240.72,
+    271.05,
+    65.59,
+    35.01
+   ],
+   "1.1-a-arrow-taxonomist-1": [
+    276.72,
+    128.25,
+    10.57,
+    7.86
+   ],
+   "1.1-a-arrow-taxonomist-2": [
+    229.12,
+    139.25,
+    30.57,
+    30.92
+   ],
+   "1.1-a-arrow-taxonomist-3": [
+    237.32,
+    213.2,
+    10.71,
+    5.77
+   ],
+   "1.1-a-arrow-lawyer-1": [
+    173.13,
+    281.65,
+    15.94,
+    5.4
+   ],
+   "1.1-a-arrow-lawyer-2": [
+    204.27,
+    258.05,
+    5.68,
+    8.87
+   ],
+   "1.1-a-arrow-lawyer-3": [
+    228.72,
+    236.45,
+    16.06,
+    32.84
+   ],
+   "1.1-a-card-doctor": [
+    174.77,
+    170.83,
+    27.05,
+    24.14
+   ],
+   "1.1-a-output-doctor": [
+    130.72,
+    198.85,
+    26.41,
+    35.16
+   ],
+   "1.1-a-arrow-doctor-1": [
+    111.73,
+    116.85,
+    15.94,
+    5.4
+   ],
+   "1.1-a-arrow-doctor-2": [
+    153.72,
+    146.45,
+    27.22,
+    23.77
+   ],
+   "1.1-a-arrow-doctor-3": [
+    160.92,
+    213.2,
+    11.97,
+    5.78
+   ],
+   "1.1-b-pile": [
+    176.23,
+    526.9,
+    61.22,
+    74.51
+   ],
+   "1.1-b-bar-people": [
+    161.68,
+    489.33,
+    88.22,
+    27.86
+   ],
+   "1.1-b-bar-web": [
+    245.68,
+    543.33,
+    88.22,
+    27.86
+   ],
+   "1.1-b-bar-ai": [
+    85.68,
+    629.33,
+    90.7,
+    27.86
+   ],
+   "1.1-b-bar-science": [
+    237.68,
+    629.33,
+    88.43,
+    27.86
+   ],
+   "1.1-b-arrow-medicine": [
+    142.1,
+    529.18,
+    31.9,
+    12.68
+   ],
+   "1.1-b-arrow-web": [
+    237.9,
+    529.18,
+    32.1,
+    12.68
+   ],
+   "1.1-b-arrow-ai": [
+    148.11,
+    576.98,
+    29.96,
+    23.17
+   ],
+   "1.1-b-arrow-science": [
+    233.9,
+    576.98,
+    30.09,
+    23.17
+   ],
+   "1.1-c-beam": [
+    146.43,
+    875.01,
+    119.04,
+    14.8
+   ],
+   "1.1-c-pan-left": [
+    124.35,
+    888.74,
+    48,
+    44.05
+   ],
+   "1.1-c-pan-right": [
+    239.55,
+    888.74,
+    48,
+    44.05
+   ],
+   "1.1-c-board-native": [
+    129.25,
+    896.01,
+    38.19,
+    29.59
+   ],
+   "1.1-c-board-translated": [
+    244.45,
+    896.01,
+    39.52,
+    29.59
+   ],
+   "1.1-c-arrow-native-board": [
+    112.56,
+    908.41,
+    15.11,
+    7.96
+   ],
+   "1.1-c-arrow-translated-board": [
+    284.35,
+    908.41,
+    15.36,
+    7.96
+   ],
+   "1.1-d-task-ner": [
+    486.13,
+    778.35,
+    52.8,
+    45.86
+   ],
+   "1.1-d-task-cls": [
+    531.87,
+    778.35,
+    52.8,
+    45.86
+   ],
+   "1.1-d-task-sts": [
+    577.61,
+    778.35,
+    52.8,
+    45.86
+   ],
+   "1.1-d-task-qa": [
+    623.35,
+    778.35,
+    52.8,
+    45.86
+   ],
+   "1.1-d-task-pos": [
+    669.08,
+    778.35,
+    52.8,
+    45.86
+   ],
+   "1.1-d-camembert": [
+    493.95,
+    830.54,
+    86.66,
+    63.2
+   ],
+   "1.1-d-drbert": [
+    570.86,
+    830.54,
+    86.66,
+    63.2
+   ]
+  },
+  "checks": {
+   "in-2": {
+    "frames": 163,
+    "first": 45.7,
+    "last": 29.7
+   },
+   "fw-1": {
+    "frames": 161,
+    "first": 51.9,
+    "last": 29.7
+   },
+   "bw-2": {
+    "frames": 161,
+    "first": 35.1,
+    "last": 29.7
+   },
+   "fw-2": {
+    "frames": 136,
+    "first": 29.7,
+    "last": 34.9
+   },
+   "bw-3": {
+    "frames": 136,
+    "first": 41.4,
+    "last": 34.9
+   },
+   "bw-1": {
+    "frames": 132,
+    "first": 29.7,
+    "last": 51.9
+   },
+   "fw-4": {
+    "frames": 132,
+    "first": 41.4,
+    "last": 34.9
+   },
+   "fw-3": {
+    "frames": 128,
+    "first": 35.1,
+    "last": 41.4
+   },
+   "bw-4": {
+    "frames": 128,
+    "first": 34.9,
+    "last": 41.4
+   },
+   "in-3": {
+    "frames": 127,
+    "first": 45.7,
+    "last": 35.1
+   },
+   "in-1": {
+    "frames": 119,
+    "first": 45.7,
+    "last": 51.9
+   },
+   "in-5": {
+    "frames": 119,
+    "first": 45.7,
+    "last": 34.9
+   },
+   "in-4": {
+    "frames": 109,
+    "first": 45.7,
+    "last": 41.4
+   },
+   "out-2": {
+    "frames": 106,
+    "first": 29.7,
+    "last": 45.7
+   },
+   "out-3": {
+    "frames": 95,
+    "first": 35.1,
+    "last": 45.7
+   },
+   "out-1": {
+    "frames": 90,
+    "first": 51.9,
+    "last": 45.7
+   },
+   "out-5": {
+    "frames": 90,
+    "first": 34.9,
+    "last": 45.7
+   },
+   "out-4": {
+    "frames": 85,
+    "first": 41.4,
+    "last": 45.7
+   }
+  },
+  "bytes": 7730741
+ },
+ "2.1": {
+  "order": [
+   "1",
+   "2",
+   "3",
+   "3.1",
+   "3.2",
+   "3.3",
+   "3.4",
+   "4",
+   "5"
+  ],
+  "names": [
+   "English deck",
+   "Sentence extraction",
+   "Sentence-wise translation",
+   "Tokenizer",
+   "Bucketing",
+   "M2M-100",
+   "Decoding",
+   "Abstract reconciliation",
+   "Translated deck"
+  ],
+  "bg": "rgb(245, 243, 239)",
+  "frame": [
+   -166.6667,
+   0,
+   1333.3333,
+   1000
+  ],
+  "svgFrac": [
+   0.13999837239583332,
+   0.020008680555555554,
+   0.7199951171875,
+   0.9599826388888889
+  ],
+  "hits": [],
+  "door": null,
+  "regions": [
+   {
+    "id": "1",
+    "name": "English deck",
+    "hit": [
+     "corpus-en"
+    ]
+   },
+   {
+    "id": "2",
+    "name": "Sentence extraction",
+    "hit": [
+     "extract-sea",
+     "extract-pmid44",
+     "extract-table",
+     "extract-wash",
+     "extract-border"
+    ]
+   },
+   {
+    "id": "3",
+    "name": "Sentence-wise translation",
+    "hit": [
+     "bucket",
+     "m2m"
+    ]
+   },
+   {
+    "id": "3.1",
+    "name": "Tokenizer",
+    "hit": [
+     "stage-tokenizer"
+    ]
+   },
+   {
+    "id": "3.2",
+    "name": "Bucketing",
+    "hit": [
+     "stage-bucketing"
+    ]
+   },
+   {
+    "id": "3.3",
+    "name": "M2M-100",
+    "hit": [
+     "stage-m2m100"
+    ]
+   },
+   {
+    "id": "3.4",
+    "name": "Decoding",
+    "hit": [
+     "stage-decoding"
+    ]
+   },
+   {
+    "id": "4",
+    "name": "Abstract reconciliation",
+    "hit": [
+     "reconcile-sea",
+     "reconcile-pmid44",
+     "reconcile-table",
+     "reconcile-wash",
+     "reconcile-border"
+    ]
+   },
+   {
+    "id": "5",
+    "name": "Translated deck",
+    "hit": [
+     "corpus-fr"
+    ]
+   }
+  ],
+  "parts": {
+   "corpus-en": [
+    742,
+    24,
+    208,
+    296.61
+   ],
+   "extract-sea": [
+    44.09,
+    47.4,
+    395.82,
+    218.76
+   ],
+   "extract-pmid44": [
+    195.66,
+    135.44,
+    92.68,
+    111.56
+   ],
+   "extract-table": [
+    442,
+    119.5,
+    220,
+    127.5
+   ],
+   "extract-wash": [
+    56,
+    56,
+    620,
+    205
+   ],
+   "extract-border": [
+    56,
+    56,
+    620,
+    205
+   ],
+   "bucket": [
+    70,
+    325,
+    592,
+    180
+   ],
+   "m2m": [
+    70,
+    519,
+    592,
+    180
+   ],
+   "stage-tokenizer": [
+    70,
+    325,
+    46,
+    180
+   ],
+   "stage-bucketing": [
+    140,
+    325,
+    46,
+    180
+   ],
+   "stage-m2m100": [
+    70,
+    519,
+    46,
+    180
+   ],
+   "stage-decoding": [
+    616,
+    519,
+    46,
+    180
+   ],
+   "reconcile-sea": [
+    292.09,
+    730.4,
+    395.82,
+    218.76
+   ],
+   "reconcile-pmid44": [
+    443.66,
+    818.44,
+    92.68,
+    111.56
+   ],
+   "reconcile-table": [
+    70,
+    802.5,
+    220,
+    127.5
+   ],
+   "reconcile-wash": [
+    56,
+    739,
+    620,
+    205
+   ],
+   "reconcile-border": [
+    56,
+    739,
+    620,
+    205
+   ],
+   "corpus-fr": [
+    742,
+    698,
+    208,
+    296.61
+   ]
+  },
+  "checks": {
+   "in-8": {
+    "frames": 535,
+    "first": 37,
+    "last": 31.8
+   },
+   "in-4": {
+    "frames": 528,
+    "first": 37,
+    "last": 32.2
+   },
+   "fw-3": {
+    "frames": 467,
+    "first": 36.1,
+    "last": 32.2
+   },
+   "bw-4": {
+    "frames": 467,
+    "first": 27.5,
+    "last": 32.2
+   },
+   "in-2": {
+    "frames": 463,
+    "first": 37,
+    "last": 34.6
+   },
+   "fw-1": {
+    "frames": 406,
+    "first": 33.9,
+    "last": 34.6
+   },
+   "bw-2": {
+    "frames": 406,
+    "first": 36.1,
+    "last": 34.6
+   },
+   "fw-7": {
+    "frames": 370,
+    "first": 25.3,
+    "last": 31.8
+   },
+   "bw-8": {
+    "frames": 370,
+    "first": 34,
+    "last": 31.8
+   },
+   "in-5": {
+    "frames": 238,
+    "first": 37,
+    "last": 33.8
+   },
+   "in-6": {
+    "frames": 238,
+    "first": 37,
+    "last": 31
+   },
+   "in-7": {
+    "frames": 216,
+    "first": 37,
+    "last": 25.3
+   },
+   "in-1": {
+    "frames": 185,
+    "first": 37,
+    "last": 33.9
+   },
+   "in-9": {
+    "frames": 185,
+    "first": 37,
+    "last": 34
+   },
+   "in-3": {
+    "frames": 183,
+    "first": 37,
+    "last": 36.1
+   },
+   "fw-6": {
+    "frames": 161,
+    "first": 31,
+    "last": 25.3
+   },
+   "bw-7": {
+    "frames": 161,
+    "first": 31.8,
+    "last": 25.3
+   },
+   "fw-4": {
+    "frames": 156,
+    "first": 32.2,
+    "last": 33.8
+   },
+   "fw-5": {
+    "frames": 156,
+    "first": 33.8,
+    "last": 31
+   },
+   "bw-5": {
+    "frames": 156,
+    "first": 31,
+    "last": 33.8
+   },
+   "bw-6": {
+    "frames": 156,
+    "first": 25.3,
+    "last": 31
+   },
+   "bw-1": {
+    "frames": 145,
+    "first": 34.6,
+    "last": 33.9
+   },
+   "fw-8": {
+    "frames": 145,
+    "first": 31.8,
+    "last": 34
+   },
+   "out-8": {
+    "frames": 140,
+    "first": 31.8,
+    "last": 36.4
+   },
+   "fw-2": {
+    "frames": 140,
+    "first": 34.6,
+    "last": 36.1
+   },
+   "bw-3": {
+    "frames": 140,
+    "first": 32.2,
+    "last": 36.1
+   },
+   "out-5": {
+    "frames": 99,
+    "first": 33.8,
+    "last": 37
+   },
+   "out-6": {
+    "frames": 99,
+    "first": 31,
+    "last": 37
+   },
+   "out-4": {
+    "frames": 88,
+    "first": 32.2,
+    "last": 37
+   },
+   "out-2": {
+    "frames": 86,
+    "first": 34.6,
+    "last": 37
+   },
+   "out-7": {
+    "frames": 85,
+    "first": 25.3,
+    "last": 36.6
+   },
+   "out-3": {
+    "frames": 79,
+    "first": 36.1,
+    "last": 37
+   },
+   "out-1": {
+    "frames": 73,
+    "first": 33.9,
+    "last": 37
+   },
+   "out-9": {
+    "frames": 73,
+    "first": 34,
+    "last": 36.6
+   }
+  },
+  "bytes": 39262445
+ },
+ "3.1": {
+  "order": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7"
+  ],
+  "names": [
+   "The start",
+   "Classifying documents",
+   "Marking key terms",
+   "Comparing meanings",
+   "Tagging word kinds",
+   "The finish",
+   "The podium"
+  ],
+  "bg": "rgb(245, 243, 239)",
+  "frame": [
+   -207.5067,
+   -1960.24,
+   2407.8933,
+   1805.92
+  ],
+  "svgFrac": [
+   0.13999837239583332,
+   0.020008680555555554,
+   0.7199951171875,
+   0.9599826388888889
+  ],
+  "hits": [
+   {
+    "rid": "7",
+    "part": "",
+    "box": [
+     1188.01,
+     -1933.61,
+     479.25,
+     253.97
+    ]
+   },
+   {
+    "rid": "1",
+    "part": "",
+    "box": [
+     741.2,
+     -1897.68,
+     313.37,
+     381.76
+    ]
+   },
+   {
+    "rid": "6",
+    "part": "",
+    "box": [
+     1758.89,
+     -1835.51,
+     271.83,
+     323.86
+    ]
+   },
+   {
+    "rid": "3",
+    "part": "",
+    "box": [
+     477.35,
+     -537.45,
+     215.95,
+     326.56
+    ]
+   },
+   {
+    "rid": "2",
+    "part": "",
+    "box": [
+     490.02,
+     -1187.82,
+     215.95,
+     326.55
+    ]
+   },
+   {
+    "rid": "4",
+    "part": "",
+    "box": [
+     878.55,
+     -537.45,
+     212.13,
+     326.56
+    ]
+   },
+   {
+    "rid": "5",
+    "part": "",
+    "box": [
+     1441.22,
+     -1187.82,
+     212.13,
+     326.55
+    ]
+   }
+  ],
+  "door": null,
+  "regions": [
+   {
+    "id": "1",
+    "name": "The start",
+    "hit": [
+     "3.1-starter",
+     "3.1-start-drbert",
+     "3.1-start-transbert",
+     "3.1-start-camembert"
+    ]
+   },
+   {
+    "id": "2",
+    "name": "Classifying documents",
+    "hit": [
+     "3.1-station-cls",
+     "3.1-cls-transbert",
+     "3.1-cls-camembert",
+     "3.1-cls-drbert"
+    ]
+   },
+   {
+    "id": "3",
+    "name": "Marking key terms",
+    "hit": [
+     "3.1-station-ner",
+     "3.1-ner-transbert",
+     "3.1-ner-camembert",
+     "3.1-ner-drbert"
+    ]
+   },
+   {
+    "id": "4",
+    "name": "Comparing meanings",
+    "hit": [
+     "3.1-station-sts",
+     "3.1-sts-transbert",
+     "3.1-sts-camembert",
+     "3.1-sts-drbert"
+    ]
+   },
+   {
+    "id": "5",
+    "name": "Tagging word kinds",
+    "hit": [
+     "3.1-station-pos",
+     "3.1-pos-transbert",
+     "3.1-pos-camembert",
+     "3.1-pos-drbert"
+    ]
+   },
+   {
+    "id": "6",
+    "name": "The finish",
+    "hit": [
+     "3.1-finish-line",
+     "3.1-finish-transbert",
+     "3.1-finish-camembert",
+     "3.1-finish-drbert"
+    ]
+   },
+   {
+    "id": "7",
+    "name": "The podium",
+    "hit": [
+     "3.1-podium",
+     "3.1-podium-transbert",
+     "3.1-podium-camembert",
+     "3.1-podium-drbert",
+     "3.1-trophy"
+    ]
+   }
+  ],
+  "parts": {
+   "3.1-starter": [
+    909.25,
+    -1891.68,
+    139.32,
+    126.4
+   ],
+   "3.1-start-drbert": [
+    808.4,
+    -1755.53,
+    100.77,
+    97.61
+   ],
+   "3.1-start-transbert": [
+    777.8,
+    -1687.53,
+    100.77,
+    97.61
+   ],
+   "3.1-start-camembert": [
+    747.2,
+    -1619.53,
+    100.77,
+    97.61
+   ],
+   "3.1-station-cls": [
+    609.07,
+    -1181.82,
+    88.28,
+    76.67
+   ],
+   "3.1-cls-transbert": [
+    601.62,
+    -1040.21,
+    98.35,
+    104.95
+   ],
+   "3.1-cls-camembert": [
+    496.02,
+    -972.21,
+    98.35,
+    104.95
+   ],
+   "3.1-cls-drbert": [
+    497.22,
+    -1108.21,
+    98.35,
+    104.95
+   ],
+   "3.1-station-ner": [
+    596.4,
+    -531.45,
+    88.28,
+    76.68
+   ],
+   "3.1-ner-transbert": [
+    588.95,
+    -389.83,
+    98.35,
+    104.95
+   ],
+   "3.1-ner-camembert": [
+    483.35,
+    -321.83,
+    98.35,
+    104.95
+   ],
+   "3.1-ner-drbert": [
+    484.55,
+    -457.83,
+    98.35,
+    104.95
+   ],
+   "3.1-station-sts": [
+    996.4,
+    -531.45,
+    88.28,
+    76.68
+   ],
+   "3.1-sts-transbert": [
+    953.95,
+    -389.83,
+    97.31,
+    104.95
+   ],
+   "3.1-sts-camembert": [
+    923.35,
+    -321.83,
+    98.35,
+    104.95
+   ],
+   "3.1-sts-drbert": [
+    884.55,
+    -457.83,
+    98.35,
+    104.95
+   ],
+   "3.1-station-pos": [
+    1559.07,
+    -1181.82,
+    88.28,
+    76.67
+   ],
+   "3.1-pos-transbert": [
+    1516.62,
+    -1040.21,
+    97.31,
+    104.95
+   ],
+   "3.1-pos-camembert": [
+    1486.02,
+    -972.21,
+    98.35,
+    104.95
+   ],
+   "3.1-pos-drbert": [
+    1447.22,
+    -1108.21,
+    98.35,
+    104.95
+   ],
+   "3.1-finish-line": [
+    1976.88,
+    -1829.51,
+    47.84,
+    207.83
+   ],
+   "3.1-finish-transbert": [
+    1884.09,
+    -1698.97,
+    88.45,
+    109.05
+   ],
+   "3.1-finish-camembert": [
+    1791.69,
+    -1622.59,
+    98.35,
+    104.95
+   ],
+   "3.1-finish-drbert": [
+    1764.89,
+    -1758.59,
+    98.35,
+    104.95
+   ],
+   "3.1-podium": [
+    1194.01,
+    -1808.12,
+    467.25,
+    111.85
+   ],
+   "3.1-podium-transbert": [
+    1324.55,
+    -1927.61,
+    101.19,
+    124.75
+   ],
+   "3.1-podium-camembert": [
+    1202.87,
+    -1893.91,
+    101.19,
+    124.75
+   ],
+   "3.1-podium-drbert": [
+    1446.23,
+    -1871.45,
+    101.19,
+    124.75
+   ],
+   "3.1-trophy": [
+    1338.39,
+    -1751.44,
+    66.82,
+    65.8
+   ]
+  },
+  "checks": {
+   "in-7": {
+    "frames": 239,
+    "first": 99,
+    "last": 32.7
+   },
+   "fw-6": {
+    "frames": 234,
+    "first": 30.5,
+    "last": 32.7
+   },
+   "fw-5": {
+    "frames": 206,
+    "first": 36.6,
+    "last": 30.5
+   },
+   "bw-6": {
+    "frames": 206,
+    "first": 32.7,
+    "last": 30.5
+   },
+   "in-4": {
+    "frames": 206,
+    "first": 99,
+    "last": 35.4
+   },
+   "in-5": {
+    "frames": 206,
+    "first": 99,
+    "last": 36.6
+   },
+   "in-2": {
+    "frames": 202,
+    "first": 99,
+    "last": 33.7
+   },
+   "fw-2": {
+    "frames": 199,
+    "first": 33.7,
+    "last": 32.8
+   },
+   "bw-3": {
+    "frames": 199,
+    "first": 35.4,
+    "last": 32.8
+   },
+   "in-3": {
+    "frames": 199,
+    "first": 99,
+    "last": 32.8
+   },
+   "fw-1": {
+    "frames": 196,
+    "first": 28.7,
+    "last": 33.7
+   },
+   "bw-2": {
+    "frames": 196,
+    "first": 32.8,
+    "last": 33.7
+   },
+   "in-6": {
+    "frames": 196,
+    "first": 99,
+    "last": 30.5
+   },
+   "fw-3": {
+    "frames": 193,
+    "first": 32.8,
+    "last": 35.4
+   },
+   "fw-4": {
+    "frames": 193,
+    "first": 35.5,
+    "last": 36.6
+   },
+   "bw-4": {
+    "frames": 193,
+    "first": 36.6,
+    "last": 35.4
+   },
+   "bw-5": {
+    "frames": 193,
+    "first": 30.5,
+    "last": 36.6
+   },
+   "in-1": {
+    "frames": 180,
+    "first": 99,
+    "last": 28.7
+   },
+   "bw-1": {
+    "frames": 166,
+    "first": 33.7,
+    "last": 28.7
+   },
+   "out-1": {
+    "frames": 78,
+    "first": 28.7,
+    "last": 99
+   },
+   "out-4": {
+    "frames": 77,
+    "first": 35.5,
+    "last": 99
+   },
+   "out-5": {
+    "frames": 77,
+    "first": 36.6,
+    "last": 99
+   },
+   "out-7": {
+    "frames": 74,
+    "first": 32.7,
+    "last": 99
+   },
+   "out-2": {
+    "frames": 73,
+    "first": 33.7,
+    "last": 99
+   },
+   "out-3": {
+    "frames": 70,
+    "first": 32.8,
+    "last": 99
+   },
+   "out-6": {
+    "frames": 67,
+    "first": 30.5,
+    "last": 99
+   }
+  },
+  "bytes": 17036613
+ },
+ "4.1": {
+  "order": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6.1",
+   "6.2",
+   "6"
+  ],
+  "names": [
+   "The method, once more",
+   "Medicine in French, tested",
+   "Other fields",
+   "Other languages",
+   "Both together",
+   "TransBERT-bio-fr",
+   "TransCorpus-bio",
+   "Released"
+  ],
+  "bg": "rgb(245, 243, 239)",
+  "frame": [
+   0,
+   -185.0913,
+   1934.31,
+   1450.7325
+  ],
+  "svgFrac": [
+   0.13999837239583332,
+   0.020008680555555554,
+   0.7199951171875,
+   0.9599826388888889
+  ],
+  "hits": [
+   {
+    "rid": "6",
+    "part": "",
+    "box": [
+     1028.8,
+     179.38,
+     724.93,
+     674.93
+    ]
+   },
+   {
+    "rid": "6.2",
+    "part": "",
+    "box": [
+     1447.5,
+     283.55,
+     306.23,
+     427.77
+    ]
+   },
+   {
+    "rid": "1",
+    "part": "",
+    "box": [
+     49.77,
+     225.3,
+     677.71,
+     163.57
+    ]
+   },
+   {
+    "rid": "6.1",
+    "part": "",
+    "box": [
+     1028.8,
+     417.43,
+     342.42,
+     293.9
+    ]
+   },
+   {
+    "rid": "1",
+    "part": "",
+    "box": [
+     365.82,
+     348.97,
+     340.36,
+     192.65
+    ]
+   },
+   {
+    "rid": "1",
+    "part": "",
+    "box": [
+     346.73,
+     531.7,
+     161.7,
+     265.5
+    ]
+   },
+   {
+    "rid": "5",
+    "part": "",
+    "box": [
+     585.05,
+     721.89,
+     207.45,
+     190.8
+    ]
+   },
+   {
+    "rid": "3",
+    "part": "",
+    "box": [
+     582.02,
+     524.09,
+     210.47,
+     168.75
+    ]
+   },
+   {
+    "rid": "2",
+    "part": "",
+    "box": [
+     84.06,
+     521.21,
+     190.13,
+     171.81
+    ]
+   },
+   {
+    "rid": "4",
+    "part": "",
+    "box": [
+     56.91,
+     770.23,
+     216.27,
+     140.21
+    ]
+   }
+  ],
+  "door": null,
+  "regions": [
+   {
+    "id": "1",
+    "name": "The method, once more",
+    "hit": [
+     "4.1-b-arrow-en-translator",
+     "4.1-b-translator",
+     "4.1-b-arrow-translator-xx",
+     "4.1-b-store-xx",
+     "4.1-b-arrow-xx-tokenizer",
+     "4.1-b-tokenizer",
+     "4.1-b-tokens",
+     "4.1-b-arrow-tokens-batch",
+     "4.1-b-batch",
+     "4.1-b-arrow-batch-model",
+     "4.1-b-model",
+     "4.1-b-arrow-model-system",
+     "4.1-b-system",
+     "4.1-b-system-card-ner",
+     "4.1-b-system-card-cls",
+     "4.1-b-system-card-sts",
+     "4.1-b-system-card-qa"
+    ]
+   },
+   {
+    "id": "2",
+    "name": "Medicine in French, tested",
+    "hit": [
+     "4.1-b-stamp-medicine"
+    ]
+   },
+   {
+    "id": "3",
+    "name": "Other professions",
+    "hit": [
+     "4.1-b-stamp-professions"
+    ]
+   },
+   {
+    "id": "4",
+    "name": "Other languages",
+    "hit": [
+     "4.1-b-stamp-languages"
+    ]
+   },
+   {
+    "id": "5",
+    "name": "Both together",
+    "hit": [
+     "4.1-b-stamp-both"
+    ]
+   },
+   {
+    "id": "6.1",
+    "name": "TransBERT-bio-fr",
+    "hit": [
+     "4.1-c-model",
+     "4.1-c-sign-model"
+    ]
+   },
+   {
+    "id": "6.2",
+    "name": "TransCorpus-bio",
+    "hit": [
+     "4.1-c-store",
+     "4.1-c-sign-data"
+    ]
+   },
+   {
+    "id": "6",
+    "name": "Released",
+    "hit": [
+     "4.1-c-lock-open"
+    ]
+   }
+  ],
+  "parts": {
+   "4.1-b-arrow-en-translator": [
+    152.56,
+    334.32,
+    49.11,
+    15.23
+   ],
+   "4.1-b-translator": [
+    179.55,
+    284.31,
+    140.87,
+    98.19
+   ],
+   "4.1-b-arrow-translator-xx": [
+    294.86,
+    334.32,
+    49.11,
+    15.23
+   ],
+   "4.1-b-store-xx": [
+    322.37,
+    231.3,
+    124.54,
+    151.57
+   ],
+   "4.1-b-arrow-xx-tokenizer": [
+    419.2,
+    333.61,
+    62.08,
+    15.01
+   ],
+   "4.1-b-tokenizer": [
+    479.61,
+    285.94,
+    241.87,
+    95.34
+   ],
+   "4.1-b-tokens": [
+    619.31,
+    338.99,
+    102.17,
+    8.37
+   ],
+   "4.1-b-arrow-tokens-batch": [
+    624.54,
+    354.97,
+    47.98,
+    86.67
+   ],
+   "4.1-b-batch": [
+    556.34,
+    453.25,
+    143.83,
+    70.44
+   ],
+   "4.1-b-arrow-batch-model": [
+    487.9,
+    480.9,
+    64.61,
+    15.23
+   ],
+   "4.1-b-model": [
+    371.82,
+    444.68,
+    142,
+    90.94
+   ],
+   "4.1-b-arrow-model-system": [
+    419.15,
+    537.7,
+    14.96,
+    73.87
+   ],
+   "4.1-b-system": [
+    352.73,
+    623.04,
+    149.7,
+    168.17
+   ],
+   "4.1-b-system-card-ner": [
+    355.37,
+    623.04,
+    43.16,
+    38.51
+   ],
+   "4.1-b-system-card-cls": [
+    453.74,
+    623.04,
+    43.16,
+    38.51
+   ],
+   "4.1-b-system-card-sts": [
+    355.37,
+    752.69,
+    43.16,
+    38.51
+   ],
+   "4.1-b-system-card-qa": [
+    453.74,
+    752.69,
+    43.16,
+    38.51
+   ],
+   "4.1-b-stamp-medicine": [
+    206.7,
+    625.53,
+    61.49,
+    61.49
+   ],
+   "4.1-b-stamp-professions": [
+    727.02,
+    626.54,
+    59.48,
+    59.48
+   ],
+   "4.1-b-stamp-languages": [
+    207.71,
+    843.54,
+    59.48,
+    59.48
+   ],
+   "4.1-b-stamp-both": [
+    727.02,
+    843.54,
+    59.48,
+    59.48
+   ],
+   "4.1-c-model": [
+    1069.96,
+    423.42,
+    295.25,
+    215.22
+   ],
+   "4.1-c-sign-model": [
+    1034.8,
+    636.5,
+    291.34,
+    68.82
+   ],
+   "4.1-c-store": [
+    1455.03,
+    289.55,
+    292.7,
+    356.23
+   ],
+   "4.1-c-sign-data": [
+    1453.49,
+    636.5,
+    281.94,
+    68.82
+   ],
+   "4.1-c-lock-open": [
+    1336.45,
+    656.48,
+    132.69,
+    191.83
+   ]
+  },
+  "checks": {
+   "bw-1": {
+    "frames": 140,
+    "first": 33,
+    "last": 39.7
+   },
+   "fw-7": {
+    "frames": 140,
+    "first": 33.9,
+    "last": 31.7
+   },
+   "in-1": {
+    "frames": 136,
+    "first": 43.5,
+    "last": 39.7
+   },
+   "in-8": {
+    "frames": 136,
+    "first": 43.5,
+    "last": 31.7
+   },
+   "fw-1": {
+    "frames": 132,
+    "first": 39.7,
+    "last": 33
+   },
+   "bw-2": {
+    "frames": 132,
+    "first": 99,
+    "last": 33
+   },
+   "fw-3": {
+    "frames": 132,
+    "first": 99,
+    "last": 32.3
+   },
+   "bw-4": {
+    "frames": 132,
+    "first": 32.2,
+    "last": 32.3
+   },
+   "fw-2": {
+    "frames": 128,
+    "first": 33,
+    "last": 70
+   },
+   "bw-3": {
+    "frames": 128,
+    "first": 32.3,
+    "last": 70
+   },
+   "fw-4": {
+    "frames": 128,
+    "first": 32.3,
+    "last": 32.2
+   },
+   "bw-5": {
+    "frames": 128,
+    "first": 38.2,
+    "last": 32.2
+   },
+   "fw-6": {
+    "frames": 128,
+    "first": 38.2,
+    "last": 33.9
+   },
+   "bw-7": {
+    "frames": 128,
+    "first": 31.7,
+    "last": 33.9
+   },
+   "fw-5": {
+    "frames": 124,
+    "first": 32.2,
+    "last": 38.2
+   },
+   "bw-6": {
+    "frames": 124,
+    "first": 33.9,
+    "last": 38
+   },
+   "in-2": {
+    "frames": 119,
+    "first": 43.5,
+    "last": 33
+   },
+   "in-4": {
+    "frames": 119,
+    "first": 43.5,
+    "last": 32.3
+   },
+   "in-3": {
+    "frames": 109,
+    "first": 43.5,
+    "last": 70
+   },
+   "in-5": {
+    "frames": 109,
+    "first": 43.5,
+    "last": 32.2
+   },
+   "in-7": {
+    "frames": 109,
+    "first": 43.5,
+    "last": 33.9
+   },
+   "in-6": {
+    "frames": 101,
+    "first": 43.5,
+    "last": 38.2
+   },
+   "out-1": {
+    "frames": 100,
+    "first": 39.7,
+    "last": 43.5
+   },
+   "out-8": {
+    "frames": 100,
+    "first": 31.7,
+    "last": 43.5
+   },
+   "out-2": {
+    "frames": 90,
+    "first": 33,
+    "last": 43.5
+   },
+   "out-4": {
+    "frames": 90,
+    "first": 32.3,
+    "last": 43.5
+   },
+   "out-3": {
+    "frames": 85,
+    "first": 99,
+    "last": 43.5
+   },
+   "out-5": {
+    "frames": 85,
+    "first": 32.2,
+    "last": 43.5
+   },
+   "out-7": {
+    "frames": 85,
+    "first": 33.9,
+    "last": 43.5
+   },
+   "out-6": {
+    "frames": 80,
+    "first": 38.2,
+    "last": 43.5
+   }
+  },
+  "bytes": 14100799
  }
 }
