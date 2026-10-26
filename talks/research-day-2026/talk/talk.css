@@ -9,14 +9,14 @@ body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New
 body.nochrome #strip { display: none; }
 
 /* the world: one row, in talk order */
-#world { position: absolute; inset: 0; display: flex; gap: 1.2vw; padding: 2vh 1.5vw; box-sizing: border-box;
+#world { position: absolute; inset: 0; display: flex; justify-content: center; box-sizing: border-box;
          align-items: center; transition: opacity .3s; }
-.cell { position: relative; flex: 1 1 0; height: 100%; display: flex; flex-direction: column; min-width: 0; }
+.cell { position: relative; flex: 0 0 22%; height: 60%; display: flex; flex-direction: column; min-width: 0; }
 .cell .frame { position: relative; flex: 1 1 auto; border: 2px solid transparent; border-radius: 12px; overflow: hidden;
                transition: border-color .15s; }
 .cell iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--paper); }
 .cell .hit { position: absolute; inset: 0; cursor: pointer; }
-.cell .label { flex: 0 0 auto; text-align: center; padding-top: 6px; opacity: .55; transition: opacity .15s; }
+.cell .label { flex: 0 0 auto; display: flex; justify-content: center; white-space: nowrap; padding-top: 6px; opacity: .55; transition: opacity .15s; }
 .cell.focus .frame { border-color: var(--ink); }
 .cell.focus .label { opacity: 1; }
 .cell:hover .frame { border-style: dashed; border-color: rgba(48,46,46,.55); }

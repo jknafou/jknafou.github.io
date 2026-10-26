@@ -57,13 +57,34 @@
       var lab = document.createElement("div"); lab.className = "label"; lab.textContent = ISL[id].sec + " · " + ISL[id].name;
       f.appendChild(ifr); f.appendChild(hit); c.appendChild(f); c.appendChild(lab); worldEl.appendChild(c);
       var cell = { id: id, el: c, ifr: ifr, playing: false };
-      ifr.addEventListener("load", function () { cell.loaded = true; playWorld(); });
+      ifr.addEventListener("load", function () {
+        cell.loaded = true;
+        try {
+          var sv = ifr.contentDocument.querySelector("body > svg"), vb = sv && sv.viewBox && sv.viewBox.baseVal;
+          if (vb && vb.width && vb.height) cell.aspect = vb.width / vb.height;
+        } catch (e) {}
+        layoutWorld(); playWorld();
+      });
       hit.addEventListener("mouseenter", function () { S.hover = i; playWorld(); });
       hit.addEventListener("mouseleave", function () { if (S.hover === i) S.hover = null; playWorld(); });
       hit.addEventListener("click", function () { if (S.layer !== "world" || S.busy) return; S.focus = i; openIsland(id); });
       cells.push(cell);
     });
   }
+  /* each island at its own aspect, all at one height, the row as large as the view allows */
+  function layoutWorld() {
+    if (!cells.length) return;
+    var W = worldEl.clientWidth, H = worldEl.clientHeight, gap = Math.max(12, W * 0.015), lab = 26;
+    var asp = cells.map(function (c) { return c.aspect || 1; });
+    var sum = asp.reduce(function (a, b) { return a + b; }, 0);
+    var h = Math.min(H * 0.9 - lab, (W * 0.96 - gap * (cells.length - 1)) / sum);
+    cells.forEach(function (c, i) {
+      c.el.style.flex = "0 0 " + Math.floor(asp[i] * h) + "px";
+      c.el.style.height = Math.floor(h + lab) + "px";
+    });
+    worldEl.style.gap = gap + "px";
+  }
+  window.addEventListener("resize", layoutWorld);
   function fl(win) { try { return win && win.FixedLive; } catch (e) { return null; } }
   /* only the island under focus or hover plays; the rest hold their still */
   function playWorld() {
