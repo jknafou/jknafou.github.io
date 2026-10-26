@@ -236,7 +236,14 @@ import backdrops  # noqa: E402
 from PIL import ImageDraw  # noqa: E402
 
 
-def backdrop(bid):
+def sign_sprite(bid, lit=True):
+    """the room's title sign at 4x, and where its top left sits on the screen"""
+    a, b, mode = backdrops.SIGNS[bid]()
+    spr = Sprite(a if lit or b is None else b)
+    return spr.img.resize((spr.img.width * K, spr.img.height * K), Image.NEAREST), (spr.x * K, spr.y * K), mode
+
+
+def backdrop(bid, sign=True):
     room = Image.new("RGBA", (MW, MH), (0, 0, 0, 0))
     Sprite(backdrops.ROOMS[bid]()).draw(room)
     im = room.convert("RGB").resize((W, H), Image.NEAREST)
@@ -251,11 +258,14 @@ def backdrop(bid):
     d.rectangle([x0 - f, y0 - f, x0 - f + 3, y1 + f - 1], fill=rgba(fr_l)[:3])                            # and left edge
     d.rectangle([x0 - 2, y0 - 2, x1 + 1, y1 + 1], fill=rgba(C.OUT)[:3])                                    # the card's own edge
     d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=(251, 247, 244))                                             # the card's place: its own paper
+    if sign:
+        sg, at, _ = sign_sprite(bid)
+        im.paste(sg, at, sg)
     return im
 
 
 if "backdrop" in ONLY:
-    for bid in IDS:
+    for bid in IDS + ["2.1"]:
         im = backdrop(bid)
         im.save(os.path.join(OUT, "backdrop-%s.webp" % bid), lossless=True, quality=100, method=6)
         edge = np.array(im)[:, :8].reshape(-1, 3).mean(axis=0)
@@ -354,6 +364,19 @@ def opening_frames(bid):
     C0 = (W / 2, H / 2)
     p0 = (C0[0] + s0 * (fc[0] - MW / 2), C0[1] + s0 * (fc[1] - MH / 2))
     pc = ((cx0 + cx1) / 2, (cy0 + cy1) / 2)
+    # the opening grows the room WITHOUT its sign lit (or without the sign, if it drops), and the
+    # sign arrives over the last TAIL frames; the very last frame is the island view itself
+    sg_lit, (gx, gy), mode = sign_sprite(bid, True)
+    sg_off = sign_sprite(bid, False)[0]
+    box = (gx, gy, gx + sg_lit.width, gy + sg_lit.height)
+    bare = backdrop(bid, sign=False)
+    full = shot
+    d_ = np.abs(np.array(full.crop(box), np.int16) - np.array(backdrop(bid).crop(box), np.int16)).max()
+    print("  sign area of the island view against the backdrop: max difference %d" % d_)
+    shot = full.copy(); shot.paste(bare.crop(box), box[:2])
+    if mode == "light":
+        shot.paste(sg_off, (gx, gy), sg_off)
+    TAIL = 14
     T = 2.4
     n = int(T * FPS)
     tz0 = 0.8
@@ -373,7 +396,7 @@ def opening_frames(bid):
         cv = frame(t, sa, None, (bid, mv)).convert("RGB")
         e = smooth(ramp(t, tz0, T - 1 / FPS))
         if i == n - 1:
-            out.append(shot.copy()); continue
+            out.append(shot.copy()); break
         if e <= 0:
             out.append(cv.resize((W, H), Image.NEAREST)); continue
         s = s0 * (s1 / s0) ** e
@@ -398,6 +421,22 @@ def opening_frames(bid):
             mask.paste(int(255 * a1), (max(0, int(ox)), max(0, int(oy)), min(W, int(ox + W * sx) + 1), min(H, int(oy + H * sy) + 1)))
             im.paste(room.convert("RGBA"), (0, 0), mask)
         out.append(im.convert("RGB"))
+    # the sign: it drops into place with a small bounce, or it flickers on
+    for k in range(1, TAIL + 1):
+        u = k / TAIL
+        im = shot.copy()
+        if k == TAIL:
+            out.append(full.copy()); break
+        if mode == "drop":
+            b_ = 1 - (1 - u) ** 3
+            bounce = math.sin(u * math.pi * 2.5) * (1 - u) * 18 if u > 0.55 else 0
+            dy = int(round(-(gy + sg_lit.height + 12) * (1 - b_) + bounce))
+            im.paste(sg_lit, (gx, gy + dy), sg_lit)
+        else:
+            a = [0, 0.8, 0.15, 1, 0.5, 1, 1, 0.85, 1, 1, 1, 1, 1, 1][k - 1]
+            lit = sg_lit.copy(); arr = np.array(lit); arr[..., 3] = (arr[..., 3] * a).astype(np.uint8)
+            im.paste(Image.fromarray(arr), (gx, gy), Image.fromarray(arr))
+        out.append(im)
     return out
 
 
