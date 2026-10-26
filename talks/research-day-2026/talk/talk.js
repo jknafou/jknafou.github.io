@@ -1,38 +1,37 @@
-/* ?live=1: THE FALLBACK SHELL, the island videos with the LIVE slides pages (the
- * version of 26 October 2026, 21:00). talk.js loads it instead of itself on ?live=1.
- *
- * The talk's navigation shell (26 October 2026), a pragmatic stand-in for
+/* The talk's navigation shell (26 October 2026), a pragmatic stand-in for
  * world/FINAL-PLAN.md section 1.
  *
- * LEVELS OF DETAIL (the author, 26 October 2026: "Couln't the world be a simple
- * gif and it would load the rendering when clicking on it? Something lighter
- * until a click ... Load only when necessary"):
- *   WORLD   four looping VIDEOS of the islands' living views (media/<id>-tile.*),
- *           their signed stills as posters. No iframe, no SVG.
- *   ISLAND  one full-size looping VIDEO of the island (media/<id>.*), with HTML
- *           hotspots over its clickable regions. The island's heavy slides page
- *           loads behind it, hidden and resting; the hotspots come from it.
- *   SLIDE   the slides page itself, its entry played from rest, crossfaded in
- *           over the video. Going back up crossfades to the video at frame 0,
- *           which is the signed still the page rests on.
- * The flights (world <-> island, 2.2's translator <-> 2.1) move video elements
- * by transform and opacity only, on the compositor.
+ * VIDEO AT EVERY LEVEL (the author, 26 October 2026 evening: "now it is really
+ * smooth, can it be implemented at all the levels?"). Nothing heavy runs:
+ *   WORLD   four looping tile videos of the islands' living views.
+ *   ISLAND  the island page's resting picture (media/slides/<id>/rest-0.webp)
+ *           with the island's looping video over its drawing, and HTML hotspots.
+ *   SLIDE   the slide's resting picture (rest-<k>.webp, 2x); every move is a
+ *           video captured from the island's own slides page: in-<k> (entry from
+ *           the island view), out-<k> (back), fw-<k> (k -> k+1), bw-<k> (k+1 -> k).
+ *           Each video starts on the picture it leaves and ends on the one it reaches.
+ * ?live=1 loads talk-live.js instead: the same shell over the live slides pages.
+ * ?reduced=1 (or the OS setting) cuts between the pictures; the videos hold still.
  *
- * 2.1 is the inside of 2.2's translator ("I want 2.1 nested in 2.2 in the
- * translation part"), and 2.2's first step is 2.1's living view (its video):
- *   1.1 slides … 1.1 last → (zoom into 2.2's translator) 2.1's living view
- *   → 2.2's slides … → 3.1's slides … → 4.1's slides; ← exactly backwards.
- * ↓/Enter goes in, ↑/Escape goes out a layer (2.1 → 2.2's island view with the
- * translator marked → the world).
- * Hash: #/ (world), #/@3.1 (world, focus), #/2.2 (island view), #/2.2/3 (2.2's
- * slide 3), #/2.2/translation (2.1's living view); #/2.1 is an alias.
- * ?chrome=0 hides the strip; ?reduced=1 (or the OS setting) holds every video on
- * its still and turns the flights into short crossfades.
- * If a video cannot load, its poster (the signed still) stands in.
- * Media are made by make_media.mjs, stills by stills.mjs.
+ * The walk (→ forwards, ← exactly backwards):
+ *   1.1's slides … → (fade, then a zoom into 2.2's translator) 2.1's living view,
+ *   2.2's step 1 → 2.2's slides … → 3.1's … → 4.1's.
+ * ↓ from 2.1's living view goes one level deeper, into 2.1's nine slides (the
+ * author: "Can we add a depth for the translation island?"); there ←/→ move
+ * between them and ↑ climbs back to the living view.
+ * ↑/Escape climbs a layer: slide → island view → world.
+ * Hash: #/ (world), #/@3.1, #/2.2 (island view), #/2.2/3 (2.2's slide 3),
+ * #/2.2/translation (2.1's living view), #/2.2/translation/4 (2.1's slide 4);
+ * #/2.1 and #/2.1/4 are aliases. ?chrome=0 hides the strip.
+ * Media are made by make_media.mjs (--slides for these), stills by stills.mjs.
  */
 (function () {
   "use strict";
+  var params = new URLSearchParams(location.search);
+  if (params.get("live") === "1") {
+    var sc = document.createElement("script"); sc.src = "talk-live.js"; document.body.appendChild(sc);
+    return;
+  }
 
   var ISL = {
     "1.1": { sec: "1 Motivation", name: "1.1 Use case" },
@@ -42,46 +41,65 @@
   };
   var SUBNAME = { "2.1": "Translation (2.1)" };
   var WORLD = ["1.1", "2.2", "3.1", "4.1"];
-  var BASE = "../";
-  var params = new URLSearchParams(location.search);
   var REDUCED = params.get("reduced") === "1" ||
     !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-  var slidesUrl = function (id) { return BASE + "island-" + id + "-slides.html?autostart=0" + (REDUCED ? "&reduced=1" : ""); };
   var stillUrl = function (id) { return "stills/" + id + ".webp"; };
+  var slideMedia = function (id, name) { return "media/slides/" + id + "/" + name; };
   if (params.get("chrome") === "0") document.body.classList.add("nochrome");
 
+  /* ---- the clickable areas, as the author asked (26 October 2026 evening).
+   * Boxes are in the drawing's own units (the island page's viewBox). A region
+   * listed here REPLACES the boxes the page gives it; "union" merges the page's
+   * boxes for that region into one, "boxes" are explicit, "pad" widens. */
+  var HOTS = {
+    "1.1": {
+      "1.1": { union: true, pad: 10 },                                   /* the clinical case: one bigger box */
+      "3.3": { boxes: "experiment" }                                     /* the experiment: the whole landmark */
+    },
+    "2.2": {
+      "3": { union: true, pad: 6 },                                      /* pre-training: one big box */
+      "4": { boxes: "finetuning" },                                      /* fine-tuning: models + modules, and the tasks */
+      "4.1": { boxes: "pretrained" }                                     /* the pre-trained model, whole */
+    }
+  };
+
   var $ = function (id) { return document.getElementById(id); };
-  var viewEl = $("view"), worldEl = $("world"), stageEl = $("stage"), vidsEl = $("vids"), hotsEl = $("hots");
-  var veil = $("veil"), loading = $("loading"), fly = $("fly"), mark = $("mark");
+  var viewEl = $("view"), worldEl = $("world"), vidsEl = $("vids"), hotsEl = $("hots"), slideEl = $("slide");
+  var veil = $("veil"), fly = $("fly"), mark = $("mark"), restImg = $("rest");
   var crumb = $("crumb"), pos = $("pos"), strip = $("strip");
 
-  /* layer: world | island | sub (2.1's living view) | slide */
-  var S = { layer: "world", focus: 0, island: null, busy: false };
+  /* layer: world | island | sub (2.1's living view) | slide | subslide (2.1's slides) */
+  var S = { layer: "world", focus: 0, island: null, k: 0, sk: 0, busy: false };
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   var nextFrame = function () { return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); }); };
   function bump() { strip.classList.remove("bump"); void strip.offsetWidth; strip.classList.add("bump"); }
-  function refocus() { try { window.focus(); } catch (e) {} }
 
-  /* ---- what the media are: aspect and frame of each island's living view ---- */
-  var META = { "1.1": { aspect: 0.771 }, "2.1": { aspect: 1 }, "2.2": { aspect: 0.769 }, "3.1": { aspect: 1.275 }, "4.1": { aspect: 1.79 } };
+  /* ---- what the media are ---------------------------------------------------- */
+  var META = {}, SL = {};
   var metaReady = Promise.all([
     fetch("stills/stills.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
-    fetch("media/media.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
+    fetch("media/media.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
+    fetch("media/slides/slides.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
   ]).then(function (j) {
     [j[0], j[1]].forEach(function (m) { Object.keys(m).forEach(function (k) { META[k] = Object.assign(META[k] || {}, m[k]); }); });
+    SL = j[2];
     layoutWorld();
   });
+  function N(id) { return SL[id] ? SL[id].order.length : 0; }
 
-  function video(id, tile) {
+  function video(src, poster) {
     var v = document.createElement("video");
-    v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true;
+    v.muted = true; v.defaultMuted = true; v.playsInline = true;
     v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("disablepictureinpicture", "");
-    v.preload = "auto"; v.poster = stillUrl(id);
-    var base = "media/" + id + (tile ? "-tile" : "");
-    [["webm", "video/webm"], ["mp4", "video/mp4"]].forEach(function (s) {
-      var so = document.createElement("source"); so.src = base + "." + s[0]; so.type = s[1]; v.appendChild(so);
+    v.preload = "auto"; if (poster) v.poster = poster;
+    [].concat(src).forEach(function (s) {
+      var so = document.createElement("source"); so.src = s; so.type = /\.webm$/.test(s) ? "video/webm" : "video/mp4"; v.appendChild(so);
     });
     return v;
+  }
+  function loopVideo(id, tile) {
+    var base = "media/" + id + (tile ? "-tile" : "");
+    var v = video([base + ".webm", base + ".mp4"], stillUrl(id)); v.loop = true; return v;
   }
   function play(v) { if (REDUCED || !v) return; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
   function ready(v, ms) {
@@ -104,6 +122,10 @@
       } catch (e) { res(); }
     });
   }
+  function place(el, r) { el.style.left = r.x + "px"; el.style.top = r.y + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; }
+  function over(at, to) {
+    return "translate(" + (to.x - at.x) + "px," + (to.y - at.y) + "px) scale(" + (to.w / at.w) + "," + (to.h / at.h) + ")";
+  }
 
   /* ---- the world: four tile videos -------------------------------------- */
   var cells = [];
@@ -112,7 +134,7 @@
     WORLD.forEach(function (id, i) {
       var c = document.createElement("div"); c.className = "cell"; c.dataset.id = id;
       var f = document.createElement("div"); f.className = "frame";
-      var v = video(id, true); v.className = "tilevid"; if (!REDUCED) v.autoplay = true;
+      var v = loopVideo(id, true); v.className = "tilevid"; if (!REDUCED) v.autoplay = true;
       var lab = document.createElement("div"); lab.className = "label"; lab.textContent = ISL[id].sec + " · " + ISL[id].name;
       f.appendChild(v); c.appendChild(f); c.appendChild(lab); worldEl.appendChild(c);
       f.addEventListener("click", function () { if (S.layer !== "world" || S.busy) return; S.focus = i; markFocus(); openIsland(id); });
@@ -133,7 +155,6 @@
     });
     worldEl.style.gap = gap + "px";
   }
-  window.addEventListener("resize", function () { layoutWorld(); placeVideos(); if (S.layer === "island") buildHots(S.island); });
   function markFocus() { cells.forEach(function (c, i) { c.el.classList.toggle("focus", i === S.focus); }); }
   function worldPlaying(on) { cells.forEach(function (c) { if (on) play(c.vid); else c.vid.pause(); }); }
   function cellOf(id) { return cells.filter(function (x) { return x.id === id; })[0]; }
@@ -143,76 +164,55 @@
     return { x: b.left - v.left, y: b.top - v.top, w: b.width, h: b.height };
   }
 
-  /* ---- where an island's picture sits on its slides page, in the view's pixels.
-   * The page's <svg> fills the view, framed by its viewBox (xMidYMid meet); the
-   * video is the living view's viewBox. Without the page, the page's framing is
-   * reproduced: the island's box widened to 4:3, fitted to the view. */
-  function fitRect(fr, vb) {
-    var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
-    var s = Math.min(Vw / fr[2], Vh / fr[3]);
-    var ox = (Vw - fr[2] * s) / 2, oy = (Vh - fr[3] * s) / 2;
-    return { x: ox + (vb[0] - fr[0]) * s, y: oy + (vb[1] - fr[1]) * s, w: vb[2] * s, h: vb[3] * s };
+  /* ---- geometry: the island page's 4:3 card, as the page draws it at this view ----
+   * The page's <svg> is a 4:3 box centred in the view with a 2% margin (measured,
+   * slides.json svgFrac); its viewBox is the island's 4:3 frame. The captured
+   * pictures (1920x1080) are scaled so their card lands on that box. */
+  function cardBox() {
+    var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight, m = 0.96;
+    var w = Math.min(Vw * m, Vh * m * 4 / 3), h = w * 3 / 4;
+    return { x: (Vw - w) / 2, y: (Vh - h) / 2, w: w, h: h };
   }
-  function islandRect(id) {
-    var m = META[id] || {}, vb = m.vb || [0, 0, 1000 * (m.aspect || 1), 1000];
-    var rec = frames[id];
-    try {
-      var sv = rec.win.document.querySelector("body > svg"), r = sv.getBoundingClientRect();
-      var f = (sv.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
-      if (f.length === 4 && f[2] > 0 && r.width > 0) {
-        var s = Math.min(r.width / f[2], r.height / f[3]);
-        var ox = r.left + (r.width - f[2] * s) / 2, oy = r.top + (r.height - f[3] * s) / 2;
-        return { x: ox + (vb[0] - f[0]) * s, y: oy + (vb[1] - f[1]) * s, w: vb[2] * s, h: vb[3] * s };
-      }
-    } catch (e) {}
-    var a = vb[2] / vb[3], fr = a < 4 / 3 ? [vb[0] - (vb[3] * 4 / 3 - vb[2]) / 2, vb[1], vb[3] * 4 / 3, vb[3]]
-                                          : [vb[0], vb[1] - (vb[2] * 3 / 4 - vb[3]) / 2, vb[2], vb[2] * 3 / 4];
-    return fitRect(fr, vb);
+  function slideBox(id) {
+    var sf = (SL[id] && SL[id].svgFrac) || [0.14, 0.02, 0.72, 0.96], C = cardBox();
+    var k = C.h / (sf[3] * 1080), w = 1920 * k, h = 1080 * k;
+    return { x: C.x + C.w / 2 - (sf[0] + sf[2] / 2) * w, y: C.y + C.h / 2 - (sf[1] + sf[3] / 2) * h, w: w, h: h };
   }
-  /* 2.1's living view stands alone: its own box fitted to the view */
-  function subRect(id) { var m = META[id] || {}, vb = m.vb || [0, 0, 1000, 1000]; return fitRect(vb, vb); }
-  function place(el, r) { el.style.left = r.x + "px"; el.style.top = r.y + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; }
-  function over(at, to) {
-    return "translate(" + (to.x - at.x) + "px," + (to.y - at.y) + "px) scale(" + (to.w / at.w) + "," + (to.h / at.h) + ")";
+  /* a box in the drawing's units -> the view's pixels */
+  function toView(id, b) {
+    var f = (SL[id] && SL[id].frame), C = cardBox();
+    if (!f) { var m = META[id] || {}, vb = m.vb || [0, 0, 1000, 1000], a = vb[2] / vb[3];
+      f = a < 4 / 3 ? [vb[0] - (vb[3] * 4 / 3 - vb[2]) / 2, vb[1], vb[3] * 4 / 3, vb[3]] : [vb[0], vb[1] - (vb[2] * 3 / 4 - vb[3]) / 2, vb[2], vb[2] * 3 / 4]; }
+    var s = C.w / f[2];
+    return { x: C.x + (b[0] - f[0]) * s, y: C.y + (b[1] - f[1]) * s, w: b[2] * s, h: b[3] * s };
   }
-
-  /* ---- the island videos: the current island's, and 2.1's inside 2.2 ------- */
-  var vids = {};
-  function bigVideo(id) {
-    if (vids[id]) return vids[id];
-    var v = video(id, false); v.className = "bigvid";
-    vidsEl.appendChild(v);
-    vids[id] = v;
-    return v;
-  }
-  function rectFor(id) { return id === "2.1" ? subRect(id) : islandRect(id); }
-  /* a video's frame holds the drawing with the living view's own margin (2% a side,
-     media.json "content"): the element's box is the drawing's box widened by it */
+  function islandRect(id) { var m = META[id] || {}; return toView(id, m.vb || [0, 0, 1000, 1000]); }
+  /* the loop video's element box: the drawing's box widened by the video's own margin */
   function expand(id, r) {
     var c = (META[id] && META[id].content) || [0.02, 0.02, 0.96, 0.96];
     var w = r.w / c[2], h = r.h / c[3];
     return { x: r.x - c[0] * w, y: r.y - c[1] * h, w: w, h: h };
   }
-  function placeVideos() { Object.keys(vids).forEach(function (id) { place(vids[id], expand(id, rectFor(id))); }); }
-  /* the slides page's own ground (its margin colour and its 4:3 card), drawn behind
-     the island video so the hand-off between the two changes nothing but motion */
-  var card = document.createElement("div"); card.id = "card"; vidsEl.appendChild(card);
-  function ground(id) {
-    var rec = id && id !== "2.1" ? frames[id] : null;
-    try {
-      var d = rec.win.document, sv = d.querySelector("body > svg"), r = sv.getBoundingClientRect();
-      var bg = rec.win.getComputedStyle(d.body).backgroundColor, cb = rec.win.getComputedStyle(sv).backgroundColor;
-      vidsEl.style.background = bg;
-      card.style.background = cb && cb !== "rgba(0, 0, 0, 0)" ? cb : "";
-      place(card, { x: r.left, y: r.top, w: r.width, h: r.height }); card.style.display = "block";
-      return;
-    } catch (e) {}
-    vidsEl.style.background = ""; card.style.display = "none";
+  function loopBox(id) { return expand(id, islandRect(id)); }
+
+  /* ---- the island loop videos ------------------------------------------------ */
+  var vids = {};
+  function bigVideo(id) {
+    if (vids[id]) return vids[id];
+    var v = loopVideo(id, false); v.className = "bigvid";
+    vidsEl.appendChild(v);
+    vids[id] = v;
+    return v;
+  }
+  /* the loops are clipped to the page's card, as the page clips its drawing */
+  function clipVids() {
+    var C = cardBox(), Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
+    vidsEl.style.clipPath = "inset(" + C.y + "px " + (Vw - C.x - C.w) + "px " + (Vh - C.y - C.h) + "px " + C.x + "px)";
   }
   function showVideo(id) {
-    ground(id);
-    Object.keys(vids).forEach(function (k) { vids[k].classList.toggle("on", k === id); if (k !== id) vids[k].pause(); });
-    if (id) { place(bigVideo(id), expand(id, rectFor(id))); vids[id].classList.add("on"); play(vids[id]); }
+    clipVids();
+    Object.keys(vids).forEach(function (k) { if (k !== id) { vids[k].classList.remove("on"); vids[k].pause(); } });
+    if (id) { var v = bigVideo(id); place(v, loopBox(id)); v.classList.add("on"); play(v); }
   }
   function pruneVideos(keep) {
     Object.keys(vids).forEach(function (id) {
@@ -222,130 +222,124 @@
     });
   }
 
-  /* ---- the slides pages: the current island and the next, never more ------- */
-  var frames = {};
-  function frameFor(id) {
-    if (frames[id]) return frames[id];
-    var el = document.createElement("iframe");
-    el.src = slidesUrl(id); el.title = id; el.setAttribute("tabindex", "-1");
-    var rec = { id: id, el: el, win: null };
-    rec.ready = new Promise(function (res) {
-      el.addEventListener("load", function () {
-        var w = el.contentWindow; rec.win = w;
-        hookFrame(rec);
-        (function wait(n) {
-          if ((w.EntryStage && w.EntryStage.order) || n > 400) { stopTour(rec); res(rec); return; }
-          setTimeout(function () { wait(n + 1); }, 50);
-        })(0);
+  /* ---- the resting pictures --------------------------------------------------- */
+  var imgCache = {};
+  function restUrl(id, k) { return slideMedia(id, "rest-" + k + ".webp"); }
+  function preImg(id, k) {
+    if (k < 0 || (SL[id] && k > N(id))) return null;
+    var u = restUrl(id, k);
+    if (!imgCache[u]) { var im = new Image(); im.src = u; imgCache[u] = im.decode ? im.decode().catch(function () {}) : Promise.resolve(); }
+    return imgCache[u];
+  }
+  async function showRest(id, k) {
+    await preImg(id, k);
+    place(restImg, slideBox(id));
+    restImg.src = restUrl(id, k);
+    if (restImg.decode) await restImg.decode().catch(function () {});
+    slideEl.classList.add("on");
+    slideEl.style.background = (SL[id] && SL[id].bg) || "";
+  }
+  function hideRest() { slideEl.classList.remove("on"); }
+
+  /* ---- the move videos: preloaded, at most a handful ------------------------- */
+  var moves = {};
+  function moveVideo(id, name) {
+    var u = slideMedia(id, name + ".mp4");
+    if (moves[u]) { moves[u].t = Date.now(); return moves[u].v; }
+    var v = video(u); v.className = "movevid";
+    slideEl.appendChild(v);
+    moves[u] = { v: v, t: Date.now() };
+    var keys = Object.keys(moves);
+    if (keys.length > 8) {
+      keys.sort(function (a, b) { return moves[a].t - moves[b].t; }).slice(0, keys.length - 8).forEach(function (k) {
+        var e = moves[k].v; if (!e.paused) return; delete moves[k];
+        while (e.firstChild) e.removeChild(e.firstChild); e.load(); e.remove();
       });
-    });
-    stageEl.appendChild(el);
-    frames[id] = rec;
-    return rec;
-  }
-  function hookFrame(rec) {
-    var w = rec.win, d;
-    try { d = w.document; } catch (e) { return; }
-    var st = d.createElement("style");
-    st.textContent = "#entry-hud,#fixed-live-hint{display:none!important}";
-    d.head.appendChild(st);
-    var back = function () { setTimeout(refocus, 0); };
-    w.addEventListener("pointerup", back, true);
-    w.addEventListener("focus", back);
-    w.addEventListener("click", function (e) {             /* a link never navigates the page */
-      var a = e.target && e.target.closest && e.target.closest("a");
-      if (a) { e.preventDefault(); e.stopPropagation(); }
-    }, true);
-    w.addEventListener("keydown", function (e) { if (NAV[e.key]) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
-  }
-  function stage(rec) { try { return rec && rec.win && rec.win.EntryStage; } catch (e) { return null; } }
-  function fl(rec) { try { return rec && rec.win && rec.win.FixedLive; } catch (e) { return null; } }
-  function stopTour(rec) { var F = fl(rec); if (F && F.running) { try { F.stop(); } catch (e) {} } }
-  function cur() { return S.island ? frames[S.island] : null; }
-  function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
-  function prevW(id) { var i = WORLD.indexOf(id); return i > 0 ? WORLD[i - 1] : null; }
-  function prune(keep) {
-    Object.keys(frames).forEach(function (id) {
-      if (keep.indexOf(id) >= 0) return;
-      var r = frames[id]; delete frames[id];
-      try { r.el.src = "about:blank"; } catch (e) {}
-      r.el.remove();
-    });
-  }
-  /* the island on stage and the next one's page; the island's videos */
-  function keepSet(id) {
-    var n = nextW(id), k = [id];
-    if (n) k.push(n);
-    prune(k);
-    k.forEach(function (x) { frameFor(x).ready.then(function (r) { if (!(S.island === x && S.layer === "slide")) hush(r); }); });
-    pruneVideos(ISL[id].sub ? [id, ISL[id].sub] : [id]);
-  }
-  /* a page out of sight: at its island view, its tour stopped */
-  function hush(rec) {
-    var E = stage(rec);
-    if (E && E.phase !== "map") { try { E.leave(); } catch (e) {} }
-    var t = 0;
-    (function wait() {
-      if (S.island === rec.id && S.layer === "slide") return;
-      var E2 = stage(rec);
-      if (E2 && E2.phase === "map" && !E2.flying) { stopTour(rec); return; }
-      if (++t < 100) setTimeout(wait, 50);
-    })();
-  }
-  async function atMap(rec) {
-    var E = stage(rec);
-    if (!E) return;
-    if (E.phase !== "map") { try { E.leave(); } catch (e) {} }
-    for (var i = 0; i < 120; i++) {
-      E = stage(rec);
-      if (E.phase === "map" && !E.flying) { stopTour(rec); return; }
-      await sleep(50);
     }
+    return v;
   }
-  function showFrame(id) { Object.keys(frames).forEach(function (k) { frames[k].el.classList.toggle("on", k === id); }); }
-  async function loaded(id) {
-    var rec = frameFor(id), shown = false;
-    var t0 = setTimeout(function () { if (!shown) loading.classList.add("on"); }, 250);
-    await rec.ready;
-    shown = true; clearTimeout(t0); loading.classList.remove("on");
-    return rec;
+  function preload(id, names) { names.forEach(function (n) { if (n) moveVideo(id, n); }); }
+  /* what the next key might play, loaded while this one rests */
+  function preloadAround(id, k) {
+    var n = N(id), L = [];
+    if (k === 0) L.push("in-1");
+    else { L.push(k < n ? "fw-" + k : null, k > 1 ? "bw-" + (k - 1) : null, "out-" + k); }
+    preload(id, L);
+    preImg(id, k + 1); preImg(id, k - 1); preImg(id, 0);
   }
-  function pick(E, slide) {
-    var o = E.order;
-    return o[slide === "first" ? 0 : slide === "last" ? o.length - 1 : Math.max(0, Math.min(o.length - 1, slide))];
+  /* play one move: it starts on the picture now shown and ends on rest-<to> */
+  async function playMove(id, name, to) {
+    var target = preImg(id, to);
+    if (REDUCED) { await showRest(id, to); return; }
+    var v = moveVideo(id, name);
+    place(v, slideBox(id));
+    await ready(v, 6000);
+    if (v.currentTime !== 0) await seekTo(v, 0);
+    v.classList.add("on");
+    var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); });
+    var p = v.play(); if (p && p.catch) p.catch(function () {});
+    slideEl.classList.add("on");
+    await target;
+    await ended;
+    place(restImg, slideBox(id));
+    restImg.src = restUrl(id, to);
+    if (restImg.decode) await restImg.decode().catch(function () {});
+    v.classList.remove("on");
+    try { v.pause(); v.currentTime = 0; } catch (e) {}
   }
 
-  /* ---- hotspots over the island video, from the page's own hit boxes -------- */
+  /* ---- hotspots over the island view ------------------------------------------ */
+  function unionOf(bs) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    bs.forEach(function (b) { x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[0] + b[2]); y1 = Math.max(y1, b[1] + b[3]); });
+    return [x0, y0, x1 - x0, y1 - y0];
+  }
+  function padded(b, p) { return [b[0] - p, b[1] - p, b[2] + 2 * p, b[3] + 2 * p]; }
+  /* explicit boxes, in the drawing's units, read off rest-0 with the page's boxes drawn on it */
+  var NAMED = {
+    /* 2.2 fine-tuning: the tasks around, and the models with their attached modules inside */
+    finetuning: function () { return [[271, 716, 403, 457], [376, 793, 196, 302]]; },
+    /* 2.2 the pre-trained model, whole: its body, screen and badge */
+    pretrained: function () { return [[381, 852, 184, 150]]; },
+    /* 1.1 the experiment: the whole landmark */
+    experiment: function () { return EXPERIMENT; }
+  };
+  var EXPERIMENT = [[97, 732, 241, 247]];      /* "Translate the data", the balance and all round it */
+  function spotsFor(id) {
+    var info = SL[id]; if (!info) return [];
+    var order = info.order, ov = HOTS[id] || {}, by = {};
+    info.hits.forEach(function (h) { (by[h.rid] = by[h.rid] || []).push(h.box); });
+    var out = [];
+    Object.keys(by).forEach(function (rid) {
+      var k = order.indexOf(rid) + 1;
+      if (!k) return;
+      var o = ov[rid];
+      if (!o) by[rid].forEach(function (b) { out.push({ k: k, box: b }); });
+      else if (o.boxes) (NAMED[o.boxes] ? NAMED[o.boxes](info) : [unionOf(by[rid])]).forEach(function (b) { out.push({ k: k, box: b }); });
+      else if (o.union) out.push({ k: k, box: padded(unionOf(by[rid]), o.pad || 0) });
+    });
+    if (ISL[id].sub && info.door) out.push({ k: "sub", box: info.door });
+    out.sort(function (p, q) { return q.box[2] * q.box[3] - p.box[2] * p.box[3]; });   /* the smallest on top */
+    return out;
+  }
   function buildHots(id) {
     hotsEl.innerHTML = "";
-    var rec = frames[id], E = stage(rec);
-    if (!E || S.island !== id || S.layer !== "island") return;
-    var d; try { d = rec.win.document; } catch (e) { return; }
-    var sub = ISL[id].sub, spots = [];
-    Array.prototype.forEach.call(d.querySelectorAll("[data-hit]"), function (el) {
-      var rid = el.getAttribute("data-hit");
-      if (!E.slides[rid] && !(sub && rid === "1")) return;
-      var b = el.getBoundingClientRect();
-      if (b.width < 2 || b.height < 2) return;
-      spots.push({ rid: rid, b: b });
-    });
-    if (sub) { var a = d.querySelector("a.subisland"); if (a) spots.push({ rid: "1", b: a.getBoundingClientRect() }); }
-    spots.sort(function (p, q) { return q.b.width * q.b.height - p.b.width * p.b.height; });   /* the smallest on top */
-    spots.forEach(function (s) {
-      var h = document.createElement("div"); h.className = "hot";
-      var pad = Math.max(0, (40 - Math.min(s.b.width, s.b.height)) / 2);
-      place(h, { x: s.b.left - pad, y: s.b.top - pad, w: s.b.width + 2 * pad, h: s.b.height + 2 * pad });
-      var toSub = sub && s.rid === "1";
-      h.title = toSub ? SUBNAME[sub] : ((E.slides[s.rid] || {}).name || "");
+    if (S.layer !== "island" || S.island !== id) return;
+    spotsFor(id).forEach(function (s) {
+      var r = toView(id, s.box), h = document.createElement("div"); h.className = "hot";
+      var pad = Math.max(0, (40 - Math.min(r.w, r.h)) / 2);
+      place(h, { x: r.x - pad, y: r.y - pad, w: r.w + 2 * pad, h: r.h + 2 * pad });
+      h.title = s.k === "sub" ? SUBNAME[ISL[id].sub] : SL[id].names[s.k - 1];
+      h.addEventListener("pointerenter", function () { if (s.k !== "sub") preload(id, ["in-" + s.k]); });
       h.addEventListener("click", function () {
         if (S.busy || S.layer !== "island") return;
-        if (toSub) zoomIn(); else toSlide(s.rid);
+        if (s.k === "sub") zoomIn(); else enterSlide(s.k);
       });
       hotsEl.appendChild(h);
     });
   }
 
-  /* ---- the flights: transform and opacity on video elements only ------------ */
+  /* ---- the flights: transform and opacity only ------------------------------- */
   async function animate(els, ms) {
     document.body.classList.add("flying");
     els.forEach(function (o) { o.el.style.transition = "none"; o.el.style.transform = REDUCED ? (o.to.transform || "none") : (o.from.transform || "none"); o.el.style.opacity = o.from.opacity == null ? 1 : o.from.opacity; });
@@ -357,46 +351,48 @@
     document.body.classList.remove("flying");
   }
   function clean(el) { el.style.transition = el.style.transform = el.style.opacity = el.style.zIndex = ""; }
-  /* a copy of an island's tile video, in step with the one it leaves, for a flight */
   function flyVideo(id, from, r) {
-    var v = video(id, true); v.className = "flyvid"; place(v, r);
+    var v = loopVideo(id, true); v.className = "flyvid"; place(v, r);
     fly.appendChild(v);
     v.addEventListener("loadedmetadata", function () { try { v.currentTime = from ? (from.currentTime % (v.duration || 1e9)) : 0; } catch (e) {} }, { once: true });
     play(v);
     return v;
   }
 
-  /* world -> island: the tile flies to the island's place, the island video takes over */
+  /* ---- the island view: the page's resting picture, the loop over it ------- */
+  async function islandView(id, t) {
+    S.island = id; S.layer = "island"; S.k = 0;
+    await showRest(id, 0);
+    var v = bigVideo(id);
+    await ready(v, 3000);
+    if (t != null) await seekTo(v, t);
+    showVideo(id);
+    hotsEl.innerHTML = "";
+    buildHots(id);
+    preloadAround(id, 0);
+    keep(id);
+  }
+  function keep(id) { pruneVideos(ISL[id].sub ? [id, ISL[id].sub] : [id]); }
+
+  /* world -> island */
   async function openIsland(id) {
     S.busy = true;
+    await metaReady;
     buildWorld();
-    var c = cellOf(id), tile = tileRect(id), R = expand(id, islandRect(id));
-    var big = bigVideo(id); place(big, R);
+    var c = cellOf(id), tile = tileRect(id), R = loopBox(id);
     var fv = flyVideo(id, c && c.vid, R);
     fly.className = "on clear";
     await ready(fv, 1500);
     document.body.classList.add("in");
+    preImg(id, 0);
     await animate([{ el: fv, from: { transform: tile ? over(R, tile) : "none" }, to: { transform: "none" } }], 560);
     worldPlaying(false);
-    await ready(big, 3000); await seekTo(big, fv.currentTime);
-    S.island = id; S.layer = "island";
-    showFrame(null); showVideo(id);
+    await islandView(id, fv.currentTime);
     await nextFrame();
     fly.innerHTML = ""; fly.className = "";
-    keepSet(id);
-    S.busy = false; refocus(); update();
-    afterIsland(id);
+    S.busy = false; update();
   }
-  /* the island view is up: its page loads behind, and the hotspots follow it */
-  function afterIsland(id) {
-    frameFor(id).ready.then(async function (rec) {
-      if (!(S.island === id && S.layer === "island")) return;
-      await atMap(rec);
-      if (S.island === id && S.layer === "island") { placeVideos(); ground(id); buildHots(id); }
-    });
-  }
-
-  /* island -> world: the island flies back to its tile */
+  /* island -> world */
   async function goWorld(focusId) {
     S.busy = true;
     buildWorld();
@@ -406,78 +402,73 @@
     hotsEl.innerHTML = "";
     S.layer = "world";
     if (from && big && big.classList.contains("on")) {
-      var R = expand(from, islandRect(from)), tile = tileRect(from);
+      var R = loopBox(from), tile = tileRect(from);
       var fv = flyVideo(from, big, R); fly.className = "on";
       await ready(fv, 800);
       await nextFrame();
       fly.className = "on clear";
-      showVideo(null);
+      showVideo(null); hideRest();
       var c = cellOf(from); if (c) { try { c.vid.currentTime = (big.currentTime || 0) % (c.vid.duration || 1e9); } catch (e) {} }
       document.body.classList.remove("in");
       worldPlaying(true);
       await animate([{ el: fv, from: { transform: "none" }, to: { transform: tile ? over(R, tile) : "none" } }], 520);
       fly.innerHTML = ""; fly.className = "";
     } else {
-      showVideo(null);
+      showVideo(null); hideRest();
       document.body.classList.remove("in");
       worldPlaying(true);
       await sleep(300);
     }
-    showFrame(null);
-    if (cur()) hush(cur());
     S.island = null;
     S.busy = false; update();
   }
 
-  /* island view -> a slide: the page rests under the video; the video fades as the entry plays */
-  async function toSlide(rid) {
-    var id = S.island;
+  /* island view -> slide k (its entry video) */
+  async function enterSlide(k, idOverride) {
+    var id = idOverride || S.island;
     S.busy = true;
-    var rec = await loaded(id);
-    await atMap(rec);
     hotsEl.innerHTML = "";
-    showFrame(id);
-    S.layer = "slide";
-    stage(rec).enter(rid);
-    if (vids[id] && vids[id].classList.contains("on")) {
-      vidsEl.style.transition = "opacity 260ms ease"; vidsEl.style.opacity = 0;
-      await sleep(280);
-    }
-    showVideo(null); vidsEl.style.transition = ""; vidsEl.style.opacity = "";
-    keepSet(id);
-    S.busy = false; refocus(); update();
-  }
-  /* a slide -> the island view: the page plays its way out, then the video takes over at its still */
-  async function toIsland() {
-    var id = S.island, rec = cur();
-    S.busy = true;
-    await atMap(rec);
-    var v = bigVideo(id);
-    await ready(v, 2000); await seekTo(v, 0);
-    vidsEl.style.transition = "none"; vidsEl.style.opacity = 0;
-    showVideo(id); v.pause();
-    await nextFrame();
-    vidsEl.style.transition = "opacity 220ms ease"; vidsEl.style.opacity = 1;
-    await sleep(240); vidsEl.style.transition = ""; vidsEl.style.opacity = ""; play(v);
-    showFrame(null);
-    S.layer = "island";
+    var v = vids[id];
+    /* the entry starts on the island at rest: the loop goes back to its still first */
+    if (v && v.classList.contains("on")) { v.pause(); await seekTo(v, 0); }
+    var p = playMove(id, "in-" + k, k);
+    await sleep(60);
+    showVideo(null);
+    await p;
+    S.layer = idOverride ? "subslide" : "slide";
+    if (idOverride) S.sk = k; else S.k = k;
+    preloadAround(id, k);
     S.busy = false; update();
-    buildHots(id);
+  }
+  /* slide k -> the island view (its leave video), the loop taking over at its still */
+  async function leaveSlide(id, k, then) {
+    S.busy = true;
+    await playMove(id, "out-" + k, 0);
+    var v = bigVideo(id);
+    await ready(v, 3000); await seekTo(v, 0);
+    showVideo(id);
+    S.busy = false;
+    return then();
+  }
+  async function stepSlide(id, from, to, sub) {
+    S.busy = true;
+    await playMove(id, to > from ? "fw-" + from : "bw-" + to, to);
+    if (sub) S.sk = to; else S.k = to;
+    preloadAround(id, to);
+    S.busy = false; update();
   }
 
-  /* the translator: 2.2's video grows about the translator's box while 2.1's grows out of it */
+  /* ---- the translator: 2.2's loop grows about the translator's box while 2.1's grows out of it */
   function doorBox() {
-    try {
-      var b = frames[S.island].win.document.querySelector("a.subisland").getBoundingClientRect();
-      if (b.width > 4) return { x: b.left, y: b.top, w: b.width, h: b.height };
-    } catch (e) {}
-    var R = islandRect(S.island);                     /* without the page: where 2.2's still has it */
+    var d = SL[S.island] && SL[S.island].door;
+    if (d) return toView(S.island, d);
+    var R = islandRect(S.island);
     return { x: R.x + R.w * 0.22, y: R.y + R.h * 0.07, w: R.w * 0.17, h: R.h * 0.22 };
   }
   async function zoomTranslator(into) {
     var parent = S.island, sub = ISL[parent].sub;
     var A = bigVideo(parent), C = bigVideo(sub);
-    var R2 = islandRect(parent), R1 = subRect(sub), b = doorBox();
+    var R2 = islandRect(parent), R1 = islandRect(sub), b = doorBox();
     var eA = function (r) { return expand(parent, r); }, eC = function (r) { return expand(sub, r); };
     place(A, eA(R2)); place(C, eC(R1));
     var s = Math.max(b.w / R1.w, b.h / R1.h);
@@ -486,7 +477,7 @@
     var big = { x: tx + (R2.x - cx) * k, y: ty + (R2.y - cy) * k, w: R2.w * k, h: R2.h * k };
     await Promise.all([ready(A, 3000), ready(C, 3000)]);
     if (into) await seekTo(C, 0);
-    ground(null);
+    hideRest();
     A.style.zIndex = 1; C.style.zIndex = 2;
     var from = [into ? "none" : over(eA(R2), eA(big)), into ? over(eC(R1), eC(door)) : "none"];
     A.style.transition = C.style.transition = "none";
@@ -497,25 +488,26 @@
       { el: A, from: { transform: from[0], opacity: into ? 1 : 0 }, to: { transform: into ? over(eA(R2), eA(big)) : "none", opacity: into ? 0 : 1 } },
       { el: C, from: { transform: from[1], opacity: into ? 0 : 1 }, to: { transform: into ? "none" : over(eC(R1), eC(door)), opacity: into ? 1 : 0 } }
     ], into ? 650 : 550);
+    await showRest(into ? sub : parent, 0);
     showVideo(into ? sub : parent);
     clean(A); clean(C);
   }
   async function zoomIn() {
     S.busy = true;
-    hotsEl.innerHTML = ""; showFrame(null);
+    hotsEl.innerHTML = "";
     await zoomTranslator(true);
-    S.layer = "sub";
-    S.busy = false; refocus(); update();
+    S.layer = "sub"; S.sk = 0;
+    preloadAround(ISL[S.island].sub, 0);
+    S.busy = false; update();
   }
-  /* out of the translator: to 2.2's island view (the translator marked), or on to its first slide */
   async function zoomOut(then) {
     S.busy = true;
     await zoomTranslator(false);
-    S.layer = "island";
+    S.layer = "island"; S.k = 0;
     S.busy = false; update();
-    if (then === "first") { S.busy = true; var rec = await loaded(S.island); S.busy = false; return toSlide(stage(rec).order[0]); }
+    if (then === "first") return enterSlide(1);
+    buildHots(S.island);
     markDoor();
-    afterIsland(S.island);
   }
   function markDoor() {
     var b = doorBox(), pad = 8;
@@ -525,30 +517,29 @@
     markDoor.t = setTimeout(function () { mark.classList.remove("on"); }, 1400);
   }
 
-  /* between islands: a short fade through paper */
-  async function crossTo(id, slide) {
+  /* ---- between islands: a short fade through paper ------------------------ */
+  async function crossTo(id, where) {
     S.busy = true;
     veil.classList.add("on"); await sleep(300);
     hotsEl.innerHTML = "";
-    var old = S.island, rec = await loaded(id);
-    await atMap(rec);
+    showVideo(null);
     S.island = id;
-    if (old && old !== id && frames[old]) hush(frames[old]);
-    keepSet(id);
-    if (slide === "translation") {                    /* → into 2.2: straight through its translator */
-      showFrame(null); showVideo(id); vids[id].pause(); await seekTo(vids[id], 0);
-      S.layer = "island";
-      await nextFrame();
+    if (where === "last") {
+      await showRest(id, N(id)); S.layer = "slide"; S.k = N(id);
+      keep(id); preloadAround(id, S.k);
       veil.classList.remove("on"); await sleep(300);
-      S.busy = false;
-      return zoomIn();
+      S.busy = false; update(); return;
     }
-    if (slide === null) { showFrame(null); showVideo(id); S.layer = "island"; }
-    else { showVideo(null); showFrame(id); S.layer = "slide"; stage(rec).enter(pick(stage(rec), slide)); }
-    await nextFrame();
-    veil.classList.remove("on");
-    S.busy = false; refocus(); update();
-    if (slide === null) afterIsland(id);
+    /* "first" and "translation" both arrive on the island view at rest, then move on */
+    await showRest(id, 0);
+    var v = bigVideo(id); await ready(v, 3000); await seekTo(v, 0); v.pause();
+    place(v, loopBox(id)); v.classList.add("on");
+    S.layer = "island"; S.k = 0; keep(id);
+    preload(id, ["in-1"]);
+    veil.classList.remove("on"); await sleep(320);
+    S.busy = false;
+    if (where === "translation") return zoomIn();
+    return enterSlide(1);
   }
 
   /* ---- the keys ----------------------------------------------------------- */
@@ -556,7 +547,7 @@
   function onKey(k) {
     if (S.busy) return;
     var fwd = k === "ArrowRight", back = k === "ArrowLeft", down = k === "ArrowDown" || k === "Enter", up = k === "ArrowUp" || k === "Escape";
-    var island = S.island;
+    var id = S.island, n = N(id);
     if (S.layer === "world") {
       if (fwd || back) {
         var j = S.focus + (fwd ? 1 : -1);
@@ -566,79 +557,85 @@
       else bump();
       return;
     }
-    if (S.layer === "sub") {                     /* 2.1's living view: 2.2's first step */
-      if (fwd) zoomOut("first");
-      else if (up) zoomOut(null);
-      else if (back) { var pb = prevW(island); pb ? crossTo(pb, "last") : zoomOut(null); }
-      else bump();
-      return;
-    }
     if (S.layer === "island") {
-      if (down || fwd) {
-        if (ISL[island].sub) return zoomIn();
-        S.busy = true;
-        return loaded(island).then(function (rec) { S.busy = false; toSlide(stage(rec).order[0]); });
-      }
-      if (up) return goWorld(island);
-      if (back) { var p0 = prevW(island); return p0 ? crossTo(p0, "last") : bump(); }
+      if (down || fwd) return ISL[id].sub ? zoomIn() : enterSlide(1);
+      if (up) return goWorld(id);
+      if (back) { var p0 = prevW(id); return p0 ? crossTo(p0, "last") : bump(); }
       return;
     }
-    var E = stage(cur()); if (!E) return;      /* a slide */
-    var order = E.order, here = E.aim !== null && E.aim !== undefined ? E.aim : E.id, i = order.indexOf(here);
-    if (up) return toIsland();
+    if (S.layer === "sub") {                       /* 2.1's living view, 2.2's step 1 */
+      var sub = ISL[id].sub;
+      if (fwd) return zoomOut("first");
+      if (up) return zoomOut(null);
+      if (down) return enterSlide(1, sub);
+      if (back) { var pb = prevW(id); return pb ? crossTo(pb, "last") : zoomOut(null); }
+      return;
+    }
+    if (S.layer === "subslide") {                  /* 2.1's slides, one level deeper */
+      var sb = ISL[id].sub, m = N(sb);
+      if (up) return leaveSlide(sb, S.sk, function () { S.layer = "sub"; S.sk = 0; preloadAround(sb, 0); update(); });
+      if (fwd) return S.sk < m ? stepSlide(sb, S.sk, S.sk + 1, true) : bump();
+      if (back) return S.sk > 1 ? stepSlide(sb, S.sk, S.sk - 1, true) : bump();
+      return bump();
+    }
+    /* a slide */
+    if (up) return leaveSlide(id, S.k, function () { S.layer = "island"; S.k = 0; buildHots(id); preloadAround(id, 0); update(); });
     if (down) return bump();
     if (fwd) {
-      if (i >= 0 && i < order.length - 1) return E.goto(order[i + 1]);
-      var n = nextW(island);
-      return n ? crossTo(n, ISL[n].sub ? "translation" : "first") : bump();
+      if (S.k < n) return stepSlide(id, S.k, S.k + 1);
+      var nx = nextW(id);
+      return nx ? crossTo(nx, ISL[nx].sub ? "translation" : "first") : bump();
     }
     if (back) {
-      if (i > 0) return E.goto(order[i - 1]);
-      if (ISL[island].sub) return (async function () { await toIsland(); await zoomIn(); })();   /* 2.2's first slide ← the translation */
-      var p = prevW(island); return p ? crossTo(p, "last") : bump();
+      if (S.k > 1) return stepSlide(id, S.k, S.k - 1);
+      if (ISL[id].sub) return leaveSlide(id, 1, function () { S.layer = "island"; S.k = 0; return zoomIn(); });
+      var pv = prevW(id); return pv ? crossTo(pv, "last") : bump();
     }
   }
+  function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
+  function prevW(id) { var i = WORLD.indexOf(id); return i > 0 ? WORLD[i - 1] : null; }
   window.addEventListener("keydown", function (e) {
     if (!NAV[e.key] || e.altKey || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
     onKey(e.key);
   });
+  window.addEventListener("resize", function () {
+    layoutWorld();
+    if (S.island) {
+      Object.keys(vids).forEach(function (id) { place(vids[id], loopBox(id)); });
+      var cur = S.layer === "sub" || S.layer === "subslide" ? ISL[S.island].sub : S.island;
+      place(restImg, slideBox(cur));
+      if (S.layer === "island") buildHots(S.island);
+    }
+  });
 
   /* ---- where am I --------------------------------------------------------- */
   var lastHash = null;
-  function where() {
-    if (S.layer === "world" || !S.island) return { layer: "world", id: WORLD[S.focus] };
-    if (S.layer !== "slide") return { layer: S.layer, id: S.island };
-    var E = stage(cur());
-    if (!E) return { layer: "island", id: S.island };
-    var here = E.aim !== null && E.aim !== undefined ? E.aim : E.id, name = "";
-    try { name = (E.slides[here] && E.slides[here].name) || ""; } catch (e) {}
-    return { layer: "slide", id: S.island, k: E.order.indexOf(here), n: E.order.length, name: name };
-  }
   function update() {
-    var w = where(), I = ISL[w.id], path;
-    if (w.layer === "world") {
-      crumb.textContent = "The talk · " + I.sec + " › " + I.name;
+    var path, id = S.island;
+    if (S.layer === "world" || !id) {
+      var I0 = ISL[WORLD[S.focus]];
+      crumb.textContent = "The talk · " + I0.sec + " › " + I0.name;
       pos.textContent = "island " + (S.focus + 1) + " / " + WORLD.length;
-      path = S.focus ? "#/@" + w.id : "#/";
+      path = S.focus ? "#/@" + WORLD[S.focus] : "#/";
     } else {
-      var sub = I.sub ? 1 : 0, E = stage(frames[w.id]), own = E ? E.order.length : (w.n || 0), all = own + sub;
-      var trail = I.sec + " › " + I.name;
-      if (w.layer === "island") { crumb.textContent = trail; pos.textContent = "island view"; path = "#/" + w.id; }
-      else if (w.layer === "sub") {
-        crumb.textContent = trail + " › " + SUBNAME[I.sub] + " › step 1 / " + (all || "…");
-        pos.textContent = w.id + " · 1 / " + (all || "…");
-        path = "#/" + w.id + "/translation";
+      var I = ISL[id], subN = I.sub ? 1 : 0, all = N(id) + subN, trail = I.sec + " › " + I.name;
+      if (S.layer === "island") { crumb.textContent = trail; pos.textContent = "island view"; path = "#/" + id; }
+      else if (S.layer === "sub") {
+        crumb.textContent = trail + " › " + SUBNAME[I.sub] + " › step 1 / " + all + " · ↓ for its slides";
+        pos.textContent = id + " · 1 / " + all; path = "#/" + id + "/translation";
+      } else if (S.layer === "subslide") {
+        var sb = I.sub;
+        crumb.textContent = trail + " › " + SUBNAME[sb] + " › slide " + S.sk + " / " + N(sb) + " · " + SL[sb].names[S.sk - 1];
+        pos.textContent = id + " · 1 / " + all + " · " + sb + " " + S.sk + " / " + N(sb); path = "#/" + id + "/translation/" + S.sk;
       } else {
-        var at = sub + w.k + 1;
-        crumb.textContent = trail + (sub ? " › step " + at + " / " + all : " › slide " + (w.k + 1) + " / " + w.n) + (w.name ? " · " + w.name : "");
-        pos.textContent = w.id + " · " + at + " / " + all;
-        path = "#/" + w.id + "/" + (w.k + 1);
+        var at = subN + S.k;
+        crumb.textContent = trail + (subN ? " › step " + at + " / " + all : " › slide " + S.k + " / " + N(id)) + " · " + SL[id].names[S.k - 1];
+        pos.textContent = id + " · " + at + " / " + all; path = "#/" + id + "/" + S.k;
       }
     }
     if (path !== lastHash) { lastHash = path; try { history.replaceState(null, "", path); } catch (e) {} }
   }
-  setInterval(function () { if (!S.busy) update(); }, 250);
 
   /* ---- arrival ------------------------------------------------------------ */
   function parseHash() {
@@ -646,10 +643,10 @@
     if (!h) return { layer: "world", id: WORLD[0] };
     if (h[0] === "@") return { layer: "world", id: h.slice(1) };
     var p = h.split("/");
-    if (p[0] === "2.1") p = ["2.2", "translation"];
+    if (p[0] === "2.1") p = ["2.2", "translation"].concat(p.slice(1));
     if (!ISL[p[0]]) return { layer: "world", id: WORLD[0] };
-    if (p[1] === "translation" && ISL[p[0]].sub) return { layer: "sub", id: p[0] };
-    if (p.length > 1 && /^\d+$/.test(p[1])) return { layer: "slide", id: p[0], k: +p[1] - 1 };
+    if (p[1] === "translation" && ISL[p[0]].sub) return /^\d+$/.test(p[2] || "") ? { layer: "subslide", id: p[0], k: +p[2] } : { layer: "sub", id: p[0] };
+    if (p.length > 1 && /^\d+$/.test(p[1])) return { layer: "slide", id: p[0], k: +p[1] };
     return { layer: "island", id: p[0] };
   }
   async function arrive() {
@@ -658,26 +655,28 @@
     var wi = WORLD.indexOf(at.id); if (wi >= 0) S.focus = wi;
     if (at.layer === "world") { buildWorld(); markFocus(); update(); return; }
     document.body.classList.add("in");
-    S.island = at.id; S.layer = "island";
-    if (at.layer === "island") { showVideo(at.id); keepSet(at.id); update(); return afterIsland(at.id); }
-    S.busy = true;
-    var rec = await loaded(at.id);
-    await atMap(rec);
-    keepSet(at.id);
-    if (at.layer === "sub") { showVideo(at.id); S.busy = false; return zoomIn(); }
-    showFrame(at.id); S.layer = "slide";
-    stage(rec).enter(pick(stage(rec), at.k));
-    S.busy = false; update();
+    S.island = at.id;
+    if (at.layer === "island") { await islandView(at.id, 0); update(); return; }
+    if (at.layer === "slide") {
+      S.k = Math.max(1, Math.min(N(at.id), at.k)); S.layer = "slide";
+      await showRest(at.id, S.k); keep(at.id); preloadAround(at.id, S.k); update(); return;
+    }
+    var sub = ISL[at.id].sub;
+    keep(at.id);
+    if (at.layer === "sub") { await showRest(sub, 0); showVideo(sub); S.layer = "sub"; preloadAround(sub, 0); update(); return; }
+    S.sk = Math.max(1, Math.min(N(sub), at.k)); S.layer = "subslide";
+    await showRest(sub, S.sk); preloadAround(sub, S.sk); update();
   }
   arrive();
 
   window.Talk = {
     get state() {
-      var E = stage(cur());
-      return Object.assign({ busy: S.busy, frames: Object.keys(frames), videos: Object.keys(vids), hash: location.hash,
-        flying: !!(E && E.flying && S.layer === "slide"), phase: E ? E.phase : null,
-        crumb: crumb.textContent + " | " + pos.textContent, hots: hotsEl.children.length }, where());
+      return { busy: S.busy, layer: S.layer, id: S.island, k: S.k, sk: S.sk, hash: location.hash, flying: false,
+        crumb: crumb.textContent + " | " + pos.textContent, hots: hotsEl.children.length,
+        moves: Object.keys(moves).length, videos: Object.keys(vids) };
     },
-    key: onKey
+    key: onKey,
+    spots: function (id) { return spotsFor(id).map(function (s) { return { k: s.k, box: s.box, view: toView(id, s.box) }; }); }
   };
+  window.TalkNamed = NAMED;
 })();
