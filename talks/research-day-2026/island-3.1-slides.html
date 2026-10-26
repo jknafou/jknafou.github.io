@@ -4510,6 +4510,32 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
     return el;
   }
 
+  /* ⚠️ A CHART'S HEADS RIDE FROM THE SCALE'S START TO THEIR SCORES (slides 2 to
+   * 5), and this is the one writer that does it, so four slides ride alike.
+   * `Entry.ride(env, prefix, model, dx, lo, value, decimals)` -> function (u):
+   * u = 0 the head stands at the scale's start and its value reads `lo`; u = 1
+   * at its score (the markup's own place, so no transform is written) and the
+   * value reads the paper's figure; its ring, if any, steps on at u = 1. The
+   * value is SET, never cross-faded (house rule). At u < 0 every string is
+   * the signed one. */
+  function ride(env, prefix, model, dx, lo, value, decimals) {
+    var tr = E2.attr(part(env, prefix + "-" + model + "-ride"), "transform");
+    var val = part(env, prefix + "-" + model + "-val"), signed = val.textContent;
+    var ringEl = env.g.querySelector('[data-dyn-part="' + prefix + "-" + model + '-ring"]');
+    var ring = ringEl ? E2.opacity(ringEl) : function () {};
+    var dp = decimals == null ? 2 : decimals;
+    return function (u) {
+      if (u < 0) { tr(null); if (val.textContent !== signed) val.textContent = signed; ring(0); return; }
+      var c = u > 1 ? 1 : u;
+      tr(c >= 1 ? null : "translate(" + (-dx * (1 - c)).toFixed(3) + ",0)");
+      var s = (lo + (value - lo) * c).toFixed(dp);
+      if (val.textContent !== s) val.textContent = s;
+      ring(c >= 1 ? 1 : 0);
+    };
+  }
+  var E2 = Entry;
+
+  Entry.ride = ride;
   Entry.part = part;
   Entry.mod = mod;
   Entry.drive = drive;
