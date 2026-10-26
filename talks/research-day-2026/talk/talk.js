@@ -41,7 +41,8 @@
  * (media/retro/backdrop-<id>.webp, make_retro.py) is drawn BEHIND the island's card, and
  * the slide pictures and videos are clipped to the card: their margins are plain page
  * colour (measured on every rest picture and every move video), so only paper is cut, and
- * the signed card is shown untouched. ?plain=1 turns the rooms off.
+ * the signed card is shown untouched. Each room carries its title sign (backdrops.py),
+ * which the opening switches on or drops into place. ?plain=1 turns the rooms off.
  */
 (function () {
   "use strict";
@@ -223,13 +224,15 @@
 
   /* ---- the room behind the card (THE ROOMS, above) ----------------------------- */
   var bdEl = null, bdImg = null, bdId = null;
-  function roomOf(id) { return id === "2.1" ? "2.2" : id; }
+  /* 2.1 is inside the factory: its own picture when there is one (the factory with a
+   * TRANSLATION sub-plate under its METHODS plate), the factory's otherwise */
+  function roomOf(id) { return id === "2.1" && !(RJ && RJ.backdrops && RJ.backdrops["2.1"]) ? "2.2" : id; }
   function buildBackdrop() {
     if (bdEl) return;
     bdEl = document.createElement("div"); bdEl.id = "backdrop";
     bdImg = document.createElement("img"); bdImg.alt = ""; bdEl.appendChild(bdImg);
     viewEl.insertBefore(bdEl, viewEl.firstChild);
-    WORLD.forEach(function (id) { var im = new Image(); im.src = "media/retro/backdrop-" + id + ".webp"; });
+    WORLD.concat(["2.1"]).forEach(function (id) { var im = new Image(); im.src = "media/retro/backdrop-" + roomOf(id) + ".webp"; });
   }
   function setBackdrop(id) {
     if (!THEMED || !bdEl || !id) return;
