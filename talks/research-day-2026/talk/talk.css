@@ -13,8 +13,8 @@ body.nochrome #strip { display: none; }
          align-items: center; transition: opacity .3s; }
 .cell { position: relative; flex: 0 0 22%; height: 60%; display: flex; flex-direction: column; min-width: 0; }
 .cell .frame { position: relative; flex: 1 1 auto; outline: 2px solid transparent; outline-offset: 4px; border-radius: 12px; }
-.cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block;
-            pointer-events: none; user-select: none; }
+.cell video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block;
+              pointer-events: none; user-select: none; background: var(--paper); }
 .cell .frame { cursor: pointer; }
 .cell .label { flex: 0 0 auto; display: flex; justify-content: center; white-space: nowrap; padding-top: 6px; opacity: .55; transition: opacity .15s; }
 .cell.focus .frame { outline-color: var(--ink); }
@@ -55,3 +55,17 @@ body.cut #stage { transition: none; }
 #world, #stage, #stage iframe, #veil { will-change: opacity; }
 /* while an image flies, the pointer never hit-tests a heavy page */
 body.flying #stage, body.flying #stage iframe, body.flying #world { pointer-events: none !important; }
+
+/* the island videos, above the (hidden or resting) slides pages; the hotspots above them */
+#vids { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+#vids video { position: absolute; display: block; opacity: 0; transform-origin: 0 0; will-change: transform, opacity;
+              object-fit: fill; background: var(--paper); }
+#vids video.on { opacity: 1; }
+#hots { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+body:not(.in) #hots { display: none; }
+.hot { position: absolute; pointer-events: auto; cursor: pointer; box-sizing: border-box; border-radius: 10px;
+       border: 2px dashed transparent; }
+.hot:hover { border-color: rgba(48,46,46,.55); }
+#fly .flyvid { position: absolute; transform-origin: 0 0; will-change: transform, opacity; object-fit: fill; }
+#fly { z-index: 3; }
+#mark { z-index: 3; }
