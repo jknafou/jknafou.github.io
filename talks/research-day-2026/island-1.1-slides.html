@@ -8882,86 +8882,36 @@ window.FIXED_CLICKABLE = {"click": "opens", "min_box_units": 48, "pad_units": 6,
    * is what VERIFY 1, 1c, 1d and 6 drive, and it is the reduced-motion cut.
    * What changed is the FLIGHT, which now drives the pieces on a schedule
    * rather than driving `seek` on one parameter. */
-  function mapMove(id, into) {
+  function mapMove(id, into, fromT) {
+    /* ISLAND 1.1 (compose.py, section 5, H6): the map's two moves ARE E(t). */
     var sp = SLIDES[id];
     var cs = sp.cameraSpan || [0, 0.62];
-    /* ⚠️ THE TRAVEL TO AND FROM THE MAP IS THE SLIDE'S OWN DECLARED CAMERA
-     * TIME, NOT THE HOUSE'S `TRAVEL_S`. That constant is for slide to slide,
-     * where the distance is small and the author asked for "minimum travel";
-     * the map is the whole island away, and the smooth flight out is the one
-     * he said was not a waste of time. Each slide already declares how long
-     * its camera takes, as a span of its own `dur`, and that declaration is
-     * signed -- so using it keeps every slide's flight exactly as long as it
-     * was designed to be. Measured on this island: 1.62 s for slide 1 and
-     * 2.04 s for 3.4, against the 0.85 s a house constant would have given
-     * them, which made leaving snap rather than lift. */
-    var travel = sp.dur * (cs[1] - cs[0]);
-    /* ⚠️ ARRIVING FROM THE MAP, PHASE (5) RUNS THE SLIDE'S WHOLE t AT ITS OWN
-     * PACE, AND IS NOT COMPRESSED TO A KNEE. The first version ran everything
-     * before `cameraSpan[1]` through a 0.35 s lead on the reading that it was
-     * only the slide's own camera flight and some placing. On the extraction
-     * slide it is not: its sweep, the ruled lines of the signed drawing
-     * becoming PMID 44's prose, lives at t 0.06 to 0.30 -- entirely inside
-     * that lead -- so the one transformation the slide exists for was being
-     * fast-forwarded into a third of a second. The author saw it as a flash
-     * and named the cause: "its content only should be gradually removed and
-     * replaced".
-     *
-     * ⚠️ THE KNEE IS STILL RIGHT BETWEEN TWO SLIDES, where the camera has
-     * already been flown by the move and the slide's own early t is genuinely
-     * only placing. It is wrong here because the map move's phase (3) flies
-     * the SAME path the slide's own camera span describes, so the slide's
-     * early t is doing a second, different job. */
-    /* ⚠️ ARRIVING, (4) AND (5) OVERLAP ON PURPOSE, WHICH IS THE ONE PLACE THE
-     * FIVE PHASES ARE NOT STRICTLY IN ORDER. The author, 20 October 2026: "I
-     * think the flash impression comes from the background being removed at
-     * once instead of gradually. The hero document though should not disapear
-     * in the animation, its content only should be gradually removed and
-     * replaced." With the fade a phase of its own, the island's drawing is
-     * gone BEFORE the slide has drawn anything to stand where it stood, and
-     * the hole between them is what reads as a flash. This island's standing
-     * rule is that the zoom IS the transformation -- the map's own ruled lines
-     * become the slide's prose -- so the map must still be there while the
-     * slide takes it over. Leaving the map is unaffected: nothing is being
-     * replaced on the way out, so (1), (2) and (3) stay strictly in order. */
-    var secs = into ? [0, 0, travel, 0, sp.dur]
-                    : [PH_S[0], PH_S[1], travel, 0, 0];
+    var knee = Math.min(1, Math.max(0, cs[1]));
+    var from = (fromT === undefined || fromT === null || !(fromT > 0)) ? 1 : Math.min(1, fromT);
+    var low = Math.min(from, knee);
+    var secs = into ? [0, 0, sp.dur * knee, 0, sp.dur * (1 - knee)]
+                    : [from > knee ? PH_S[0] : 0, 0, sp.dur * low, 0, 0];
     var sch = schedule(secs);
     return {
-      id: id, into: into, dur: sch.dur, s: sch,
-      cam: Entry.camera(Entry.ISLAND_FRAME, sp.frame, 0, 1),
+      id: id, into: into, dur: sch.dur, s: sch, knee: knee, from: from, low: low,
       keep: sp.needs || [],
       t: function (p) { return p; }
     };
   }
 
-  /* returns the SLIDE's own t, which is what `S.t` goes on meaning: 1 while
-   * the slide is whole and 0 when it is not drawn. Three checks read it that
-   * way and would otherwise be measuring the schedule instead. */
+  /* returns the SLIDE's own t, which is what `S.t` goes on meaning */
   function mpaint(M, j) {
-    var u = Entry.span(j, 0, 1), S = M.s, slideT;
+    var u = Entry.span(j, 0, 1), S = M.s, t;
     if (M.into) {
-      view(M.cam(Entry.io3(S.at(u, 2))));                      /* (3) */
-      /* (4) receding across the first stretch of (5), so the island's drawing
-       * is still there while the slide draws itself over it */
-      var out = Entry.io3(Entry.span(S.at(u, 4), 0, BG_RECEDE));
-      writeHolds(function (n) {
-        var to = M.keep.indexOf(n) >= 0 ? 1 : 0;
-        return 1 + (to - 1) * out;
-      });
-      var p5 = S.at(u, 4);                                     /* (5) */
-      slideT = p5 <= 0 ? 0 : M.t(p5);
+      var p3 = S.at(u, 2), p5 = S.at(u, 4);
+      t = p5 > 0 ? M.knee + (1 - M.knee) * p5 : M.knee * p3;
     } else {
-      slideT = 1 - Entry.io3(S.at(u, 0));                      /* (1) */
-      var inP = Entry.io3(S.at(u, 1));                         /* (2) */
-      writeHolds(function (n) {
-        var from = M.keep.indexOf(n) >= 0 ? 1 : 0;
-        return from + (1 - from) * inP;
-      });
-      view(M.cam(1 - Entry.io3(S.at(u, 2))));                  /* (3) */
+      var p1 = S.at(u, 0), q3 = S.at(u, 2);
+      t = q3 > 0 ? M.low * (1 - q3)
+                 : M.from - (M.from - M.low) * Entry.io3(p1);
     }
-    paint(M.id, slideT);
-    return slideT;
+    seek(M.id, t);
+    return t;
   }
 
   var MN = null;              /* the map move in flight, if any */
