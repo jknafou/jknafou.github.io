@@ -3,6 +3,8 @@
  * seeking its own timeline (FixedLive.sync(t)) frame by frame, and encoded.
  *
  *   node world/talk/make_media.mjs --ffmpeg <path to ffmpeg> [--tmp <dir>] [--only 2.2,3.1] [--workers 8]
+ *   node world/talk/make_media.mjs --slides --ffmpeg <path> [--only 3.1] [--workers 10] [--crf 26]
+ *        (every slide move as video, every rest as a still: see "--slides" below)
  *
  * writes world/talk/media/<id>.mp4 + .webm (the island view: the island at up to
  * 1920x1080, framed exactly as its living view's viewBox, like stills/), and
@@ -21,7 +23,7 @@
  * ships a static one (python -c "import imageio_ffmpeg as f; print(f.get_ffmpeg_exe())").
  */
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -148,6 +150,144 @@ function encode(id, R) {
   for (const f of [id + ".mp4", id + ".webm", id + "-tile.mp4", id + "-tile.webm"])
     if (existsSync(join(OUT, f))) out[f] = Math.round(statSync(join(OUT, f)).size / 1024) + " kB";
   return out;
+}
+
+/* ---- --slides: every move of every island's slides page, as video, and every
+ * slide at rest, as a still (the author, 26 October 2026 evening: "now it is
+ * really smooth, can it be implemented at all the levels?").
+ * Captured from the deck's dynamic/dynamic.html AS IT IS (never rebuilt), by its
+ * own test API: EntryStage.mapSeek(id, into, j) for a slide's entry from the
+ * island view and its leave back, EntryStage.journeySeek(a, b, j) for a move
+ * between consecutive slides, both ways; EntryStage.seek(id, 1) for the rest.
+ * Writes media/slides/<island>/in-<k>.mp4, out-<k>.mp4, fw-<k>.mp4 (k -> k+1),
+ * bw-<k>.mp4 (k+1 -> k), rest-<k>.webp (2x), rest-0.webp (the island view), and
+ * media/slides/slides.json: order, names, the page's ground, its frame, every
+ * clickable region's boxes in the drawing's units, and the hand-off checks. */
+const SLIDE_SIZE = [1920, 1080];
+async function openSlides(id, dpr) {
+  const b = await browser();
+  await b.send("Emulation.setDeviceMetricsOverride", { width: SLIDE_SIZE[0], height: SLIDE_SIZE[1], deviceScaleFactor: dpr || 1, mobile: false });
+  await b.send("Page.navigate", { url: pathToFileURL(join(DECK, ISLANDS[id], "dynamic", "dynamic.html")).href + "?autostart=0" });
+  for (let i = 0; i < 1800; i++) {
+    await sleep(100);
+    if (await b.evaluate("!!(window.EntryStage && EntryStage.order && window.FixedLive)").catch(() => false)) break;
+  }
+  await sleep(500);
+  return b;
+}
+const RAF = "new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); })";
+async function slidesInfo(id) {
+  const b = await openSlides(id, 1);
+  try {
+    return await b.evaluate(`(function(){ var E = EntryStage, o = E.order; E.base();
+      var sv = document.querySelector("body > svg"), r = sv.getBoundingClientRect();
+      var f = (sv.getAttribute("viewBox") || "").trim().split(/[\\s,]+/).map(Number);
+      if (f.length !== 4) { var bv = sv.viewBox.baseVal; f = [bv.x, bv.y, bv.width, bv.height]; }
+      var s = Math.min(r.width / f[2], r.height / f[3]), ox = r.left + (r.width - f[2] * s) / 2, oy = r.top + (r.height - f[3] * s) / 2;
+      var toU = function (b) { return [f[0] + (b.left - ox) / s, f[1] + (b.top - oy) / s, b.width / s, b.height / s].map(function (x) { return +x.toFixed(2); }); };
+      var hits = [];
+      Array.prototype.forEach.call(document.querySelectorAll("[data-hit]"), function (el) {
+        var b = el.getBoundingClientRect(); if (b.width < 1 || b.height < 1) return;
+        hits.push({ rid: el.getAttribute("data-hit"), part: el.getAttribute("data-hit-part") || el.getAttribute("data-object") || "", box: toU(b) });
+      });
+      var door = document.querySelector("a.subisland"), doorBox = door ? toU(door.getBoundingClientRect()) : null;
+      var regions = (window.FIXED_CLICKABLE && FIXED_CLICKABLE.regions || []).map(function (g) { return { id: g.id, name: g.name, hit: g.hit }; });
+      var parts = {};
+      regions.forEach(function (g) { (g.hit || []).forEach(function (n) { var el = document.querySelector('[data-object="' + n + '"]'); if (el) { var b = el.getBoundingClientRect(); if (b.width > 0) parts[n] = toU(b); } }); });
+      return { order: o, names: o.map(function (k) { return E.slides[k].name; }),
+        bg: getComputedStyle(document.body).backgroundColor, frame: f, svgFrac: [r.left / innerWidth, r.top / innerHeight, r.width / innerWidth, r.height / innerHeight],
+        hits: hits, door: doorBox, regions: regions, parts: parts,
+        durs: o.map(function (k, i) { return { in: E.mapPlan(k, true).dur, out: E.mapPlan(k, false).dur, fw: i + 1 < o.length ? E.journeyPlan(k, o[i + 1]).dur : null, bw: i + 1 < o.length ? E.journeyPlan(o[i + 1], k).dur : null }; }) }; })()`);
+  } finally { b.close(); }
+}
+async function captureMoves(id, info, dir, workers) {
+  const o = info.order, moves = [];
+  o.forEach((k, i) => {
+    const n = i + 1;
+    moves.push({ name: "in-" + n, dur: info.durs[i].in, pre: `E.seek(${JSON.stringify(k)}, 0)`, at: (j) => `E.mapSeek(${JSON.stringify(k)}, true, ${j})` });
+    moves.push({ name: "out-" + n, dur: info.durs[i].out, pre: `E.seek(${JSON.stringify(k)}, 1)`, at: (j) => `E.mapSeek(${JSON.stringify(k)}, false, ${j})` });
+    if (i + 1 < o.length) {
+      const a = JSON.stringify(k), c = JSON.stringify(o[i + 1]);
+      moves.push({ name: "fw-" + n, dur: info.durs[i].fw, pre: `E.seek(${a}, 1)`, at: (j) => `E.journeySeek(${a}, ${c}, ${j})` });
+      moves.push({ name: "bw-" + n, dur: info.durs[i].bw, pre: `E.seek(${c}, 1)`, at: (j) => `E.journeySeek(${c}, ${a}, ${j})` });
+    }
+  });
+  moves.sort((x, y) => y.dur - x.dur);                       /* the longest first, spread over the workers */
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(workers, moves.length) }, async () => {
+    const b = await openSlides(id, 1);
+    try {
+      for (;;) {
+        const m = moves[next++]; if (!m) break;
+        const md = join(dir, m.name); mkdirSync(md, { recursive: true });
+        const N = Math.max(2, Math.ceil(m.dur * FPS) + 1);
+        m.frames = N;
+        /* every slide a previous move drew is put back to E(0) first: base() leaves them */
+        await b.evaluate(`(function(){ var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); ${m.pre}; return ${RAF}; })()`);
+        for (let f = 0; f < N; f++) {
+          const j = (f / (N - 1)).toFixed(6);
+          await b.evaluate(`(function(){ var E = EntryStage; ${m.at(j)}; return ${RAF}; })()`);
+          const s = await b.send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
+          writeFileSync(join(md, String(f).padStart(4, "0") + ".jpg"), Buffer.from(s.data, "base64"));
+        }
+      }
+    } finally { b.close(); }
+  }));
+  return moves;
+}
+async function captureRests(id, info, dir) {
+  const b = await openSlides(id, 2);
+  try {
+    const shoot = async (expr, name) => {
+      await b.evaluate(`(function(){ var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); ${expr}; return ${RAF}; })()`);
+      await sleep(150);
+      const s = await b.send("Page.captureScreenshot", { format: "webp", quality: 90 });
+      writeFileSync(join(dir, name), Buffer.from(s.data, "base64"));
+      /* and a 1x jpeg of the same state, for the hand-off check */
+      await b.send("Emulation.setDeviceMetricsOverride", { width: SLIDE_SIZE[0], height: SLIDE_SIZE[1], deviceScaleFactor: 1, mobile: false });
+      await b.evaluate(RAF);
+      const t = await b.send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
+      writeFileSync(join(TMP, "slides-" + id + "-" + name.replace(".webp", ".jpg")), Buffer.from(t.data, "base64"));
+      await b.send("Emulation.setDeviceMetricsOverride", { width: SLIDE_SIZE[0], height: SLIDE_SIZE[1], deviceScaleFactor: 2, mobile: false });
+      await b.evaluate(RAF);
+    };
+    await shoot("FixedLive.sync(0)", "rest-0.webp");
+    for (let i = 0; i < info.order.length; i++) await shoot(`E.seek(${JSON.stringify(info.order[i])}, 1)`, `rest-${i + 1}.webp`);
+  } finally { b.close(); }
+}
+async function slidesFor(id, workers) {
+  const t0 = Date.now();
+  const info = await slidesInfo(id);
+  const out = join(OUT, "slides", id); mkdirSync(out, { recursive: true });
+  const fr = join(TMP, "slides-" + id); mkdirSync(fr, { recursive: true });
+  const [moves] = await Promise.all([captureMoves(id, info, fr, workers), captureRests(id, info, out)]);
+  const x264 = ["-c:v", "libx264", "-preset", "slow", "-crf", String(arg("crf", "26")), "-pix_fmt", "yuv420p", "-g", String(FPS), "-movflags", "+faststart", "-an"];
+  const checks = {};
+  for (const m of moves) {
+    ff(["-framerate", String(FPS), "-start_number", "0", "-i", join(fr, m.name, "%04d.jpg"), ...x264, join(out, m.name + ".mp4")]);
+    /* hand-offs: first and last frames against the rests they leave and reach */
+    const n = +m.name.split("-")[1], last = String(m.frames - 1).padStart(4, "0");
+    const restJ = (k) => join(TMP, "slides-" + id + "-rest-" + k + ".jpg");
+    const [a, z] = m.name.startsWith("in") ? [0, n] : m.name.startsWith("out") ? [n, 0] : m.name.startsWith("fw") ? [n, n + 1] : [n + 1, n];
+    checks[m.name] = { frames: m.frames, first: +(+psnr(join(fr, m.name, "0000.jpg"), restJ(a)) || 99).toFixed(1), last: +(+psnr(join(fr, m.name, last + ".jpg"), restJ(z)) || 99).toFixed(1) };
+  }
+  let bytes = 0;
+  for (const f of readdirSync(out)) bytes += statSync(join(out, f)).size;
+  console.log(id, "slides:", info.order.length, "moves:", moves.length, "frames:", moves.reduce((s, m) => s + m.frames, 0),
+    "MB:", (bytes / 1048576).toFixed(1), "in", ((Date.now() - t0) / 1000).toFixed(0), "s");
+  delete info.durs;
+  return Object.assign(info, { checks, bytes });
+}
+if (process.argv.includes("--slides")) {
+  mkdirSync(join(OUT, "slides"), { recursive: true });
+  const sp = join(OUT, "slides", "slides.json");
+  const sm = existsSync(sp) ? JSON.parse(readFileSync(sp, "utf8")) : {};
+  const ids = ONLY ? ONLY.split(",") : Object.keys(ISLANDS);
+  const res = await Promise.all(ids.map(async (id) => [id, await slidesFor(id, WORKERS)]));
+  for (const [id, r] of res) sm[id] = r;
+  writeFileSync(sp, JSON.stringify(sm, null, 1) + "\n");
+  console.log("frames kept in", TMP);
+  process.exit(0);
 }
 
 mkdirSync(OUT, { recursive: true });
