@@ -3783,16 +3783,24 @@
   var PAD = (function () { var v = (params.get("maskpad") || "8,0.5").split(",").map(parseFloat); return (v.length === 2 && v[0] >= 0 && v[1] >= 0) ? v : [8, 0.5]; })();
   function boundMasks() {
     var ms = svg.querySelectorAll('mask[maskUnits="userSpaceOnUse"]'), n = 0, skipped = 0;
+    /* ⚠️ ALL THE BOXES ARE READ, THEN ALL THE ATTRIBUTES WRITTEN (26 October 2026,
+     * world/SMOOTH-RECIPE.md "Leave freeze"): read and written in turn, every getBBox()
+     * after a write forced a layout of the whole drawing, once per mask. A mask's
+     * child's box does not depend on the mask's own region, so the values are the same. */
+    var todo = [];
     for (var i = 0; i < ms.length; i++) {
       var m = ms[i];
       if (m.getAttribute("width") !== "10000" || m.getAttribute("height") !== "10000") { skipped++; continue; }
       var first = m.firstElementChild;
       if (!first || typeof first.getBBox !== "function") { skipped++; continue; }
-      var b = first.getBBox();
+      var b = first.getBBox();                         /* reads only: one layout for all */
       if (!(b.width >= 0 && b.height >= 0)) { skipped++; continue; }
-      var pad = Math.max(PAD[0], PAD[1] * Math.max(b.width, b.height));
-      m.setAttribute("x", (b.x - pad).toFixed(2)); m.setAttribute("y", (b.y - pad).toFixed(2));
-      m.setAttribute("width", (b.width + 2 * pad).toFixed(2)); m.setAttribute("height", (b.height + 2 * pad).toFixed(2));
+      todo.push([m, b.x, b.y, b.width, b.height]);
+    }
+    for (var j = 0; j < todo.length; j++) {           /* then writes only */
+      var t = todo[j], pad = Math.max(PAD[0], PAD[1] * Math.max(t[3], t[4]));
+      t[0].setAttribute("x", (t[1] - pad).toFixed(2)); t[0].setAttribute("y", (t[2] - pad).toFixed(2));
+      t[0].setAttribute("width", (t[3] + 2 * pad).toFixed(2)); t[0].setAttribute("height", (t[4] + 2 * pad).toFixed(2));
       n++;
     }
     return { bounded: n, left: skipped };
