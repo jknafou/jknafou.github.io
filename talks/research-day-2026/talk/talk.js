@@ -61,38 +61,39 @@
 
   function bump() { strip.classList.remove("bump"); void strip.offsetWidth; strip.classList.add("bump"); }
   function refocus() { try { window.focus(); } catch (e) {} }
-  /* ---- the world: built on first need, never with a slides page's cost ---- */
+  /* ---- the world: four STILLS, never four living pages -------------------
+   * The author, 26 October 2026, on his laptop: "The hovering at the world level
+   * (selecting the island) is really slow." The world showed four living views
+   * in iframes; it now shows each island's signed still (stills/<id>.webp, made
+   * by stills.mjs from the living view at rest) and a CSS outline for hover and
+   * focus. Nothing on the world runs, so hover costs one style change. */
+  var STILL = { "1.1": { aspect: 0.771 }, "2.1": { aspect: 1 }, "2.2": { aspect: 0.769 }, "3.1": { aspect: 1.275 }, "4.1": { aspect: 1.79 } };
+  var stillsReady = fetch("stills/stills.json").then(function (r) { return r.json(); })
+    .then(function (j) { Object.keys(j).forEach(function (k) { STILL[k] = j[k]; }); layoutWorld(); })
+    .catch(function () {});
+  var stillUrl = function (id) { return "stills/" + id + ".webp"; };
+  /* decode every still once, so a zoom never waits on an image */
+  Object.keys(STILL).forEach(function (id) { var im = new Image(); im.src = stillUrl(id); if (im.decode) im.decode().catch(function () {}); });
   var cells = [];
   function buildWorld() {
     if (cells.length) return;
     WORLD.forEach(function (id, i) {
       var c = document.createElement("div"); c.className = "cell"; c.dataset.id = id;
       var f = document.createElement("div"); f.className = "frame";
-      var ifr = document.createElement("iframe"); ifr.src = liveUrl(id); ifr.setAttribute("tabindex", "-1");
-      ifr.title = ISL[id].name;
-      var hit = document.createElement("div"); hit.className = "hit";
+      var img = document.createElement("img"); img.src = stillUrl(id); img.alt = ISL[id].name; img.decoding = "async"; img.draggable = false;
       var lab = document.createElement("div"); lab.className = "label"; lab.textContent = ISL[id].sec + " · " + ISL[id].name;
-      f.appendChild(ifr); f.appendChild(hit); c.appendChild(f); c.appendChild(lab); worldEl.appendChild(c);
-      var cell = { id: id, el: c, ifr: ifr, playing: false };
-      ifr.addEventListener("load", function () {
-        cell.loaded = true;
-        try {
-          var sv = ifr.contentDocument.querySelector("body > svg"), vb = sv && sv.viewBox && sv.viewBox.baseVal;
-          if (vb && vb.width && vb.height) cell.aspect = vb.width / vb.height;
-        } catch (e) {}
-        layoutWorld(); playWorld();
-      });
-      hit.addEventListener("mouseenter", function () { S.hover = i; playWorld(); });
-      hit.addEventListener("mouseleave", function () { if (S.hover === i) S.hover = null; playWorld(); });
-      hit.addEventListener("click", function () { if (S.layer !== "world" || S.busy) return; S.focus = i; openIsland(id); });
+      f.appendChild(img); c.appendChild(f); c.appendChild(lab); worldEl.appendChild(c);
+      var cell = { id: id, el: c, img: img, frame: f };
+      f.addEventListener("click", function () { if (S.layer !== "world" || S.busy) return; S.focus = i; markFocus(); openIsland(id); });
       cells.push(cell);
     });
+    layoutWorld();
   }
   /* each island at its own aspect, all at one height, the row as large as the view allows */
   function layoutWorld() {
     if (!cells.length) return;
     var W = worldEl.clientWidth, H = worldEl.clientHeight, gap = Math.max(12, W * 0.015), lab = 26;
-    var asp = cells.map(function (c) { return c.aspect || 1; });
+    var asp = cells.map(function (c) { return (STILL[c.id] && STILL[c.id].aspect) || 1; });
     var sum = asp.reduce(function (a, b) { return a + b; }, 0);
     var h = Math.min(H * 0.9 - lab, (W * 0.96 - gap * (cells.length - 1)) / sum);
     cells.forEach(function (c, i) {
@@ -103,18 +104,64 @@
   }
   window.addEventListener("resize", layoutWorld);
   function fl(win) { try { return win && win.FixedLive; } catch (e) { return null; } }
-  /* only the island under focus or hover plays; the rest hold their still */
-  function playWorld() {
-    cells.forEach(function (c, i) {
-      var want = S.layer === "world" && (i === S.focus || i === S.hover);
-      var F = fl(c.ifr.contentWindow);
-      if (!F) return;
-      try {
-        if (want && !F.running) F.start();
-        else if (!want && F.running) F.stop();
-      } catch (e) {}
-    });
-    cells.forEach(function (c, i) { c.el.classList.toggle("focus", i === S.focus); });
+  function markFocus() { cells.forEach(function (c, i) { c.el.classList.toggle("focus", i === S.focus); }); }
+  function playWorld() { markFocus(); }       /* the world holds its stills; nothing plays there */
+  function tileRect(id) {
+    var c = cells.filter(function (x) { return x.id === id; })[0];
+    if (!c) return null;
+    var b = c.img.getBoundingClientRect(), v = viewEl.getBoundingClientRect();
+    return { x: b.left - v.left, y: b.top - v.top, w: b.width, h: b.height };
+  }
+
+  /* ---- the still's place on a mounted page: its drawing's box, in the view's pixels.
+   * The page's <svg> fills its frame with the island framed by its own viewBox
+   * (xMidYMid meet); the still is the living view's viewBox, so its box is that
+   * viewBox mapped through the page's. Falls back to the still fitted to the view. */
+  function stillRect(rec, id) {
+    var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight, st = STILL[id] || { aspect: 1 };
+    try {
+      var sv = rec.win.document.querySelector("body > svg"), r = sv.getBoundingClientRect();
+      var vbA = (sv.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
+      if (vbA.length !== 4 || !(vbA[2] > 0)) { var bv = sv.viewBox.baseVal; vbA = [bv.x, bv.y, bv.width, bv.height]; }
+      var s = Math.min(r.width / vbA[2], r.height / vbA[3]);
+      var ox = r.left + (r.width - vbA[2] * s) / 2, oy = r.top + (r.height - vbA[3] * s) / 2;
+      var q = st.vb || vbA;
+      if (s > 0 && isFinite(s)) return { x: ox + (q[0] - vbA[0]) * s, y: oy + (q[1] - vbA[1]) * s, w: q[2] * s, h: q[3] * s };
+    } catch (e) {}
+    var a = st.aspect, w = Math.min(Vw, Vh * a), h = w / a;
+    return { x: (Vw - w) / 2, y: (Vh - h) / 2, w: w, h: h };
+  }
+
+  /* ---- the flight: images only, transform and opacity only (the compositor's) --- */
+  var fly = $("fly");
+  var nextFrame = function () { return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); }); };
+  function place(el, r) { el.style.left = r.x + "px"; el.style.top = r.y + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; }
+  /* the transform that draws a box laid out at `at` over the box `to` */
+  function over(at, to) {
+    return "translate(" + (to.x - at.x) + "px," + (to.y - at.y) + "px) scale(" + (to.w / at.w) + "," + (to.h / at.h) + ")";
+  }
+  function flyImg(id, at) {
+    var im = document.createElement("img");
+    im.src = stillUrl(id); im.className = "flyimg"; im.draggable = false;
+    place(im, at);
+    fly.appendChild(im);
+    return im;
+  }
+  function flyClear() { fly.innerHTML = ""; fly.className = ""; }
+  async function animate(els, ms) {
+    /* els: [{el, from:{transform, opacity}, to:{...}}]; set from, two frames, then to */
+    els.forEach(function (o) { o.el.style.transition = "none"; o.el.style.transform = o.from.transform || "none"; o.el.style.opacity = o.from.opacity == null ? 1 : o.from.opacity; });
+    var dec = els.map(function (o) { return o.el.decode ? o.el.decode().catch(function () {}) : null; });
+    await Promise.all(dec);
+    await nextFrame();
+    var tr = "transform " + ms + "ms cubic-bezier(.45,0,.2,1), opacity " + ms + "ms ease";
+    els.forEach(function (o) { o.el.style.transition = tr; o.el.style.transform = o.to.transform || "none"; o.el.style.opacity = o.to.opacity == null ? 1 : o.to.opacity; });
+    await sleep(ms + 30);
+  }
+  async function fadeFly(ms) {
+    fly.style.transition = "opacity " + ms + "ms ease"; fly.style.opacity = 0;
+    await sleep(ms + 20);
+    flyClear(); fly.style.transition = ""; fly.style.opacity = "";
   }
 
   /* ---- the slides pages: the current island, its nested one, and the next -- */
@@ -250,28 +297,30 @@
     clearTimeout(markDoor.t);
     markDoor.t = setTimeout(function () { mark.classList.remove("on"); }, 1400);
   }
-  /* the zoom: the parent grows about the translator while the nested island grows out of it */
+  /* the zoom into the translator, on IMAGES: 2.2's still grows about the
+     translator's box while 2.1's still grows out of it; the live page is shown
+     under the images once they rest, and the images fade away */
   async function zoom(outer, inner, into, ms) {
-    var b = doorBox(), Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
-    var a = outer.el, c = inner.el;
-    if (!b) { /* no box: a plain crossfade */
-      b = { x: Vw * 0.4, y: Vh * 0.4, w: Vw * 0.2, h: Vh * 0.2 };
-    }
-    var s = Math.max(b.w / Vw, b.h / Vh), cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    var small = "translate(" + (cx - Vw * s / 2) + "px," + (cy - Vh * s / 2) + "px) scale(" + s + ")";
-    var big = "translate(" + (Vw / 2 - cx / s) + "px," + (Vh / 2 - cy / s) + "px) scale(" + (1 / s) + ")";
-    [a, c].forEach(function (e) { e.style.transition = "none"; e.style.transformOrigin = "0 0"; });
-    a.style.opacity = 1; a.style.transform = into ? "none" : big;
-    c.style.opacity = into ? 0 : 1; c.style.transform = into ? small : "none";
-    c.style.zIndex = 2; a.style.zIndex = 1;
-    void c.offsetWidth;
-    var tr = "transform " + ms + "ms cubic-bezier(.45,0,.25,1), opacity " + ms + "ms ease";
-    a.style.transition = tr; c.style.transition = tr;
-    a.style.transform = into ? big : "none";
-    c.style.transform = into ? "none" : small;
-    c.style.opacity = into ? 1 : 0;
-    await sleep(ms + 40);
-    [a, c].forEach(function (e) { e.style.transition = e.style.transform = e.style.opacity = e.style.zIndex = e.style.transformOrigin = ""; });
+    var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
+    var b = doorBox() || { x: Vw * 0.4, y: Vh * 0.4, w: Vw * 0.2, h: Vh * 0.2 };
+    var parent = S.island, sub = ISL[parent].sub;
+    var R2 = stillRect(outer, parent), R1 = stillRect(inner, sub);
+    var s = Math.max(b.w / R1.w, b.h / R1.h);
+    var door = { x: b.x + b.w / 2 - R1.w * s / 2, y: b.y + b.h / 2 - R1.h * s / 2, w: R1.w * s, h: R1.h * s };
+    /* 2.2 scaled so the translator's box becomes 2.1's box */
+    var k = R1.w / door.w, cx = b.x + b.w / 2, cy = b.y + b.h / 2, tx = R1.x + R1.w / 2, ty = R1.y + R1.h / 2;
+    var big = { x: tx + (R2.x - cx) * k, y: ty + (R2.y - cy) * k, w: R2.w * k, h: R2.h * k };
+    flyClear(); fly.className = "on";
+    var a = flyImg(parent, R2), c = flyImg(sub, R1);
+    var A = { el: a, from: { transform: into ? "none" : over(R2, big), opacity: into ? 1 : 0 }, to: { transform: into ? over(R2, big) : "none", opacity: into ? 0 : 1 } };
+    var C = { el: c, from: { transform: into ? over(R1, door) : "none", opacity: into ? 0 : 1 }, to: { transform: into ? "none" : over(R1, door), opacity: into ? 1 : 0 } };
+    A.from.opacity = 1; A.to.opacity = into ? 0.0 : 1;
+    if (into) { A.to.opacity = 0; } else { A.from.opacity = 0; A.to.opacity = 1; }
+    await animate([A, C], ms);
+    /* the destination page, shown under the resting image, then the image fades */
+    showFrame((into ? inner : outer).id);
+    await nextFrame();
+    await fadeFly(160);
   }
 
   /* ---- the moves -------------------------------------------------------- */
