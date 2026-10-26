@@ -50,3 +50,6 @@ body.in #world { opacity: 0; pointer-events: none; }
 #fly.on.clear { background: transparent; }
 #fly .flyimg { position: absolute; transform-origin: 0 0; will-change: transform, opacity; user-select: none; }
 body.cut #stage { transition: none; }
+/* every layer that fades is its own compositor layer, so a fade or a show/hide
+   never repaints a heavy island page (measured: 670 ms of paint at 4x without) */
+#world, #stage, #stage iframe, #veil { will-change: opacity; }
