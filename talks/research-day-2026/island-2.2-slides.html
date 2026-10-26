@@ -5977,8 +5977,13 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
    * in front of it. Added 19 October 2026 for slide 3.4's above-or-below
    * graph, defaulted to "" so the eight callers that predate it are
    * untouched. */
-  function counter(el, to, decimals, suffix, prefix) {
+  /* ⚠️ `group` (26 October 2026, island 2.2's composer): true writes the
+   * thousands with commas, "8,000" and "500,000", which `toFixed` cannot, so
+   * two of 2.2's entries carried a figure writer of their own with this very
+   * contract. Whole numbers only: grouping is refused with decimals > 0. */
+  function counter(el, to, decimals, suffix, prefix, group) {
     if (!el) return function () {};
+    if (group && decimals) throw new Error("counter(): group wants decimals 0");
     var signed = el.textContent, pre = prefix || "";
     return function (u) {
       /* ⚠️ A NEGATIVE u MEANS "RESTORE THE SIGNED STRING" and 0 means "count
@@ -5986,7 +5991,11 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
        * made a figure flash its finished value on the frame it appeared. */
       var s;
       if (u < 0) { s = signed; }
-      else { s = pre + (to * (u > 1 ? 1 : u)).toFixed(decimals) + suffix; }
+      else {
+        var v = (to * (u > 1 ? 1 : u)).toFixed(decimals);
+        if (group) v = v.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        s = pre + v + (suffix || "");
+      }
       if (el.textContent !== s) el.textContent = s;
     };
   }
@@ -6357,6 +6366,17 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
     };
   }
   Entry.follow = follow;
+
+  /* ⚠️ THE MAP'S MODULES REBUILT AT THE SLIDE'S SCALE WHILE A LOOP RUNS (the
+   * house `rescale`, off by default). Turned on 26 October 2026 by the
+   * composer, as island 1.1's entry.py does: without it FixedLive stays built
+   * at the overview's 0.70 px/unit on every slide, and 08-H stills its two pale
+   * beads under BEAD_MIN_PX 4 (5.3 u x 0.70 = 3.7 px), so on slide 3.3 the
+   * correction never visibly rides the river into the model (measured by its
+   * verifier: 1 distinct state across a loop; 19 with the flag, at 2.00
+   * px/unit). Every E(t), journey and seek still runs on the map's tier; only a
+   * running loop is rebuilt, and `stopIdle` rebuilds the map's before E(1). */
+  Entry.RESCALE_ON_SLIDE = true;
 })(window);
 
 </script>
@@ -7512,7 +7532,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
   }
 
   /* ---- the idle, started when E reaches 1 and killed by easing to E(1) --- */
-  var idleTl = null, idleP = null, settle = null;
+  var idleTl = null, idleP = null, settle = null, idleId = null;
   function startIdle(id) {
     var B = built(id), spec = SLIDES[id];
     if (FL.reducedNow()) return;
@@ -7520,6 +7540,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
     var I = B.idle;
     if (!I) return;
     rescale(id);
+    idleId = id;
     idleP = { u: 0 };
     idleTl = gsap.timeline();
     if (I.preludeFor > 0) {
@@ -7598,6 +7619,28 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
       } });
   }
 
+  /* ⚠️ A LOOP KILLED WITHOUT ITS SETTLE STILL PUTS ITS OWN WRITES BACK
+   * (26 October 2026, island 2.2's composer; its CONTRACT.md H7). `travel`,
+   * `enter` and `base` used to kill `idleTl` and `settle` and call `quiet()`,
+   * which puts the ISLAND's clock at sync(0) but never calls the slide's
+   * `idleAt(0)`: whatever `idleAt` last wrote on an element `at` does not own
+   * stayed. Measured on 2.2: after 2 -> 3 by ArrowRight and a leave, slide 2's
+   * `<g data-dyn="s1-oc-follow">` kept `opacity="0.0000"`, 17 bytes, while
+   * every entry alone round-tripped at 0. `stopIdle` already ends on
+   * `apply(beats); idleAt(0)`; this is the same ending for the abrupt paths,
+   * after `quiet()` so the follow reads the signed pose at the map's tier. */
+  function dropIdle() {
+    var id = (idleTl || settle) ? idleId : null;
+    if (idleTl) { idleTl.kill(); idleTl = null; }
+    if (settle) { settle.kill(); settle = null; }
+    idleId = null;
+    quiet();
+    if (id && SLIDES[id] && SLIDES[id].idleAt) {
+      var B = built(id), I = B.idle;
+      SLIDES[id].idleAt(0, B.w, B.env, I ? I.period : 0);
+    }
+  }
+
   /* ---- the state machine ------------------------------------------------- */
   var S = { phase: "map", id: null, from: null, fly: null, t: 0 };
 
@@ -7647,9 +7690,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
      * needed five bisections to say where, because the symptom was 434 kB
      * downstream of the cause. One writer per clock, asserted here rather than
      * relied upon. */
-    if (idleTl) { idleTl.kill(); idleTl = null; }
-    if (settle) { settle.kill(); settle = null; }
-    quiet();
+    dropIdle();                       /* kills idleTl and settle, quiet(), idleAt(0) */
     JN = null; AIM = null;            /* an enter is a fresh start, never a retarget */
     S.phase = "in"; S.id = id; S.from = null;
     seek(id, 0);
@@ -7999,9 +8040,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
    * pressing, because the two legs differ and pressing would have shown one. */
   function travel(id) {
     if (!SLIDES[id]) { hudSay("region " + id + " has no entry built yet"); return false; }
-    if (idleTl) { idleTl.kill(); idleTl = null; }
-    if (settle) { settle.kill(); settle = null; }
-    quiet();
+    dropIdle();                       /* kills idleTl and settle, quiet(), idleAt(0) */
     var J;
     if (JN) {
       /* ⚠️ A RETARGET'S PHASE (1) IS THE ABANDONED DESTINATION, NOT A CUT.
@@ -8144,7 +8183,9 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
     markup: function () { return svg.outerHTML; },
     viewBox: function () { return svg.getAttribute("viewBox"); },
     /* the island's own clock put back where E(0) assumes it */
-    base: function () { quiet(); TOUCHED = {}; },
+    /* ⚠️ AND IT KILLS A RUNNING LOOP FIRST (CONTRACT H7 of island 2.2): it was
+     * `quiet(); TOUCHED = {}`, so on an open slide the loop kept writing. */
+    base: function () { dropIdle(); TOUCHED = {}; },
     /* one step of an idle, driven rather than waited for */
     /* ⚠️ IT PAUSES THE LIVE LOOP AND ANSWERS null WITH NO SLIDE CURRENT
      * (25 October 2026, island 1.1's fan-out, two designers independently).
@@ -8171,7 +8212,9 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
       for (var i = 0; i < all.length; i++) {
         var b = all[i].getBBox();
         out.push([all[i].getAttribute("data-dyn"),
-                  +b.x.toFixed(2), +b.y.toFixed(2), +b.width.toFixed(2), +b.height.toFixed(2)]);
+                  /* four decimals, as a frame is written: at two, a mark lying on a frame
+                   * edge of 329.5213 read as 329.52, outside by 0.0013 (island 2.2, 4.1) */
+                  +b.x.toFixed(4), +b.y.toFixed(4), +b.width.toFixed(4), +b.height.toFixed(4)]);
       }
       return out;
     }
