@@ -250,7 +250,7 @@ def backdrop(bid):
     d.rectangle([x0 - f, y0 - f, x1 + f - 1, y0 - f + 3], fill=rgba(fr_l)[:3])                            # its lit top edge
     d.rectangle([x0 - f, y0 - f, x0 - f + 3, y1 + f - 1], fill=rgba(fr_l)[:3])                            # and left edge
     d.rectangle([x0 - 2, y0 - 2, x1 + 1, y1 + 1], fill=rgba(C.OUT)[:3])                                    # the card's own edge
-    d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=(245, 243, 239))                                             # the card's place
+    d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=(251, 247, 244))                                             # the card's place: its own paper
     return im
 
 
