@@ -6801,7 +6801,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
 /* ==== world/smooth.py: the camera on the compositor (see its docstring) ==== */
 (function (G) {
   "use strict";
-  var COMPOSITE_HOLDS = true, COMPOSITE_SLIDES = false;
+  var COMPOSITE_HOLDS = false, COMPOSITE_SLIDES = false;
   G.SmoothCam = function (svg, viewRaw, Entry) {
     var A = Entry.ASPECT;
     var V0 = (svg.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(parseFloat);
