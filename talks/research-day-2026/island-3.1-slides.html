@@ -4491,14 +4491,16 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
    * slide 2 wrote its mask, slide 1's writer -- whose last write was already
    * null -- skipped its at(0), and the map came back with slide 2's strip
    * mask on the whole track (check-dynamic VERIFY 2a-2d, "LEFT CHANGED" at
-   * byte 367, all 42 ordered pairs). The signed hold carries no `mask`, so
-   * null removes it, every time, whoever wrote last. */
+   * byte 367, all 42 ordered pairs). And it does NOT remember a "signed"
+   * value when it is made: a slide is built lazily, so slide 2's writer was
+   * made mid-journey with slide 1's mask on the hold and put THAT back at its
+   * t = 0. The signed hold carries no `mask` (compose.py refuses a drawing
+   * whose track wrapper has one), so null removes it, every time. */
   function trackMask() {
-    var el = hold("3.1-track"), signed = el.getAttribute("mask");
+    var el = hold("3.1-track");
     return function (v) {
-      var s = (v === null || v === undefined) ? signed : String(v);
-      if (s === null) { if (el.hasAttribute("mask")) el.removeAttribute("mask"); }
-      else if (el.getAttribute("mask") !== s) el.setAttribute("mask", s);
+      if (v === null || v === undefined) { if (el.hasAttribute("mask")) el.removeAttribute("mask"); }
+      else if (el.getAttribute("mask") !== String(v)) el.setAttribute("mask", String(v));
     };
   }
 
