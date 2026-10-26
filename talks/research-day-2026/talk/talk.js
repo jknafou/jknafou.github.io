@@ -183,10 +183,33 @@
     return v;
   }
   function rectFor(id) { return id === "2.1" ? subRect(id) : islandRect(id); }
-  function placeVideos() { Object.keys(vids).forEach(function (id) { place(vids[id], rectFor(id)); }); }
+  /* a video's frame holds the drawing with the living view's own margin (2% a side,
+     media.json "content"): the element's box is the drawing's box widened by it */
+  function expand(id, r) {
+    var c = (META[id] && META[id].content) || [0.02, 0.02, 0.96, 0.96];
+    var w = r.w / c[2], h = r.h / c[3];
+    return { x: r.x - c[0] * w, y: r.y - c[1] * h, w: w, h: h };
+  }
+  function placeVideos() { Object.keys(vids).forEach(function (id) { place(vids[id], expand(id, rectFor(id))); }); }
+  /* the slides page's own ground (its margin colour and its 4:3 card), drawn behind
+     the island video so the hand-off between the two changes nothing but motion */
+  var card = document.createElement("div"); card.id = "card"; vidsEl.appendChild(card);
+  function ground(id) {
+    var rec = id && id !== "2.1" ? frames[id] : null;
+    try {
+      var d = rec.win.document, sv = d.querySelector("body > svg"), r = sv.getBoundingClientRect();
+      var bg = rec.win.getComputedStyle(d.body).backgroundColor, cb = rec.win.getComputedStyle(sv).backgroundColor;
+      vidsEl.style.background = bg;
+      card.style.background = cb && cb !== "rgba(0, 0, 0, 0)" ? cb : "";
+      place(card, { x: r.left, y: r.top, w: r.width, h: r.height }); card.style.display = "block";
+      return;
+    } catch (e) {}
+    vidsEl.style.background = ""; card.style.display = "none";
+  }
   function showVideo(id) {
+    ground(id);
     Object.keys(vids).forEach(function (k) { vids[k].classList.toggle("on", k === id); if (k !== id) vids[k].pause(); });
-    if (id) { place(bigVideo(id), rectFor(id)); vids[id].classList.add("on"); play(vids[id]); }
+    if (id) { place(bigVideo(id), expand(id, rectFor(id))); vids[id].classList.add("on"); play(vids[id]); }
   }
   function pruneVideos(keep) {
     Object.keys(vids).forEach(function (id) {
@@ -344,7 +367,7 @@
   async function openIsland(id) {
     S.busy = true;
     buildWorld();
-    var c = cellOf(id), tile = tileRect(id), R = islandRect(id);
+    var c = cellOf(id), tile = tileRect(id), R = expand(id, islandRect(id));
     var big = bigVideo(id); place(big, R);
     var fv = flyVideo(id, c && c.vid, R);
     fly.className = "on clear";
@@ -366,7 +389,7 @@
     frameFor(id).ready.then(async function (rec) {
       if (!(S.island === id && S.layer === "island")) return;
       await atMap(rec);
-      if (S.island === id && S.layer === "island") { placeVideos(); buildHots(id); }
+      if (S.island === id && S.layer === "island") { placeVideos(); ground(id); buildHots(id); }
     });
   }
 
@@ -380,7 +403,7 @@
     hotsEl.innerHTML = "";
     S.layer = "world";
     if (from && big && big.classList.contains("on")) {
-      var R = islandRect(from), tile = tileRect(from);
+      var R = expand(from, islandRect(from)), tile = tileRect(from);
       var fv = flyVideo(from, big, R); fly.className = "on";
       await ready(fv, 800);
       await nextFrame();
@@ -413,9 +436,11 @@
     showFrame(id);
     S.layer = "slide";
     stage(rec).enter(rid);
-    var v = vids[id];
-    if (v && v.classList.contains("on")) { v.style.transition = "opacity 260ms ease"; v.style.opacity = 0; await sleep(280); showVideo(null); clean(v); }
-    else showVideo(null);
+    if (vids[id] && vids[id].classList.contains("on")) {
+      vidsEl.style.transition = "opacity 260ms ease"; vidsEl.style.opacity = 0;
+      await sleep(280);
+    }
+    showVideo(null); vidsEl.style.transition = ""; vidsEl.style.opacity = "";
     keepSet(id);
     S.busy = false; refocus(); update();
   }
@@ -426,11 +451,11 @@
     await atMap(rec);
     var v = bigVideo(id);
     await ready(v, 2000); await seekTo(v, 0);
-    v.style.transition = "none"; v.style.opacity = 0;
-    place(v, islandRect(id)); v.classList.add("on");
+    vidsEl.style.transition = "none"; vidsEl.style.opacity = 0;
+    showVideo(id); v.pause();
     await nextFrame();
-    v.style.transition = "opacity 220ms ease"; v.style.opacity = 1;
-    await sleep(240); clean(v); showVideo(id);
+    vidsEl.style.transition = "opacity 220ms ease"; vidsEl.style.opacity = 1;
+    await sleep(240); vidsEl.style.transition = ""; vidsEl.style.opacity = ""; play(v);
     showFrame(null);
     S.layer = "island";
     S.busy = false; update();
@@ -450,22 +475,24 @@
     var parent = S.island, sub = ISL[parent].sub;
     var A = bigVideo(parent), C = bigVideo(sub);
     var R2 = islandRect(parent), R1 = subRect(sub), b = doorBox();
-    place(A, R2); place(C, R1);
+    var eA = function (r) { return expand(parent, r); }, eC = function (r) { return expand(sub, r); };
+    place(A, eA(R2)); place(C, eC(R1));
     var s = Math.max(b.w / R1.w, b.h / R1.h);
     var door = { x: b.x + b.w / 2 - R1.w * s / 2, y: b.y + b.h / 2 - R1.h * s / 2, w: R1.w * s, h: R1.h * s };
     var k = R1.w / door.w, cx = b.x + b.w / 2, cy = b.y + b.h / 2, tx = R1.x + R1.w / 2, ty = R1.y + R1.h / 2;
     var big = { x: tx + (R2.x - cx) * k, y: ty + (R2.y - cy) * k, w: R2.w * k, h: R2.h * k };
     await Promise.all([ready(A, 3000), ready(C, 3000)]);
     if (into) await seekTo(C, 0);
+    ground(null);
     A.style.zIndex = 1; C.style.zIndex = 2;
-    var from = [into ? "none" : over(R2, big), into ? over(R1, door) : "none"];
+    var from = [into ? "none" : over(eA(R2), eA(big)), into ? over(eC(R1), eC(door)) : "none"];
     A.style.transition = C.style.transition = "none";
     A.style.transform = from[0]; C.style.transform = from[1];
     A.style.opacity = into ? 1 : 0; C.style.opacity = into ? 0 : 1;
     A.classList.add("on"); C.classList.add("on"); play(A); play(C);
     await animate([
-      { el: A, from: { transform: from[0], opacity: into ? 1 : 0 }, to: { transform: into ? over(R2, big) : "none", opacity: into ? 0 : 1 } },
-      { el: C, from: { transform: from[1], opacity: into ? 0 : 1 }, to: { transform: into ? "none" : over(R1, door), opacity: into ? 1 : 0 } }
+      { el: A, from: { transform: from[0], opacity: into ? 1 : 0 }, to: { transform: into ? over(eA(R2), eA(big)) : "none", opacity: into ? 0 : 1 } },
+      { el: C, from: { transform: from[1], opacity: into ? 0 : 1 }, to: { transform: into ? "none" : over(eC(R1), eC(door)), opacity: into ? 1 : 0 } }
     ], into ? 650 : 550);
     showVideo(into ? sub : parent);
     clean(A); clean(C);

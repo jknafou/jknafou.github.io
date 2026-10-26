@@ -95,6 +95,13 @@ async function render(id) {
   p.close();
   const a = info.vb[2] / info.vb[3];
   const w = even(Math.min(BOX[0], BOX[1] * a)), h = even(Math.min(BOX[1], BOX[0] / a));
+  /* where the drawing sits in the frame (the living view keeps a margin): the shell aligns by it */
+  const q = await openIsland(id, [w, h]);
+  await sleep(800);
+  info.content = await q.evaluate(`(function(){ var s = document.querySelector('body > svg'), r = s.getBoundingClientRect(), b = s.viewBox.baseVal;
+    var k = Math.min(r.width / b.width, r.height / b.height), cw = b.width * k, ch = b.height * k;
+    return [(r.left + (r.width - cw) / 2) / innerWidth, (r.top + (r.height - ch) / 2) / innerHeight, cw / innerWidth, ch / innerHeight].map(function (x) { return +x.toFixed(6); }); })()`);
+  q.close();
   const N = Math.round(info.L * FPS);
   const dir = join(TMP, id); mkdirSync(dir, { recursive: true });
   const t0 = Date.now();
@@ -130,7 +137,7 @@ function encode(id, R) {
   const vp9 = ["-c:v", "libvpx-vp9", "-crf", "36", "-b:v", "0", "-row-mt", "1", "-cpu-used", "2", "-pix_fmt", "yuv420p", "-g", String(FPS * 2), "-an"];
   ff([...inp, ...x264, join(OUT, id + ".mp4")]);
   ff([...inp, ...vp9, join(OUT, id + ".webm")]);
-  const out = { aspect: +(R.vb[2] / R.vb[3]).toFixed(5), vb: R.vb, L: R.L, fps: FPS, frames: R.N, w: R.w, h: R.h,
+  const out = { aspect: +(R.vb[2] / R.vb[3]).toFixed(5), vb: R.vb, content: R.content, L: R.L, fps: FPS, frames: R.N, w: R.w, h: R.h,
     seamPSNR: psnr(join(R.dir, "00000.jpg"), join(R.dir, String(R.N).padStart(5, "0") + ".jpg")) };
   if (TILES.includes(id)) {
     const s = R.w >= R.h ? `scale=${TILE_LONG}:-2` : `scale=-2:${TILE_LONG}`;
