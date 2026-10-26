@@ -346,9 +346,6 @@ def opening_frames(bid):
     shot = Image.open(os.path.join(ISLANDS_DIR, "island-%s.png" % bid)).convert("RGB")
     assert shot.size == (W, H), shot.size
     cx0, cy0, cx1, cy1 = int(math.floor(CARD[0])), int(math.floor(CARD[1])), int(math.ceil(CARD[0] + CARD[2])), int(math.ceil(CARD[1] + CARD[3]))
-    card_img = shot.crop((cx0, cy0, cx1, cy1))
-    margin = shot.convert("RGBA")
-    m = np.array(margin); m[cy0:cy1, cx0:cx1, 3] = 0; margin = Image.fromarray(m)
     B = BUILD[bid]
     fx0, fy0, fx1, fy1 = B["floor"]
     fc = ((fx0 + fx1) / 2, (fy0 + fy1) / 2)
@@ -386,24 +383,20 @@ def opening_frames(bid):
         im = cv.transform((W, H), Image.AFFINE, (a_, 0, fc[0] - p[0] * a_, 0, a_, fc[1] - p[1] * a_), Image.NEAREST,
                           fillcolor=rgba(C.GRASS)[:3])
         im = im.convert("RGBA")
-        # the island card grows out of the floor
+        # the room grows out of the floor, the island's card in it: the whole island view, its
+        # card mapped onto the box Q that rises from the floor and ends exactly on the card
         qw = fw * s
         qh = fh * s + ((cy1 - cy0) - fh * s) * e
         qx, qy = p[0] - qw / 2, p[1] - qh / 2
-        a1 = smooth(ramp(e, 0.02, 0.45))
+        a1 = smooth(ramp(e, 0.02, 0.5))
         if a1 > 0:
-            ci = card_img if (abs(qw - card_img.width) < 0.5 and abs(qh - card_img.height) < 0.5) else \
-                card_img.resize((max(1, int(round(qw))), max(1, int(round(qh)))), Image.BILINEAR)
-            ci = ci.convert("RGBA")
-            if a1 < 1:
-                arr = np.array(ci); arr[..., 3] = int(255 * a1); ci = Image.fromarray(arr)
-            im.alpha_composite(ci, (int(round(qx)), int(round(qy))))
-        a2 = smooth(ramp(e, 0.5, 0.97))
-        if a2 > 0:
-            mg = margin
-            if a2 < 1:
-                arr = np.array(margin); arr[..., 3] = (arr[..., 3].astype(np.float32) * a2).astype(np.uint8); mg = Image.fromarray(arr)
-            im.alpha_composite(mg)
+            sx, sy = qw / (cx1 - cx0), qh / (cy1 - cy0)
+            ox, oy = qx - cx0 * sx, qy - cy0 * sy
+            # screen = o + s * shot  ->  shot = (screen - o) / s
+            room = shot.transform((W, H), Image.AFFINE, (1 / sx, 0, -ox / sx, 0, 1 / sy, -oy / sy), Image.BILINEAR)
+            mask = Image.new("L", (W, H), 0)
+            mask.paste(int(255 * a1), (max(0, int(ox)), max(0, int(oy)), min(W, int(ox + W * sx) + 1), min(H, int(oy + H * sy) + 1)))
+            im.paste(room.convert("RGBA"), (0, 0), mask)
         out.append(im.convert("RGB"))
     return out
 
