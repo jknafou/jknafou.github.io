@@ -72,3 +72,17 @@ body:not(.in) #hots { display: none; }
 #card { position: absolute; display: none; }
 #vids:not(:has(video.on)) { background: transparent !important; }
 #vids:not(:has(video.on)) #card { display: none !important; }
+
+/* the slides as pictures and videos (talk.js); the live fallback (talk-live.js) never shows #slide */
+#slide { position: absolute; inset: 0; display: none; z-index: 1; overflow: hidden; }
+#slide.on { display: block; }
+#slide #rest { position: absolute; display: block; user-select: none; }
+#slide .movevid { position: absolute; display: block; opacity: 0; will-change: opacity; object-fit: fill; pointer-events: none; }
+#slide .movevid.on { opacity: 1; }
+#vids { z-index: 2; }
+#hots { z-index: 3; }
+#fly { z-index: 4; }
+#mark { z-index: 4; }
+#veil { z-index: 5; }
+#loading { z-index: 6; }
+#view { overflow: hidden; }

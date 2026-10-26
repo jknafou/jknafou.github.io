@@ -1,4 +1,7 @@
-/* The talk's navigation shell (26 October 2026), a pragmatic stand-in for
+/* ?live=1: THE FALLBACK SHELL, the island videos with the LIVE slides pages (the
+ * version of 26 October 2026, 21:00). talk.js loads it instead of itself on ?live=1.
+ *
+ * The talk's navigation shell (26 October 2026), a pragmatic stand-in for
  * world/FINAL-PLAN.md section 1.
  *
  * LEVELS OF DETAIL (the author, 26 October 2026: "Couln't the world be a simple
