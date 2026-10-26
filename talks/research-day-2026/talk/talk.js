@@ -148,7 +148,7 @@
     return im;
   }
   function flyClear() { fly.innerHTML = ""; fly.className = ""; }
-  async function animate(els, ms) {
+  async function animate(els, ms, during) {
     /* els: [{el, from:{transform, opacity}, to:{...}}]; set from, two frames, then to */
     els.forEach(function (o) { o.el.style.transition = "none"; o.el.style.transform = o.from.transform || "none"; o.el.style.opacity = o.from.opacity == null ? 1 : o.from.opacity; });
     var dec = els.map(function (o) { return o.el.decode ? o.el.decode().catch(function () {}) : null; });
@@ -156,6 +156,8 @@
     await nextFrame();
     var tr = "transform " + ms + "ms cubic-bezier(.45,0,.2,1), opacity " + ms + "ms ease";
     els.forEach(function (o) { o.el.style.transition = tr; o.el.style.transform = o.to.transform || "none"; o.el.style.opacity = o.to.opacity == null ? 1 : o.to.opacity; });
+    /* main-thread work waits until the compositor has the motion */
+    if (during) { await nextFrame(); try { during(); } catch (e) {} }
     await sleep(ms + 30);
   }
   async function fadeFly(ms) {
@@ -300,7 +302,7 @@
   /* the zoom into the translator, on IMAGES: 2.2's still grows about the
      translator's box while 2.1's still grows out of it; the live page is shown
      under the images once they rest, and the images fade away */
-  async function zoom(outer, inner, into, ms) {
+  async function zoom(outer, inner, into, ms, during) {
     var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
     var b = doorBox() || { x: Vw * 0.4, y: Vh * 0.4, w: Vw * 0.2, h: Vh * 0.2 };
     var parent = S.island, sub = ISL[parent].sub;
@@ -320,7 +322,7 @@
     var C = { el: c, from: { transform: into ? over(R1, door) : "none", opacity: into ? 0 : 1 }, to: { transform: into ? "none" : over(R1, door), opacity: into ? 1 : 0 } };
     A.from.opacity = 1; A.to.opacity = into ? 0.0 : 1;
     if (into) { A.to.opacity = 0; } else { A.from.opacity = 0; A.to.opacity = 1; }
-    await animate([A, C], ms);
+    await animate([A, C], ms, during);
     /* the destination page, shown under the resting image, then the image fades */
     showFrame((into ? inner : outer).id);
     await nextFrame();
@@ -389,9 +391,10 @@
     S.busy = true;
     var outer = frames[parent], inner = await loaded(live ? liveKey(sub) : sub);
     await atMap(outer); if (!live) await atMap(inner);
-    stopTour(outer);
-    if (live) { stopTour(inner); try { fl(inner.win).sync(0); } catch (e) {} }
-    await zoom(outer, inner, true, 650);
+    await zoom(outer, inner, true, 650, function () {
+      stopTour(outer);
+      if (live) { stopTour(inner); try { fl(inner.win).sync(0); } catch (e) {} }
+    });
     S.sub = sub; S.subLive = live;
     showFrame(inner.id);
     var E = stage(inner);
@@ -409,8 +412,7 @@
     S.busy = true;
     var outer = frames[parent], inner = cur();
     if (!inner.live) await atMap(inner);
-    stopTour(inner);
-    await zoom(outer, inner, false, 550);
+    await zoom(outer, inner, false, 550, function () { stopTour(inner); });
     S.sub = null; S.subLive = false;
     showFrame(parent);
     hush(inner);
@@ -457,7 +459,6 @@
     var rec = cur(), from = S.island && !S.sub ? S.island : null;
     S.layer = "world";
     if (rec && from && cells.length) {
-      stopTour(rec);
       var R = stillRect(rec, from), tile = tileRect(from);
       flyClear(); fly.className = "on clear";
       var im = flyImg(from, R);
