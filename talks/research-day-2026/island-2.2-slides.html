@@ -5656,8 +5656,14 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
     var st = m.__fixedSigned || (m.__fixedSigned = { x: m.getAttribute("x"), y: m.getAttribute("y"), width: m.getAttribute("width"), height: m.getAttribute("height") });
     return st;
   }
+  /* ⚠️ ALL THE BOXES ARE READ, THEN ALL THE ATTRIBUTES WRITTEN (26 October 2026,
+   * world/SMOOTH-RECIPE.md "Leave freeze"). Read and written in turn, each getBBox()
+   * after a write forced a layout of the whole drawing: 2,559 masks, about 5 s on
+   * every leave of a slide at 4x throttle. A mask's child's box does not depend on
+   * the mask's own x/y/width/height, so the values written are the same. */
   function boundMasks(pad) {
     var ms = svg.querySelectorAll('mask[maskUnits="userSpaceOnUse"]'), n = 0, skipped = 0, restored = 0;
+    var todo = [];
     for (var i = 0; i < ms.length; i++) {
       var m = ms[i], sg = signedRegion(m);
       if (sg.width !== "10000" || sg.height !== "10000") { skipped++; continue; }
@@ -5667,11 +5673,14 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
       }
       var first = m.firstElementChild;
       if (!first || typeof first.getBBox !== "function") { skipped++; continue; }
-      var b = first.getBBox();
+      var b = first.getBBox();                         /* reads only: one layout for all */
       if (!(b.width >= 0 && b.height >= 0)) { skipped++; continue; }
-      var p = Math.max(pad[0], pad[1] * Math.max(b.width, b.height));
-      m.setAttribute("x", (b.x - p).toFixed(2)); m.setAttribute("y", (b.y - p).toFixed(2));
-      m.setAttribute("width", (b.width + 2 * p).toFixed(2)); m.setAttribute("height", (b.height + 2 * p).toFixed(2));
+      todo.push([m, b.x, b.y, b.width, b.height]);
+    }
+    for (var j = 0; j < todo.length; j++) {           /* then writes only */
+      var t = todo[j], p = Math.max(pad[0], pad[1] * Math.max(t[3], t[4]));
+      t[0].setAttribute("x", (t[1] - p).toFixed(2)); t[0].setAttribute("y", (t[2] - p).toFixed(2));
+      t[0].setAttribute("width", (t[3] + 2 * p).toFixed(2)); t[0].setAttribute("height", (t[4] + 2 * p).toFixed(2));
       n++;
     }
     return { bounded: n, left: skipped, restored: restored };
