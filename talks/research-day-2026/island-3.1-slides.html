@@ -4518,11 +4518,25 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
    * made mid-journey with slide 1's mask on the hold and put THAT back at its
    * t = 0. The signed hold carries no `mask` (compose.py refuses a drawing
    * whose track wrapper has one), so null removes it, every time. */
+  /* ⚠️ AND A NULL REMOVES ONLY THE WRITER'S OWN MASK (26 October 2026, the
+   * mend of round 2 of the critique). On a journey A -> B the stage paints B
+   * at t = 0 in EVERY frame of the move, after A, so B's `at(0)` -- "null" --
+   * stripped A's strip mask on the first frame of A's un-drawing: the whole
+   * track came back in full ink under A's half-faded evidence for the 0.45 s
+   * of RESET_S (the critique's "track ink pump", rt/j12-001.png). Each slide
+   * masks with its own `url(#s31-eN-...)`, a constant, so a writer knows its
+   * own value without remembering anything that t did not give it: it removes
+   * the attribute when the attribute IS its value, and leaves a sibling's
+   * alone. The signed hold carries no mask, so nothing it leaves is signed. */
   function trackMask() {
-    var el = hold("3.1-track");
+    var el = hold("3.1-track"), mine = null;
     return function (v) {
-      if (v === null || v === undefined) { if (el.hasAttribute("mask")) el.removeAttribute("mask"); }
-      else if (el.getAttribute("mask") !== String(v)) el.setAttribute("mask", String(v));
+      if (v === null || v === undefined) {
+        if (mine !== null && el.getAttribute("mask") === mine) el.removeAttribute("mask");   /* never wrote one: none is its own */
+      } else {
+        mine = String(v);
+        if (el.getAttribute("mask") !== mine) el.setAttribute("mask", mine);
+      }
     };
   }
 
@@ -4722,17 +4736,16 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
  * separate set() block. */
 (function (G) {
   "use strict";
-  var E = G.Entry, C = {"FIRST_ACT": [0.0, 0.05], "LAMP": [0.05, 0.09], "BOARD_UP": [0.09, 0.28], "RUN": [0.3, 0.4], "FLASH": [0.4, 0.52], "CLEAR": [0.52, 0.56], "PRINT_OUT": [0.56, 0.66], "LAYOUT_IN": [0.14, 0.28], "PAPER_OUT": [0.66, 0.66], "BUILD": [0.66, 1.0], "FADE": [0.06, 0.3], "TRACK_FADE": [0.04, 0.14], "S": {"FA": 0.9, "BEAT": 1.8, "LIT": 1.95, "STEP": 2.05, "FREEZE": 2.55, "DEV": 3.5, "CLEAR": 4.15, "GONE": 5.3}, "ANCHOR": [653.2, -1105.2], "BOARD_S": 2.2, "TAGS": [[634.21, -1147.46], [653.39, -1147.46], [672.57, -1147.46]], "PRINT_C": [759.18, -1142.55], "PRINT_TILT": -4.0, "PRINT_TO": [844.8487573529414, -1181.2243279411764], "PRINT_K": 1.25, "MASK": "url(#s31-e2-trackmask)", "P": "s2-chart", "MODELS": ["transbert", "camembert", "drbert"], "RIDE": {"transbert": {"dx": 219.50999999999948, "v": 75.71}, "camembert": {"dx": 94.77000000000014, "v": 74.17}, "drbert": {"dx": 59.13000000000032, "v": 73.73}}, "LO": 73, "TILES": [{"i": 0, "dot": false}, {"i": 1, "dot": true}, {"i": 2, "dot": false}, {"i": 3, "dot": true}, {"i": 4, "dot": false}], "TESTS": ["cls"], "LOOP": {"LIFT": 0.35, "EMPTY": 0.3, "HANG": 0.45, "HOLD": 0.6, "RISE": 10.0, "SWING": 34.0}};
+  var E = G.Entry, C = {"LAMP": [0.05, 0.09], "BOARD_UP": [0.09, 0.28], "FLASH": [0.3, 0.52], "CLEAR": [0.52, 0.56], "PRINT_OUT": [0.56, 0.66], "LAYOUT_IN": [0.14, 0.28], "PAPER_OUT": [0.66, 0.66], "BUILD": [0.66, 1.0], "FADE": [0.06, 0.3], "TRACK_FADE": [0.04, 0.14], "S": {"FA": 0.9, "BEAT": 1.8, "LIT": 1.95, "STEP": 2.05, "FREEZE": 2.55, "DEV": 3.5, "CLEAR": 4.15, "GONE": 5.3}, "ANCHOR": [653.2, -1105.2], "BOARD_S": 2.2, "TAGS": [[634.21, -1147.46], [653.39, -1147.46], [672.57, -1147.46]], "PRINT_C": [759.18, -1142.55], "PRINT_TILT": -4.0, "PRINT_TO": [844.8487573529414, -1181.2243279411764], "PRINT_K": 1.25, "MASK": "url(#s31-e2-trackmask)", "P": "s2-chart", "MODELS": ["transbert", "camembert", "drbert"], "RIDE": {"transbert": {"dx": 219.50999999999948, "v": 75.71}, "camembert": {"dx": 94.77000000000014, "v": 74.17}, "drbert": {"dx": 59.13000000000032, "v": 73.73}}, "LO": 73, "TILES": [{"i": 0, "dot": false}, {"i": 1, "dot": true}, {"i": 2, "dot": false}, {"i": 3, "dot": true}, {"i": 4, "dot": false}], "TESTS": ["cls"], "LOOP": {"LIFT": 0.35, "EMPTY": 0.3, "HANG": 0.45, "HOLD": 0.6, "RISE": 10.0, "SWING": 34.0}};
   var V = G.FIXED_VOCAB || {};
   var LP = C.LOOP, BEATS = LP.LIFT + LP.EMPTY + 3 * LP.HANG + LP.HOLD;
 
-  /* the island second 02-C1 is driven to, from t alone: the first act, the
-   * lamp, the run, the flash, then the step past the print (CONTRACT.md 3.3) */
+  /* the island second 02-C1 is driven to, from t alone: the signed stop held,
+   * then the flash on the frozen trio, then the step past the print */
   function islandSecond(t) {
     var S = C.S;
-    if (t < C.LAMP[0]) return S.FA * E.span(t, C.FIRST_ACT[0], C.FIRST_ACT[1]);
-    if (t < C.RUN[0]) return S.BEAT + (S.LIT - S.BEAT) * E.span(t, C.LAMP[0], C.LAMP[1]);
-    if (t < C.FLASH[0]) return S.STEP + (S.FREEZE - S.STEP) * E.span(t, C.RUN[0], C.RUN[1]);
+    /* the signed stop, the trio on its places, until the flash (mend, round 2) */
+    if (t < C.FLASH[0]) return 0;
     if (t < C.CLEAR[0]) return S.FREEZE + (S.DEV - S.FREEZE) * E.span(t, C.FLASH[0], C.FLASH[1]);
     if (t < C.PRINT_OUT[0]) return S.DEV + (S.CLEAR - S.DEV) * E.span(t, C.CLEAR[0], C.CLEAR[1]);
     return S.GONE;
@@ -4812,13 +4825,16 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
 
       /* THE ZOOM IS THE TRANSFORMATION: the board's copy steps on over the lit
        * board and grows on its clamp, about its foot */
-      var bon = t >= C.BOARD_UP[0] ? 1 : 0;
+      /* it steps on DARK at the lamp's start, byte for byte the signed board
+       * at scale 1, so the step cannot be seen; its own lamp then lights it
+       * (02-C1 is held at 0 under it, its lamp dark) */
+      var bon = t >= C.LAMP[0] ? 1 : 0;
       var g = E.mix(1, C.BOARD_S, E.ph(t, C.BOARD_UP[0], C.BOARD_UP[1]));
       var ax = C.ANCHOR[0], ay = C.ANCHOR[1];
       w.boardO(bon);
       w.boardT(bon ? "translate(" + ax.toFixed(3) + "," + ay.toFixed(3) + ") scale(" + g.toFixed(5) + ") translate("
                     + (-ax).toFixed(3) + "," + (-ay).toFixed(3) + ")" : null);
-      w.lamp.level(bon ? 1 : 0);              /* 02-C1's lamp is full from island 1.95 */
+      w.lamp.level(bon ? E.ph(t, C.LAMP[0], C.LAMP[1]) : 0);   /* ACTIVATION, on the copy */
       /* the loop's own marks are at rest whenever E writes: three tags hung */
       for (var k = 0; k < 3; k++) { w.tags[k].o(1); w.tags[k].tf(null); }
 
