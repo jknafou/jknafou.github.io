@@ -149,6 +149,7 @@
   }
   function flyClear() { fly.innerHTML = ""; fly.className = ""; }
   async function animate(els, ms, during) {
+    document.body.classList.add("flying");
     /* els: [{el, from:{transform, opacity}, to:{...}}]; set from, two frames, then to */
     els.forEach(function (o) { o.el.style.transition = "none"; o.el.style.transform = o.from.transform || "none"; o.el.style.opacity = o.from.opacity == null ? 1 : o.from.opacity; });
     var dec = els.map(function (o) { return o.el.decode ? o.el.decode().catch(function () {}) : null; });
@@ -156,9 +157,10 @@
     await nextFrame();
     var tr = "transform " + ms + "ms cubic-bezier(.45,0,.2,1), opacity " + ms + "ms ease";
     els.forEach(function (o) { o.el.style.transition = tr; o.el.style.transform = o.to.transform || "none"; o.el.style.opacity = o.to.opacity == null ? 1 : o.to.opacity; });
-    /* main-thread work waits until the compositor has the motion */
-    if (during) { await nextFrame(); try { during(); } catch (e) {} }
     await sleep(ms + 30);
+    document.body.classList.remove("flying");
+    /* main-thread work on the pages waits until the motion is over */
+    if (during) { try { during(); } catch (e) {} }
   }
   async function fadeFly(ms) {
     fly.style.transition = "opacity " + ms + "ms ease"; fly.style.opacity = 0;
