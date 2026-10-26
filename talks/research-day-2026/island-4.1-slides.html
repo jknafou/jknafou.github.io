@@ -7130,15 +7130,40 @@ window.FIXED_CLICKABLE = {"click": "opens", "min_box_units": 48, "pad_units": 6,
   /* Chrome already delivers pointermove once per frame (coalesced), so the cue is resolved
    * in the handler itself: plain maths, no layout, and the outline lands in the frame the
    * pointer moved in. `ask` (one animation frame) is for the map coming back. */
-  G.addEventListener("pointermove", function (e) { X = e.clientX; Y = e.clientY; stop(e); frame(); },
+  /* ⚠️ THE TOUR HOLDS STILL WHILE THE POINTER IS ON THE DRAWING (v2, the author on v1:
+   * "The hovering is still very very slow though"). Measured: the handler costs ~0.5 ms
+   * but the outline reaches the screen only with the tour's next frame, and a tour frame
+   * re-draws the huge drawing (p95 183 ms at 4x). So the first move over the drawing
+   * PAUSES the tour's own driver -- a gsap timeline, so it holds the frame it is on, which
+   * is a frame of the signed loop -- and it RESUMES from that very point once the pointer
+   * has been still or away for TOUR_RESUME_S, on gsap's clock (a timer is banned here). */
+  var held = null, wake = null;
+  function hold() {
+    var d = FL && FL.driver;
+    if (d && !d.paused() && mapNow()) { d.pause(); held = d; }
+    if (held && G.gsap) { if (wake) wake.kill(); wake = G.gsap.delayedCall(2, release); }
+  }
+  function release() {
+    wake = null;
+    if (held && FL && FL.driver === held && mapNow()) held.resume();
+    held = null;
+  }
+  G.addEventListener("pointermove", function (e) {
+    X = e.clientX; Y = e.clientY; stop(e);
+    if (e.target && svg.contains(e.target)) hold();
+    frame();
+  },
                      { capture: true, passive: true });
   G.addEventListener("mousemove", stop, { capture: true, passive: true });
-  svg.addEventListener("pointerleave", function () { X = null; shown = null; });
+  svg.addEventListener("pointerleave", function () { X = null; shown = null; if (held) hold(); });
   G.addEventListener("resize", function () { M = null; ask(); });
   /* the map is back: the pointer may be resting on a region and never move again */
   if (FL && typeof FL.start === "function") {
     var start0 = FL.start;
-    FL.start = function () { var out = start0.apply(FL, arguments); onmap = null; shown = null; ask(); return out; };
+    FL.start = function () {
+      if (wake) { wake.kill(); wake = null; } held = null;      /* a fresh tour: nothing held */
+      var out = start0.apply(FL, arguments); onmap = null; shown = null; ask(); return out;
+    };
   }
   G.SmoothHover = { boxes: function () { return BOX; }, at: function (x, y) { if (!BOX) boxes(); if (!M) matrix(); return resolve(x, y); } };
 })(window);
