@@ -4898,7 +4898,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
  * every t, so there is no separate set() block. */
 (function (G) {
   "use strict";
-  var E = G.Entry, C = {"FIRST_ACT": [0.0, 0.06], "FADE": [0.06, 0.26], "TRACK_FADE": [0.04, 0.13], "LAMP_IN": [0.07, 0.11], "RUN": [0.27, 0.56], "PRINT_OUT": [0.56, 0.66], "BOARD_GROW": [0.07, 0.26], "LAYOUT_IN": [0.13, 0.26], "PAPER_OUT": [0.66, 0.66], "BUILD": [0.66, 1.0], "S_FIRST": 0.9, "S_LAMP": 5.4, "S_DEVELOPED": 7.75, "S_GONE": 9.0, "LAMP_S": 0.15, "MOD": "03-C2", "MASK": "url(#s31-e3-trackmask)", "ANCHOR": [640.54, -464.67], "G": 2.2, "PR": {"cx": 746.51, "cy": -492.17, "a": -4.0, "to": [874.9616184305255, -527.40045], "s": 1.25}, "HL": [[625.25, 16.700000000000045], [632.87, 19.24000000000001], [627.79, 17.210000000000036]], "TILES": [{"i": 0, "fill": "#6B47B8", "dot": false}, {"i": 1, "fill": "#6B47B8", "dot": false}, {"i": 2, "fill": "#6B47B8", "dot": false}, {"i": 3, "fill": "#6B47B8", "dot": true}, {"i": 4, "fill": "#6B47B8", "dot": true}, {"i": 5, "fill": "#6B47B8", "dot": false}], "RIDE": {"transbert": {"dx": 270.3000000000006, "v": 83.15}, "camembert": {"dx": 107.0999999999997, "v": 81.55}, "drbert": {"dx": 38.759999999999536, "v": 80.88}}, "LO": 80.5, "MODELS": ["transbert", "camembert", "drbert"], "LOOP": {"clear": 0.3, "plain": 0.3, "sweep": 0.5, "hold": 1.2}};
+  var E = G.Entry, C = {"FADE": [0.06, 0.26], "TRACK_FADE": [0.04, 0.13], "LAMP_IN": [0.07, 0.11], "FLASH": [0.27, 0.56], "PRINT_OUT": [0.56, 0.66], "BOARD_GROW": [0.07, 0.26], "LAYOUT_IN": [0.13, 0.26], "PAPER_OUT": [0.66, 0.66], "BUILD": [0.66, 1.0], "S_FREEZE": 6.15, "S_DEVELOPED": 7.75, "S_GONE": 9.0, "LAMP_S": 0.15, "MOD": "03-C2", "MASK": "url(#s31-e3-trackmask)", "ANCHOR": [640.54, -464.67], "G": 2.2, "PR": {"cx": 746.51, "cy": -492.17, "a": -4.0, "to": [874.9616184305255, -527.40045], "s": 1.25}, "HL": [[625.25, 16.700000000000045], [632.87, 19.24000000000001], [627.79, 17.210000000000036]], "TILES": [{"i": 0, "fill": "#6B47B8", "dot": false}, {"i": 1, "fill": "#6B47B8", "dot": false}, {"i": 2, "fill": "#6B47B8", "dot": false}, {"i": 3, "fill": "#6B47B8", "dot": true}, {"i": 4, "fill": "#6B47B8", "dot": true}, {"i": 5, "fill": "#6B47B8", "dot": false}], "RIDE": {"transbert": {"dx": 270.3000000000006, "v": 83.15}, "camembert": {"dx": 107.0999999999997, "v": 81.55}, "drbert": {"dx": 38.759999999999536, "v": 80.88}}, "LO": 80.5, "MODELS": ["transbert", "camembert", "drbert"], "LOOP": {"clear": 0.3, "plain": 0.3, "sweep": 0.5, "hold": 1.2}};
   var LP = C.LOOP, BEATS = LP.clear + LP.plain + 3 * LP.sweep + LP.hold;
 
   /* the marks of the method at one instant: o the highlights' opacity, k[i]
@@ -4954,11 +4954,12 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
     },
 
     at: function (t, w) {
-      /* the region's own signed module: FIRST ACT, then its beat (lamp, run,
-       * freeze, flash, print developed), then the instant its print is gone,
-       * which is the instant this entry's copy of it steps on */
-      var s = C.S_FIRST * E.span(t, C.FIRST_ACT[0], C.FIRST_ACT[1]);
-      if (t >= C.RUN[0]) s = C.S_LAMP + (C.S_DEVELOPED - C.S_LAMP) * E.span(t, C.RUN[0], C.RUN[1]);
+      /* the region's own signed module: the signed stop held (the trio on its
+       * places, mend round 2), then the flash from the freeze on, then the
+       * instant its print is gone, which is the instant this entry's copy of
+       * it steps on */
+      var s = 0;
+      if (t >= C.FLASH[0]) s = C.S_FREEZE + (C.S_DEVELOPED - C.S_FREEZE) * E.span(t, C.FLASH[0], C.FLASH[1]);
       if (t >= C.PRINT_OUT[0]) s = C.S_GONE;
       E.drive(C.MOD, s);
 
@@ -5037,7 +5038,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
  * is TOTAL: it writes every property it owns at every t. */
 (function (G) {
   "use strict";
-  var E = G.Entry, C = {"FIRST_ACT": [0.0, 0.06], "FADE": [0.08, 0.32], "TRACK_FADE": [0.04, 0.14], "BOARD": [0.08, 0.3], "RUN": [0.3, 0.42], "FLASH": [0.42, 0.55], "MOVE": [0.55, 0.64], "LAYOUT_IN": [0.16, 0.3], "PAPER_OUT": [0.64, 0.64], "RUN_ON": [0.55, 0.66], "BUILD": [0.66, 1.0], "S_READY": 0.9, "U_DEV": 0.95, "S_END": 12.5, "DR_STEP": 0.85, "MODULE": "04-C3", "BEAT": "C3", "FOOT": [1040.54, -464.66999999999996], "GROW": 2.45, "CAM": [1040.54, -532.045], "DEV": [1194.2375, -532.045], "OPEN_C": [1301.6825882352941, -511.378338235294], "OPEN_K": 1.25, "TILT": -4.0, "MASK": "url(#s31-e4-trackmask)", "N": 2, "LO": 82, "V": {"transbert": 83.04, "camembert": 83.38, "drbert": 73.56}, "MODELS": ["transbert", "camembert", "drbert"], "DX": {"transbert": 93.60000000000055, "camembert": 124.1999999999996, "drbert": -54.0}, "DR_BREAK": 0.3675, "LOOP": {"off": 0.4, "apart": 0.4, "draw": 0.8, "hold": 1.4}};
+  var E = G.Entry, C = {"FADE": [0.08, 0.32], "TRACK_FADE": [0.04, 0.14], "BOARD": [0.08, 0.3], "LAMP": [0.08, 0.12], "FLASH": [0.3, 0.55], "MOVE": [0.55, 0.64], "LAYOUT_IN": [0.16, 0.3], "PAPER_OUT": [0.64, 0.64], "RUN_ON": [0.55, 0.66], "BUILD": [0.66, 1.0], "U_DEV": 0.95, "S_END": 12.5, "DR_STEP": 0.85, "MODULE": "04-C3", "BEAT": "C3", "FOOT": [1040.54, -464.66999999999996], "GROW": 2.45, "CAM": [1040.54, -532.045], "DEV": [1194.2375, -532.045], "OPEN_C": [1301.6825882352941, -511.378338235294], "OPEN_K": 1.25, "TILT": -4.0, "MASK": "url(#s31-e4-trackmask)", "N": 2, "LO": 82, "V": {"transbert": 83.04, "camembert": 83.38, "drbert": 73.56}, "MODELS": ["transbert", "camembert", "drbert"], "DX": {"transbert": 93.60000000000055, "camembert": 124.1999999999996, "drbert": -54.0}, "DR_BREAK": 0.3675, "LOOP": {"off": 0.4, "apart": 0.4, "draw": 0.8, "hold": 1.4}};
 
   function tf(cx, cy, k, ox, oy, turn) {
     return "translate(" + cx.toFixed(3) + " " + cy.toFixed(3) + ")" + (turn ? " rotate(" + turn.toFixed(3) + ")" : "") +
@@ -5115,8 +5116,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
       /* the region's own module, over its own seconds: the first act, then
        * its lamp, step-in, run and freeze, then on through its flash (whose
        * beams are the only pieces this slide shows) to S_END */
-      var s = C.S_READY * E.span(t, C.FIRST_ACT[0], C.FIRST_ACT[1]);
-      if (t >= C.RUN[0]) s = w.at0 + (w.freeze - w.at0) * E.span(t, C.RUN[0], C.RUN[1]);
+      var s = 0;                                  /* the signed stop, held (mend, round 2) */
       if (t >= C.FLASH[0]) s = w.freeze + C.U_DEV * E.span(t, C.FLASH[0], C.FLASH[1]);
       if (t >= C.RUN_ON[0]) s = w.freeze + C.U_DEV + (w.sEnd - w.freeze - C.U_DEV) * E.span(t, C.RUN_ON[0], C.RUN_ON[1]);
       E.drive(C.MODULE, s);
@@ -5132,7 +5132,8 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
       /* the board copy's lamp: the module's own envelope at the module's own
        * second, HELD at full from where the module's starts to go dark (the
        * plan: the board stays lit while the method loops) */
-      w.lamp.level(w.level(Math.min(s, w.lampOff - w.ramp), w.at0, w.lampOff));
+      w.lamp.level(t < C.FLASH[0] ? (t >= C.BOARD[0] ? E.ph(t, C.LAMP[0], C.LAMP[1]) : 0)
+                                  : w.level(Math.min(s, w.lampOff - w.ramp), w.at0, w.lampOff));
       w.pen(0); w.chain(1);                       /* the loop's marks at rest: linked */
 
       /* FLASH: burst, glint and print, at the module's own second after the freeze */
@@ -5190,14 +5191,12 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
  * is TOTAL: it writes every property it owns at every t, from t alone. */
 (function (G) {
   "use strict";
-  var E = G.Entry, C = {"FIRST_ACT": [0.0, 0.06], "FADE": [0.06, 0.3], "LAMP": [0.06, 0.1], "BOARD": [0.1, 0.3], "RUN": [0.3, 0.4], "FLASH": [0.4, 0.55], "FLASH_TAIL": [0.55, 0.7], "PRINT_OUT": [0.58, 0.68], "LAYOUT_IN": [0.16, 0.3], "PAPER_OUT": [0.68, 0.68], "BUILD": [0.68, 1.0], "S_FIRST": 0.9, "S_LAMP": 12.6, "S_RUN0": 12.8, "S_FREEZE": 13.35, "U_MID": 1.0, "U_END": 2.8499999999999996, "MASK": "url(#s31-e5-trackmask)", "ANCHOR": [1603.21, -1115.05], "K_BOARD0": 0.36666666666666664, "N_TAGS": 12, "CAM": [1617.81, -1144.07], "D": [1764.135, -1190.05], "PC": [1492.19, -1142.55], "TILT": -4.0, "K_PRINT": 1.25, "T_PRINT": [1801.8726333333327, -1154.2190500000002], "TRACK_FADE": [0.04, 0.14], "RISE": 25.0, "SCALE0": 0.15, "LO": 96, "HEADS": [{"m": "transbert", "dx": 235.62000000000023, "v": 98.31}, {"m": "camembert", "dx": 233.5800000000006, "v": 98.29}, {"m": "drbert", "dx": 222.3600000000007, "v": 98.18}], "TILES": [{"fill": "#6B47B8", "dot": false}, {"fill": "#F2A71B", "dot": true}], "LOOP": {"lead": 0.3, "plain": 0.3, "step": 0.15, "hold": 0.75}, "BEATS": 3.15};
+  var E = G.Entry, C = {"FADE": [0.06, 0.3], "LAMP": [0.06, 0.1], "BOARD": [0.1, 0.3], "FLASH": [0.3, 0.55], "FLASH_TAIL": [0.55, 0.7], "PRINT_OUT": [0.58, 0.68], "LAYOUT_IN": [0.16, 0.3], "PAPER_OUT": [0.68, 0.68], "BUILD": [0.68, 1.0], "S_FREEZE": 13.35, "U_MID": 1.0, "U_END": 2.8499999999999996, "MASK": "url(#s31-e5-trackmask)", "ANCHOR": [1603.21, -1115.05], "K_BOARD0": 0.36666666666666664, "N_TAGS": 12, "CAM": [1617.81, -1144.07], "D": [1764.135, -1190.05], "PC": [1492.19, -1142.55], "TILT": -4.0, "K_PRINT": 1.25, "T_PRINT": [1801.8726333333327, -1154.2190500000002], "TRACK_FADE": [0.04, 0.14], "RISE": 25.0, "SCALE0": 0.15, "LO": 96, "HEADS": [{"m": "transbert", "dx": 235.62000000000023, "v": 98.31}, {"m": "camembert", "dx": 233.5800000000006, "v": 98.29}, {"m": "drbert", "dx": 222.3600000000007, "v": 98.18}], "TILES": [{"fill": "#6B47B8", "dot": false}, {"fill": "#F2A71B", "dot": true}], "LOOP": {"lead": 0.3, "plain": 0.3, "step": 0.15, "hold": 0.75}, "BEATS": 3.15};
   var ZERO = { burst: 0, glint: 0, print: 0, flight: 0, arc: 0, cover: 1 };
 
   /* the island's clock for module 05-C4, as a function of t alone */
   function sOf(t) {
-    if (t < C.LAMP[0]) return C.S_FIRST * E.span(t, C.FIRST_ACT[0], C.FIRST_ACT[1]);
-    if (t < C.RUN[0]) return C.S_LAMP + (C.S_RUN0 - C.S_LAMP) * E.span(t, C.LAMP[0], C.LAMP[1]);
-    if (t < C.FLASH[0]) return C.S_RUN0 + (C.S_FREEZE - C.S_RUN0) * E.span(t, C.RUN[0], C.RUN[1]);
+    if (t < C.FLASH[0]) return 0;      /* the signed stop, the trio on its places (mend, round 2) */
     return C.S_FREEZE + C.U_MID * E.span(t, C.FLASH[0], C.FLASH[1])
                       + (C.U_END - C.U_MID) * E.span(t, C.FLASH_TAIL[0], C.FLASH_TAIL[1]);
   }
@@ -5271,13 +5270,13 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
       w.rest(1 - E.ph(t, C.TRACK_FADE[0], C.TRACK_FADE[1]));
 
       /* the board: steps on over the map's (both lit), grows on its post */
-      var on = t >= C.BOARD[0] ? 1 : 0;
+      var on = t >= C.LAMP[0] ? 1 : 0;   /* steps on dark at the lamp, the signed board's twin */
       var kb = E.mix(C.K_BOARD0, 1, E.ph(t, C.BOARD[0], C.BOARD[1]));
       var ax = C.ANCHOR[0], ay = C.ANCHOR[1];
       w.boardO(on);
       w.boardT(on && kb < 0.99999 ? "translate(" + ax.toFixed(3) + " " + ay.toFixed(3) + ") scale(" + kb.toFixed(5)
                                     + ") translate(" + (-ax).toFixed(3) + " " + (-ay).toFixed(3) + ")" : null);
-      w.lamp.level(on);
+      w.lamp.level(on ? E.ph(t, C.LAMP[0], C.LAMP[1]) : 0);
       /* the loop's own marks at rest whenever E writes: every word tagged */
       for (var i = 0; i < w.hl.length; i++) w.hl[i](1);
 
@@ -5352,7 +5351,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
  * every property it owns at every t, so there is no separate set() block. */
 (function (G) {
   "use strict";
-  var E = G.Entry, C = {"FIRST_ACT": [0.16, 0.2], "TRACK_FADE": [0.03, 0.1], "RUN": [0.22, 0.308], "FLASH": [0.308, 0.52], "SWAP": 0.52, "PRINT_OUT": [0.52, 0.64], "LAYOUT_IN": [0.1, 0.22], "PAPER_OUT": [0.64, 0.64], "BUILD": [0.64, 1.0], "FADE": [0.04, 0.24], "S_DEPART": 0.9, "S_STEPIN": 16.3, "S_FREEZE": 16.8, "FLASH_U": 1.6, "S_END": 20.0, "N": 15, "SIG": [0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1], "GROUP_FIRST": {"cls": 0, "ner": 5, "sts": 11, "pos": 13}, "MODELS": ["transbert", "camembert", "drbert"], "MASK": "url(#s31-e6-trackmask)", "TALLY_OF": [["camembert", 0], ["transbert", 0], ["transbert", 1], ["transbert", 2], ["camembert", 1], ["transbert", 3], ["transbert", 4], ["transbert", 5], ["transbert", 6], ["transbert", 7], ["transbert", 8], ["camembert", 2], ["camembert", 3], ["transbert", 9], ["camembert", 4]], "NWIN": {"transbert": 10, "camembert": 5, "drbert": 0}, "TILES_X0": 1665.1158386764705, "STEP": 42.0, "GAP": 8.0, "FIG_GAP": 16.058823529411764, "PC": [1908.855, -1806.84], "TILT": -4.0, "PSCALE": 1.4, "PEND": [2474.1996666666664, -1579.5707058823527], "PTOP": -1898.284812623038, "LEGS": {"rise": [0.0, 0.3], "cross": [0.25, 0.9], "down": [0.55, 1.0]}, "GROW": [0.55, 1.0], "PIC_OUT": [0.3, 0.75]};
+  var E = G.Entry, C = {"TRACK_FADE": [0.03, 0.1], "FLASH": [0.22, 0.52], "SWAP": 0.52, "PRINT_OUT": [0.52, 0.64], "LAYOUT_IN": [0.1, 0.22], "PAPER_OUT": [0.64, 0.64], "BUILD": [0.64, 1.0], "FADE": [0.04, 0.24], "S_STEPIN": 16.3, "S_FREEZE": 16.8, "FLASH_U": 1.6, "S_END": 20.0, "N": 15, "SIG": [0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1], "GROUP_FIRST": {"cls": 0, "ner": 5, "sts": 11, "pos": 13}, "MODELS": ["transbert", "camembert", "drbert"], "MASK": "url(#s31-e6-trackmask)", "TALLY_OF": [["camembert", 0], ["transbert", 0], ["transbert", 1], ["transbert", 2], ["camembert", 1], ["transbert", 3], ["transbert", 4], ["transbert", 5], ["transbert", 6], ["transbert", 7], ["transbert", 8], ["camembert", 2], ["camembert", 3], ["transbert", 9], ["camembert", 4]], "NWIN": {"transbert": 10, "camembert": 5, "drbert": 0}, "TILES_X0": 1665.1158386764705, "STEP": 42.0, "GAP": 8.0, "FIG_GAP": 16.058823529411764, "PC": [1908.855, -1806.84], "TILT": -4.0, "PSCALE": 1.4, "PEND": [2474.1996666666664, -1579.5707058823527], "PTOP": -1898.284812623038, "LEGS": {"rise": [0.0, 0.3], "cross": [0.25, 0.9], "down": [0.55, 1.0]}, "GROW": [0.55, 1.0], "PIC_OUT": [0.3, 0.75]};
 
   /* the print's journey, as _path() in Python: rise, cross, come down and grow */
   function path(u) {
@@ -5412,8 +5411,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
       var s;
       if (t >= C.SWAP) s = C.S_END;
       else if (t >= C.FLASH[0]) s = C.S_FREEZE + C.FLASH_U * E.span(t, C.FLASH[0], C.FLASH[1]);
-      else if (t >= C.RUN[0]) s = C.S_STEPIN + (C.S_FREEZE - C.S_STEPIN) * E.span(t, C.RUN[0], C.RUN[1]);
-      else s = C.S_DEPART * E.span(t, C.FIRST_ACT[0], C.FIRST_ACT[1]);
+      else s = 0;                                 /* the signed finish, held (mend, round 2) */
       E.drive("06-F", s);
 
       /* the track: one hold, kept lit, masked to the finish straight as the
@@ -5479,7 +5477,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
  * every property it owns at every t, so there is no separate set() block. */
 (function (G) {
   "use strict";
-  var E = G.Entry, C = {"S_GONE": 0.5, "P_START": 20.0, "P_SIGNED": 24.74, "P_HOLD": [22.74, 24.24], "RACE": [0.22, 0.78], "LAYOUT": [0.08, 0.22], "BUILD": [0.68, 1.0], "COLS": ["camembert", "drbert"], "TESTS": ["cls", "ner", "sts", "pos"], "N": 8, "BARS": [["transbert", 4000.0, "4B"], ["drbert", 310.0, "310M"]], "FIG_X": {"transbert": 1749.823279509804, "drbert": 1749.823279509804}};
+  var E = G.Entry, C = {"P_LIFT": 22.2, "P_START": 20.0, "P_SIGNED": 24.74, "P_HOLD": [22.74, 24.24], "RACE": [0.22, 0.62], "LAYOUT": [0.08, 0.22], "BUILD": [0.5, 1.0], "COLS": ["camembert", "drbert"], "TESTS": ["cls", "ner", "sts", "pos"], "N": 8, "BARS": [["transbert", 4000.0, "4B"], ["drbert", 310.0, "310M"]], "FIG_X": {"transbert": 1749.823279509804, "drbert": 1749.823279509804}};
 
   E.register("7", {
     name: "The podium",
@@ -5502,6 +5500,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
       if (tl && tl.data && tl.data.lift && tl.data.steps) {
         var tt = tl.data.lift.timetable, bad = [];
         if (Math.abs(tl.data.steps.gold - C.P_START) > 1e-6) bad.push("gold at " + tl.data.steps.gold);
+        if (Math.abs(tt.hopUp[0] - C.P_LIFT) > 1e-6) bad.push("hop up at " + tt.hopUp[0]);
         if (Math.abs(tt.signedFrom - C.P_SIGNED) > 1e-6) bad.push("signed from " + tt.signedFrom);
         if (Math.abs(tt.held[0] - C.P_HOLD[0]) > 1e-6 || Math.abs(tt.held[1] - C.P_HOLD[1]) > 1e-6) bad.push("held " + tt.held);
         if (bad.length) throw new Error("slide-07: 07-P is not the beat this entry was timed on: " + bad.join(", "));
@@ -5533,8 +5532,8 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "The start", "parent":
        * first instant the three are off and the trophy gone; from RACE[0] the
        * beat replays -- the three steps, the trophy, the hop, the lift, the
        * set-back -- and at RACE[1] it is at P_SIGNED, the signed picture again. */
-      var s = t <= 0 ? 0 : (t < C.RACE[0] ? C.S_GONE
-              : C.P_START + (C.P_SIGNED - C.P_START) * E.span(t, C.RACE[0], C.RACE[1]));
+      var s = t < C.RACE[0] ? 0                    /* the signed podium, held (mend, round 2) */
+              : C.P_LIFT + (C.P_SIGNED - C.P_LIFT) * E.span(t, C.RACE[0], C.RACE[1]);
       E.drive("07-P", s);
 
       /* PLACE, grey, under the camera: the board stands in the right half
