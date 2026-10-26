@@ -6318,9 +6318,15 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
   function idleWindows(windows, pre) {
     var FL = G.FixedLive;
     if (!FL || !windows || !windows.length) return null;
-    function total(ss) { return ss.reduce(function (a, w) { return a + (w[1] - w[0]); }, 0); }
+    /* ⚠️ A WINDOW MAY BE A DWELL (26 October 2026, the composer): `[s, s, d]`
+     * holds the clock at second s for d seconds. slide-03.py (3.1) needed one
+     * after the deal and built its own idle object to get it, a second idle
+     * builder on one island; it calls this now. A third number on an ordinary
+     * window ([a, b, 1], b > a) is ignored, as slide-03's own segments wrote it. */
+    function dur(w) { return w[1] > w[0] ? w[1] - w[0] : (w[2] || 0); }
+    function total(ss) { return ss.reduce(function (a, w) { return a + dur(w); }, 0); }
     function walk(ss, u) {
-      for (var i = 0; i < ss.length; i++) { var d = ss[i][1] - ss[i][0]; if (u < d) return ss[i][0] + u; u -= d; }
+      for (var i = 0; i < ss.length; i++) { var d = dur(ss[i]); if (u < d) return ss[i][0] === ss[i][1] ? ss[i][0] : ss[i][0] + u; u -= d; }
       return ss.length ? ss[ss.length - 1][1] - 1e-4 : 0;
     }
     var p = pre || [], beats = total(windows), period = beats / (1 - Entry.REST_SHARE);
@@ -6626,16 +6632,9 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
     return 0;
   }
   var SEGS = FL ? segments() : null;
-  var IDLE = null;
-  if (SEGS) {
-    var beats = SEGS.reduce(function (a, s) { return a + durOf(s); }, 0);
-    IDLE = {
-      beats: beats, period: beats / (1 - E.REST_SHARE), pre: [], loop: SEGS,
-      apply: function (u) { var c = u >= beats ? 0 : clockAt(SEGS, u); FL.sync(c); return c; },
-      prelude: function () { FL.sync(0); },
-      preludeFor: 0
-    };
-  }
+  /* the island's one idle builder, whose windows take a dwell [s, s, d] (entry.py);
+   * this slide built the same object by hand until 26 October 2026 (the composer) */
+  var IDLE = SEGS ? E.idleWindows(SEGS) : null;
 
   /* the island's own seconds for this batch, read off the two modules' schedules
    * once they exist (the stage builds an idle only after FixedLive has built) */
