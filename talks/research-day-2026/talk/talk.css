@@ -37,3 +37,9 @@ body.in #world { opacity: 0; pointer-events: none; }
            transition: opacity .2s; }
 #loading.on { opacity: .6; }
 @media (prefers-reduced-motion: reduce) { #world, #stage, #veil { transition: none; } }
+
+/* the translator, marked on 2.2's island view when coming back up out of 2.1 */
+#mark { position: absolute; box-sizing: border-box; border: 2px dashed rgba(48,46,46,.7); border-radius: 10px;
+        pointer-events: none; opacity: 0; transition: opacity .2s; z-index: 3; }
+#mark.on { opacity: 1; }
+#stage iframe { transform-origin: 0 0; }
