@@ -16,7 +16,11 @@ Writes, at 1920x1080 and 30 fps (the map is 480x270 pixels, 4 screen pixels each
                           shell shows it (islands/island-<id>.png, see retro_capture.mjs)
   close-<id>.mp4          open-<id> backwards
   idle-<id>.webp          the idle loop's frame 0, the poster (and the picture for ?reduced=1)
-  retro.json              the map's size, each building's box and door, each video's length
+  backdrop-<id>.webp      the room inside building <id> (backdrops.py), the card's frame drawn round the
+                          card's place and the card's place left as paper: the shell shows it behind the
+                          island's card at every level of that island (2.1 uses 2.2's, the factory)
+  retro.json              the map's size, each building's box and door, each video's length, each
+                          backdrop's edge colour (the view is filled with it beyond the picture)
 
 ⚠️ THE HAND-OFFS ARE BY CONSTRUCTION, NOT BY LUCK. Every video is rendered on one clock: the smoke,
 the flags and Bert's breath have a period of 1 s, so a video an integer number of seconds long
@@ -43,7 +47,7 @@ ap.add_argument("--ffmpeg", required=True)
 ap.add_argument("--deck", default=os.path.normpath(os.path.join(HERE, "..", "..")))
 ap.add_argument("--out", default=None)
 ap.add_argument("--islands", default=None)
-ap.add_argument("--only", default="idle,walk,open")
+ap.add_argument("--only", default="backdrop,idle,walk,open")
 ap.add_argument("--crf", default="20")
 A = ap.parse_args()
 OUT = A.out or os.path.join(A.deck, "world", "talk", "media", "retro")
@@ -226,6 +230,38 @@ for bid in IDS:
 
 ONLY = A.only.split(",")
 
+
+# ---- the rooms behind the cards ------------------------------------------------------------
+import backdrops  # noqa: E402
+from PIL import ImageDraw  # noqa: E402
+
+
+def backdrop(bid):
+    room = Image.new("RGBA", (MW, MH), (0, 0, 0, 0))
+    Sprite(backdrops.ROOMS[bid]()).draw(room)
+    im = room.convert("RGB").resize((W, H), Image.NEAREST)
+    fr, fr_l, sh = backdrops.FRAMES[bid]
+    d = ImageDraw.Draw(im)
+    x0, y0, x1, y1 = CARD[0], CARD[1], CARD[0] + CARD[2], CARD[1] + CARD[3]
+    f, o, s = 12, 4, 8
+    d.rectangle([x0 - f - o + s, y0 - f - o + s, x1 + f + o + s - 1, y1 + f + o + s - 1], fill=rgba(sh)[:3])   # its offset darker copy
+    d.rectangle([x0 - f - o, y0 - f - o, x1 + f + o - 1, y1 + f + o - 1], fill=rgba(C.OUT)[:3])               # the chunky outline
+    d.rectangle([x0 - f, y0 - f, x1 + f - 1, y1 + f - 1], fill=rgba(fr)[:3])                               # the frame
+    d.rectangle([x0 - f, y0 - f, x1 + f - 1, y0 - f + 3], fill=rgba(fr_l)[:3])                            # its lit top edge
+    d.rectangle([x0 - f, y0 - f, x0 - f + 3, y1 + f - 1], fill=rgba(fr_l)[:3])                            # and left edge
+    d.rectangle([x0 - 2, y0 - 2, x1 + 1, y1 + 1], fill=rgba(C.OUT)[:3])                                    # the card's own edge
+    d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=(245, 243, 239))                                             # the card's place
+    return im
+
+
+if "backdrop" in ONLY:
+    for bid in IDS:
+        im = backdrop(bid)
+        im.save(os.path.join(OUT, "backdrop-%s.webp" % bid), lossless=True, quality=100, method=6)
+        edge = np.array(im)[:, :8].reshape(-1, 3).mean(axis=0)
+        META.setdefault("backdrops", {})[bid] = "rgb(%d,%d,%d)" % tuple(int(v) for v in edge)
+        print("backdrop-%s.webp  %6.0f kB" % (bid, os.path.getsize(os.path.join(OUT, "backdrop-%s.webp" % bid)) / 1024))
+
 # ---- idle loops ---------------------------------------------------------------------------
 if "idle" in ONLY:
     for bid in IDS:
@@ -380,7 +416,9 @@ if "open" in ONLY:
 
 mp = os.path.join(OUT, "retro.json")
 old = json.load(open(mp)) if os.path.exists(mp) else {}
-old.update({k: v for k, v in META.items() if k != "videos"})
+old.update({k: v for k, v in META.items() if k not in ("videos", "backdrops")})
+if "backdrops" in META:
+    old["backdrops"] = META["backdrops"]
 old.setdefault("videos", {}).update(META["videos"])
 json.dump(old, open(mp, "w"), indent=1)
 print("wrote", mp)
