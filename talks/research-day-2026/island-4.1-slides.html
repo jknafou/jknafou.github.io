@@ -5715,8 +5715,13 @@ window.FIXED_CLICKABLE = {"click": "opens", "min_box_units": 48, "pad_units": 6,
    * in front of it. Added 19 October 2026 for slide 3.4's above-or-below
    * graph, defaulted to "" so the eight callers that predate it are
    * untouched. */
-  function counter(el, to, decimals, suffix, prefix) {
+  /* ⚠️ `group` (26 October 2026, island 2.2's composer): true writes the
+   * thousands with commas, "8,000" and "500,000", which `toFixed` cannot, so
+   * two of 2.2's entries carried a figure writer of their own with this very
+   * contract. Whole numbers only: grouping is refused with decimals > 0. */
+  function counter(el, to, decimals, suffix, prefix, group) {
     if (!el) return function () {};
+    if (group && decimals) throw new Error("counter(): group wants decimals 0");
     var signed = el.textContent, pre = prefix || "";
     return function (u) {
       /* ⚠️ A NEGATIVE u MEANS "RESTORE THE SIGNED STRING" and 0 means "count
@@ -5724,7 +5729,11 @@ window.FIXED_CLICKABLE = {"click": "opens", "min_box_units": 48, "pad_units": 6,
        * made a figure flash its finished value on the frame it appeared. */
       var s;
       if (u < 0) { s = signed; }
-      else { s = pre + (to * (u > 1 ? 1 : u)).toFixed(decimals) + suffix; }
+      else {
+        var v = (to * (u > 1 ? 1 : u)).toFixed(decimals);
+        if (group) v = v.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        s = pre + v + (suffix || "");
+      }
       if (el.textContent !== s) el.textContent = s;
     };
   }
@@ -6073,6 +6082,33 @@ window.FIXED_CLICKABLE = {"click": "opens", "min_box_units": 48, "pad_units": 6,
     var FL = G.FixedLive;
     for (var i = 0; i < FL.beats.length; i++) if (FL.beats[i][0] === label) return FL.at[label] + FL.beats[i][1];
     throw new Error("Entry.beatEnd: the island's clock has no beat " + label);
+  };
+
+  /* ⚠️ ONE MODULE OF THE ISLAND'S CLOCK, DRIVEN BY t INSIDE AN ENTRY. The plan
+   * (section 0): "Where a beat of the signed loop plays inside an entry, it is
+   * driven by t through the island's own module, never re-written: the press
+   * is the island's PRESS, the lamp its lamp, the bead its bead." This sets
+   * ONE module's timeline to `s` seconds of the island's clock and leaves the
+   * other twelve where they are (at 0, the signed picture, after the stage's
+   * quiet()), so a case entry can lift its own stamp, run its own bead and
+   * press its own stamp without the tour's other beats moving. `s <= 0` puts
+   * the module at 0, which Proof 3 of FIXED-ANIMATION.md shows is the signed
+   * picture -- so `at(0)` must call it with 0 and E(0) stays byte-identical
+   * (check-entry measures it). The module is looked up by id on every call,
+   * because the stage rebuilds the modules at a slide's scale around a loop.
+   * ⚠️ A MODULE STILLED AT THE MAP'S SCALE IS STILLED HERE TOO: E(t) runs on
+   * the map's tier (house_compose `rescale` acts around idles only), and
+   * 06-C1 logs its bead as stilled at 0.715 px/u. Read `FixedLive.children`'s
+   * `tl.data.live` and say in your report what your entry's beat does. */
+  Entry.moduleAt = function (id, s) {
+    var kids = (G.FixedLive && G.FixedLive.children) || [];
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i].id !== id) continue;
+      var tl = kids[i].tl, want = Math.min(Math.max(s || 0, 0), tl.duration());
+      if (Math.abs(tl.time() - want) > 1e-9) tl.time(want, false);
+      return want;
+    }
+    throw new Error("Entry.moduleAt: the island's clock has no module " + id);
   };
 
   /* ⚠️ A RULE STANDS WHOLE, IT DOES NOT GROW (1.1, mend round 1). The house
