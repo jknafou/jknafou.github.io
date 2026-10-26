@@ -34,6 +34,14 @@
  * the camera dives into the floor and ends ON the island view, which is under it), and
  * ↑/Escape from the island view plays it backwards (close-<id>) after the island's loop
  * is put back at its frame 0. ?world=old brings back the four tiles.
+ *
+ * THE ROOMS (the author, 26 October 2026, late: "could we adapt the background of each
+ * island so that it matches its environement?"). Inside an island, at every level -- its
+ * view, its slides, 2.1's depth inside the factory -- the room of its building
+ * (media/retro/backdrop-<id>.webp, make_retro.py) is drawn BEHIND the island's card, and
+ * the slide pictures and videos are clipped to the card: their margins are plain page
+ * colour (measured on every rest picture and every move video), so only paper is cut, and
+ * the signed card is shown untouched. ?plain=1 turns the rooms off.
  */
 (function () {
   "use strict";
@@ -54,6 +62,8 @@
   var REDUCED = params.get("reduced") === "1" ||
     !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   var RETRO = params.get("world") !== "old";
+  var THEMED = params.get("plain") !== "1";
+  if (!THEMED) document.body.classList.add("plain");
   var stillUrl = function (id) { return "stills/" + id + ".webp"; };
   var slideMedia = function (id, name) { return "media/slides/" + id + "/" + name; };
   if (params.get("chrome") === "0") document.body.classList.add("nochrome");
@@ -91,9 +101,11 @@
     fetch("stills/stills.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
     fetch("media/media.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
     fetch("media/slides/slides.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
-    RETRO ? fetch("media/retro/retro.json").then(function (r) { return r.json(); }).catch(function () { return null; }) : null
+    (RETRO || THEMED) ? fetch("media/retro/retro.json").then(function (r) { return r.json(); }).catch(function () { return null; }) : null
   ]).then(function (j) {
     RJ = j[3]; if (RETRO && !RJ) RETRO = false;
+    if (THEMED && !(RJ && RJ.backdrops)) { THEMED = false; document.body.classList.add("plain"); }
+    if (THEMED) { document.body.classList.add("themed"); buildBackdrop(); }
     [j[0], j[1]].forEach(function (m) { Object.keys(m).forEach(function (k) { META[k] = Object.assign(META[k] || {}, m[k]); }); });
     SL = j[2];
     layoutWorld();
@@ -208,6 +220,35 @@
   }
   function loopBox(id) { return expand(id, islandRect(id)); }
 
+
+  /* ---- the room behind the card (THE ROOMS, above) ----------------------------- */
+  var bdEl = null, bdImg = null, bdId = null;
+  function roomOf(id) { return id === "2.1" ? "2.2" : id; }
+  function buildBackdrop() {
+    if (bdEl) return;
+    bdEl = document.createElement("div"); bdEl.id = "backdrop";
+    bdImg = document.createElement("img"); bdImg.alt = ""; bdEl.appendChild(bdImg);
+    viewEl.insertBefore(bdEl, viewEl.firstChild);
+    WORLD.forEach(function (id) { var im = new Image(); im.src = "media/retro/backdrop-" + id + ".webp"; });
+  }
+  function setBackdrop(id) {
+    if (!THEMED || !bdEl || !id) return;
+    var r = roomOf(id);
+    if (r !== bdId) {
+      bdId = r;
+      bdImg.src = "media/retro/backdrop-" + r + ".webp";
+      bdEl.style.backgroundColor = (RJ.backdrops && RJ.backdrops[r]) || "";
+    }
+    layoutBackdrop();
+  }
+  function layoutBackdrop() {
+    if (!THEMED || !bdEl) return;
+    var C = cardBox(), cd = (RJ && RJ.card) || [268.8, 21.6, 1382.4, 1036.8], s = C.h / cd[3];
+    place(bdImg, { x: C.x - cd[0] * s, y: C.y - cd[1] * s, w: 1920 * s, h: 1080 * s });
+    var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
+    slideEl.style.clipPath = "inset(" + C.y + "px " + (Vw - C.x - C.w) + "px " + (Vh - C.y - C.h) + "px " + C.x + "px)";
+  }
+
   /* ---- the island loop videos ------------------------------------------------ */
   var vids = {};
   function bigVideo(id) {
@@ -250,7 +291,8 @@
     restImg.src = restUrl(id, k);
     if (restImg.decode) await restImg.decode().catch(function () {});
     slideEl.classList.add("on");
-    slideEl.style.background = (SL[id] && SL[id].bg) || "";
+    slideEl.style.background = THEMED ? "transparent" : ((SL[id] && SL[id].bg) || "");
+    if (THEMED) { setBackdrop(id); layoutBackdrop(); }
   }
   function hideRest() { slideEl.classList.remove("on"); }
 
@@ -374,7 +416,7 @@
 
   /* ---- the island view: the page's resting picture, the loop over it ------- */
   async function islandView(id, t) {
-    S.island = id; S.layer = "island"; S.k = 0;
+    S.island = id; S.layer = "island"; S.k = 0; setBackdrop(id);
     await showRest(id, 0);
     var v = bigVideo(id);
     await ready(v, 3000);
@@ -538,7 +580,7 @@
     veil.classList.add("on"); await sleep(300);
     hotsEl.innerHTML = "";
     showVideo(null);
-    S.island = id;
+    S.island = id; setBackdrop(id);
     if (where === "last") {
       await showRest(id, N(id)); S.layer = "slide"; S.k = N(id);
       keep(id); preloadAround(id, S.k);
@@ -630,6 +672,14 @@
     });
   }
   function retroShown(on) { retroEl.classList.toggle("on", on); }
+  /* what shows beyond the videos' 16:9 picture when the view is wider: grass on the map, the
+   * room's own colour as the camera arrives in a building, so the edges never jump */
+  var GRASS = "#4caf46";
+  function retroEdge(c, ms, delay) {
+    retroEl.style.transition = ms ? "background-color " + ms + "ms linear " + (delay || 0) + "ms" : "none";
+    retroEl.style.backgroundColor = c;
+  }
+  function roomColour(id) { return (THEMED && RJ && RJ.backdrops && RJ.backdrops[roomOf(id)]) || ""; }
   /* what the next key might play, loaded while Bert idles at building i */
   function retroPreload(i) {
     var id = WORLD[i], L = ["idle-" + id, "open-" + id];
@@ -639,7 +689,7 @@
   }
   /* Bert idling at building i, shown at once (arrival, or the end of a cut) */
   async function retroIdle(i) {
-    buildRetro(); retroShown(true);
+    buildRetro(); retroShown(true); retroEdge(GRASS, 0);
     var id = WORLD[i];
     rposterShow(id);
     if (!REDUCED) { await rswap(rvid("idle-" + id)); rposter.removeAttribute("src"); }
@@ -668,7 +718,7 @@
   }
   /* the island view, made ready UNDER the retro layer: its picture, its loop held at frame 0 */
   async function prepIsland(id) {
-    S.island = id;
+    S.island = id; setBackdrop(id);
     await showRest(id, 0);
     var v = bigVideo(id);
     await ready(v, 3000);
@@ -686,6 +736,7 @@
     if (!REDUCED) {
       var v = rvid("open-" + id);
       await rswap(v);
+      if (roomColour(id)) retroEdge(roomColour(id), 1300, 900);
       rvid("close-" + id);
       await rended(v);
     }
@@ -693,6 +744,7 @@
     document.body.classList.add("in");
     S.layer = "island"; S.k = 0;
     retroShown(false);
+    if (!THEMED && !REDUCED) await sleep(320);   /* ?plain=1: the videos land on the room; #retro fades instead */
     play(bv);
     hotsEl.innerHTML = ""; buildHots(id); preloadAround(id, 0); keep(id);
     S.busy = false; update();
@@ -707,6 +759,7 @@
     if (!REDUCED) {
       var v = rvid("close-" + id);
       rvid("idle-" + id);
+      if (roomColour(id)) retroEdge(roomColour(id), 0);
       await ready(v, 6000);
       if (v.currentTime > 0.001) await seekTo(v, 0);
       v.style.zIndex = ++rz;
@@ -717,6 +770,7 @@
       await nextFrame();
       retroEl.classList.add("clear");            /* until the map is back, the island shows through, never paper */
       retroShown(true);
+      retroEdge(GRASS, 1300, 200);
       if (!rlat.moved) rlat.moved = performance.now();
       await rended(v);
       await rswap(rvid("idle-" + id));
@@ -798,7 +852,7 @@
     onKey(e.key);
   });
   window.addEventListener("resize", function () {
-    layoutWorld(); layoutRetro();
+    layoutWorld(); layoutRetro(); layoutBackdrop(); clipVids();
     if (S.island) {
       Object.keys(vids).forEach(function (id) { place(vids[id], loopBox(id)); });
       var cur = S.layer === "sub" || S.layer === "subslide" ? ISL[S.island].sub : S.island;
@@ -858,7 +912,7 @@
     }
     if (RETRO) buildRetro();
     document.body.classList.add("in");
-    S.island = at.id;
+    S.island = at.id; setBackdrop(at.id);
     if (at.layer === "island") { await islandView(at.id, 0); update(); return; }
     if (at.layer === "slide") {
       S.k = Math.max(1, Math.min(N(at.id), at.k)); S.layer = "slide";

@@ -97,4 +97,11 @@ body:not(.in) #hots { display: none; }
 #retro .bld { position: absolute; box-sizing: border-box; border-radius: 10px; cursor: pointer; z-index: 100000;
   border: 3px dashed transparent; }
 #retro .bld:hover { border-color: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(34,32,42,.55); }
-#retro.clear { background: transparent; }
+#retro.clear { background: transparent !important; }
+
+/* the rooms behind the islands' cards (talk.js, THE ROOMS): under everything of the island */
+#backdrop { position: absolute; inset: 0; z-index: 0; display: none; overflow: hidden; }
+body.themed.in #backdrop { display: block; }
+#backdrop img { position: absolute; display: block; image-rendering: pixelated; user-select: none; pointer-events: none; }
+body.themed #vids video { background: transparent; }
+body.plain #retro { transition: opacity .3s; }

@@ -40,8 +40,13 @@ const base = `http://127.0.0.1:${srv.address().port}/index.html`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 for (const id of ["1.1", "2.2", "3.1", "4.1"]) {
   const b = await open(base + "?chrome=0&world=old#/" + id, { size: [1920, 1080] });
-  await b.until("window.Talk && Talk.state.layer==='island' && !Talk.state.busy", 30000);
-  await b.evaluate(`(async()=>{for(const v of document.querySelectorAll('video.bigvid')){v.pause();v.currentTime=0;await new Promise(r=>{v.addEventListener('seeked',r,{once:true});setTimeout(r,2000)});} return 1})()`);
+  await b.until("window.Talk && Talk.state.layer==='island' && !Talk.state.busy && Talk.state.videos.length && Talk.state.crumb.length > 5", 30000); await new Promise(r=>setTimeout(r,1500));
+  /* hold the loop at frame 0 and wait until that frame is PRESENTED: a paused video's
+   * seek is otherwise not always repainted before a headless screenshot */
+  await b.evaluate(`(()=>{window.__f0=0;const v=document.querySelector('video.bigvid.on');v.pause();
+    const done=()=>{window.__f0=1};v.addEventListener('seeked',()=>{v.requestVideoFrameCallback?v.requestVideoFrameCallback(done):setTimeout(done,300)},{once:true});
+    v.currentTime=0.0001;setTimeout(()=>{v.currentTime=0},50);return 1})()`);
+  await b.until("window.__f0===1", 10000);
   await sleep(800);
   await b.shot(path.join(OUT, "island-" + id + ".png"));
   console.log("island-" + id + ".png");
