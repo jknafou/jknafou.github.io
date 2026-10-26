@@ -12,15 +12,15 @@ body.nochrome #strip { display: none; }
 #world { position: absolute; inset: 0; display: flex; justify-content: center; box-sizing: border-box;
          align-items: center; transition: opacity .3s; }
 .cell { position: relative; flex: 0 0 22%; height: 60%; display: flex; flex-direction: column; min-width: 0; }
-.cell .frame { position: relative; flex: 1 1 auto; border: 2px solid transparent; border-radius: 12px; overflow: hidden;
-               transition: border-color .15s; }
-.cell iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--paper); }
-.cell .hit { position: absolute; inset: 0; cursor: pointer; }
+.cell .frame { position: relative; flex: 1 1 auto; outline: 2px solid transparent; outline-offset: 4px; border-radius: 12px; }
+.cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block;
+            pointer-events: none; user-select: none; }
+.cell .frame { cursor: pointer; }
 .cell .label { flex: 0 0 auto; display: flex; justify-content: center; white-space: nowrap; padding-top: 6px; opacity: .55; transition: opacity .15s; }
-.cell.focus .frame { border-color: var(--ink); }
+.cell.focus .frame { outline-color: var(--ink); }
 .cell.focus .label { opacity: 1; }
-.cell:hover .frame { border-style: dashed; border-color: rgba(48,46,46,.55); }
-.cell.focus:hover .frame { border-style: solid; border-color: var(--ink); }
+.cell .frame:hover { outline-style: dashed; outline-color: rgba(48,46,46,.55); }
+.cell.focus .frame:hover { outline-style: solid; outline-color: var(--ink); }
 
 /* the island: its slides page, whole */
 #stage { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .3s; }
@@ -31,9 +31,9 @@ body.in #stage { opacity: 1; pointer-events: auto; }
 body.in #world { opacity: 0; pointer-events: none; }
 
 /* the crossing between islands: a short fade through paper */
-#veil { position: absolute; inset: 0; background: var(--paper); opacity: 0; pointer-events: none; transition: opacity .28s; }
+#veil { position: absolute; inset: 0; z-index: 4; background: var(--paper); opacity: 0; pointer-events: none; transition: opacity .28s; }
 #veil.on { opacity: 1; pointer-events: auto; }
-#loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
+#loading { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
            transition: opacity .2s; }
 #loading.on { opacity: .6; }
 @media (prefers-reduced-motion: reduce) { #world, #stage, #veil { transition: none; } }
@@ -43,3 +43,10 @@ body.in #world { opacity: 0; pointer-events: none; }
         pointer-events: none; opacity: 0; transition: opacity .2s; z-index: 3; }
 #mark.on { opacity: 1; }
 #stage iframe { transform-origin: 0 0; }
+
+/* the flights: still images, moved by transform and opacity only */
+#fly { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 2; contain: strict; }
+#fly.on { display: block; background: var(--paper); }
+#fly.on.clear { background: transparent; }
+#fly .flyimg { position: absolute; transform-origin: 0 0; will-change: transform, opacity; user-select: none; }
+body.cut #stage { transition: none; }

@@ -310,8 +310,12 @@
     /* 2.2 scaled so the translator's box becomes 2.1's box */
     var k = R1.w / door.w, cx = b.x + b.w / 2, cy = b.y + b.h / 2, tx = R1.x + R1.w / 2, ty = R1.y + R1.h / 2;
     var big = { x: tx + (R2.x - cx) * k, y: ty + (R2.y - cy) * k, w: R2.w * k, h: R2.h * k };
-    flyClear(); fly.className = "on";
+    var stale = Array.prototype.slice.call(fly.children);
+    fly.className = "on";
     var a = flyImg(parent, R2), c = flyImg(sub, R1);
+    a.style.opacity = 0; c.style.opacity = 0;
+    await Promise.all([a, c].map(function (e) { return e.decode ? e.decode().catch(function () {}) : null; }));
+    stale.forEach(function (e) { e.remove(); });
     var A = { el: a, from: { transform: into ? "none" : over(R2, big), opacity: into ? 1 : 0 }, to: { transform: into ? over(R2, big) : "none", opacity: into ? 0 : 1 } };
     var C = { el: c, from: { transform: into ? over(R1, door) : "none", opacity: into ? 0 : 1 }, to: { transform: into ? "none" : over(R1, door), opacity: into ? 1 : 0 } };
     A.from.opacity = 1; A.to.opacity = into ? 0.0 : 1;
@@ -346,7 +350,36 @@
     update();
     if (ISL[id].sub && (slide === null || slide === undefined) && fade) { await sleep(320); markDoor(); }
   }
-  function openIsland(id) { return mount(id, null, false); }
+  /* world -> island: the island's still flies from its tile to its place on the
+     island page (compositor-only), the page loads and rests under it, then the
+     still fades. The page's load starts only once the flight is under way. */
+  async function openIsland(id) {
+    if (!cells.length || S.layer !== "world") return mount(id, null, false);
+    S.busy = true;
+    var tile = tileRect(id), rec0 = frames[id];
+    var R = rec0 && rec0.win ? stillRect(rec0, id) : stillRect(null, id);
+    flyClear(); fly.className = "on clear";
+    var im = flyImg(id, R);
+    document.body.classList.add("in");           /* the world fades; the stage is empty until shown */
+    setTimeout(function () { frameFor(id); }, 120);
+    await animate([{ el: im, from: { transform: over(R, tile) }, to: { transform: "none" } }], 560);
+    var rec = await loaded(id);
+    await atMap(rec);
+    var old = activeId();
+    S.island = id; S.sub = null; S.subLive = false; S.layer = "island";
+    var R2 = stillRect(rec, id);
+    if (Math.abs(R2.x - R.x) + Math.abs(R2.y - R.y) + Math.abs(R2.w - R.w) > 3)
+      await animate([{ el: im, from: { transform: "none" }, to: { transform: over(R, R2) } }], 200);
+    showFrame(id);
+    if (old && old !== id && frames[old]) hush(frames[old]);
+    await nextFrame(); await nextFrame();
+    await fadeFly(180);
+    startTour(rec);
+    keepSet(id);
+    refocus();
+    S.busy = false;
+    update();
+  }
   function crossTo(id, slide) { return mount(id, slide, true); }
 
   /* into 2.2's translator. slide = null: 2.1's LIVING VIEW, its loop playing (the walk);
@@ -413,21 +446,41 @@
     update();
   }
 
+  /* island -> world: the island page's still flies back to its tile, the world
+     fading in behind it (compositor-only) */
   async function goWorld(focusId) {
     S.busy = true;
     buildWorld();
     var i = WORLD.indexOf(focusId);
     if (i >= 0) S.focus = i;
-    var rec = cur();
+    markFocus();
+    var rec = cur(), from = S.island && !S.sub ? S.island : null;
     S.layer = "world";
-    document.body.classList.remove("in");
+    if (rec && from && cells.length) {
+      stopTour(rec);
+      var R = stillRect(rec, from), tile = tileRect(from);
+      flyClear(); fly.className = "on clear";
+      var im = flyImg(from, R);
+      im.decode && await im.decode().catch(function () {});
+      await nextFrame();
+      document.body.classList.add("cut");          /* the page goes at once: the still covers it */
+      document.body.classList.remove("in");
+      showFrame(null);
+      await nextFrame();
+      document.body.classList.remove("cut");
+      await animate([{ el: im, from: { transform: "none" }, to: { transform: over(R, tile) } }], 520);
+      flyClear();
+    } else {
+      document.body.classList.remove("in");
+      await sleep(300);
+      showFrame(null);
+    }
     if (rec) hush(rec);
-    playWorld();
-    await sleep(300);
-    S.island = null; S.sub = null; S.subLive = false; showFrame(null);
+    S.island = null; S.sub = null; S.subLive = false;
     S.busy = false;
     update();
   }
+
 
   /* ---- the keys ----------------------------------------------------------- */
   var NAV = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, Enter: 1, Escape: 1 };
@@ -435,7 +488,28 @@
   function crossBack(id) { return crossTo(id, "last"); }
   /* the first item of an island's line, for → from the previous island:
      an island with a nested one starts at its island view, the door before the zoom */
-  function crossFwd(id) { return ISL[id].sub ? crossTo(id, null) : crossTo(id, "first"); }
+  function crossFwd(id) { return ISL[id].sub ? crossIntoSub(id) : crossTo(id, "first"); }
+  /* → from the previous island's last slide straight to the island's first step, its
+     nested island's living view (2.2's translation): fade to 2.2's still, then the zoom,
+     without stopping on 2.2's island view (the author, 26 October 2026) */
+  async function crossIntoSub(id) {
+    S.busy = true;
+    veil.classList.add("on"); await sleep(300);
+    var old = activeId(), rec = await loaded(id);
+    await atMap(rec);
+    var inner = await loaded(liveKey(ISL[id].sub));
+    S.island = id; S.sub = null; S.subLive = false; S.layer = "island";
+    stopTour(rec);
+    if (old && old !== id && frames[old]) hush(frames[old]);
+    flyClear(); fly.className = "on";
+    flyImg(id, stillRect(rec, id));
+    showFrame(id);
+    await nextFrame();
+    veil.classList.remove("on"); await sleep(300);
+    keepSet(id);
+    S.busy = false;
+    return zoomIn(null);
+  }
 
   function onKey(k) {
     if (S.busy) return;
@@ -453,7 +527,8 @@
     /* 2.1's living view, inside 2.2's translator: step 1 of 2.2 */
     if (S.sub && S.subLive) {
       if (fwd) zoomOut("first");                /* back out, on to 2.2's first own slide */
-      else if (back || up) zoomOut(null);       /* back to 2.2's island view, the translator marked */
+      else if (up) zoomOut(null);               /* back to 2.2's island view, the translator marked */
+      else if (back) { var pb = prevW(S.island); pb ? crossTo(pb, "last") : zoomOut(null); }   /* ← the previous island's last slide */
       else bump();
       return;
     }
