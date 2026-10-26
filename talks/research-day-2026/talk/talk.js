@@ -24,6 +24,16 @@
  * #/2.2/translation (2.1's living view), #/2.2/translation/4 (2.1's slide 4);
  * #/2.1 and #/2.1/4 are aliases. ?chrome=0 hides the strip.
  * Media are made by make_media.mjs (--slides for these), stills by stills.mjs.
+ *
+ * THE RETRO WORLD (the author, 26 October 2026 evening: a city "in a kind of mario retro
+ * games rendering"; the designs validated: "Love it"). The world level is the overworld
+ * map of world/concepts/drafts/retro-city/, as videos made by make_retro.py
+ * (media/retro/): Bert idles at the building of the current island (idle-<id>), ←/→ walk
+ * him along the dirt road to the previous or next building (walk-<a>-<b>), ↓/Enter or a
+ * click on a building plays its opening (open-<id>: the roof flies off, the walls fall,
+ * the camera dives into the floor and ends ON the island view, which is under it), and
+ * ↑/Escape from the island view plays it backwards (close-<id>) after the island's loop
+ * is put back at its frame 0. ?world=old brings back the four tiles.
  */
 (function () {
   "use strict";
@@ -43,6 +53,7 @@
   var WORLD = ["1.1", "2.2", "3.1", "4.1"];
   var REDUCED = params.get("reduced") === "1" ||
     !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var RETRO = params.get("world") !== "old";
   var stillUrl = function (id) { return "stills/" + id + ".webp"; };
   var slideMedia = function (id, name) { return "media/slides/" + id + "/" + name; };
   if (params.get("chrome") === "0") document.body.classList.add("nochrome");
@@ -75,12 +86,14 @@
   function bump() { strip.classList.remove("bump"); void strip.offsetWidth; strip.classList.add("bump"); }
 
   /* ---- what the media are ---------------------------------------------------- */
-  var META = {}, SL = {};
+  var META = {}, SL = {}, RJ = null;
   var metaReady = Promise.all([
     fetch("stills/stills.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
     fetch("media/media.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
-    fetch("media/slides/slides.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
+    fetch("media/slides/slides.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
+    RETRO ? fetch("media/retro/retro.json").then(function (r) { return r.json(); }).catch(function () { return null; }) : null
   ]).then(function (j) {
+    RJ = j[3]; if (RETRO && !RJ) RETRO = false;
     [j[0], j[1]].forEach(function (m) { Object.keys(m).forEach(function (k) { META[k] = Object.assign(META[k] || {}, m[k]); }); });
     SL = j[2];
     layoutWorld();
@@ -376,6 +389,7 @@
 
   /* world -> island */
   async function openIsland(id) {
+    if (RETRO) return retroOpen(id);
     S.busy = true;
     await metaReady;
     buildWorld();
@@ -394,6 +408,7 @@
   }
   /* island -> world */
   async function goWorld(focusId) {
+    if (RETRO) return retroClose(focusId);
     S.busy = true;
     buildWorld();
     var i = WORLD.indexOf(focusId); if (i >= 0) S.focus = i;
@@ -542,12 +557,195 @@
     return enterSlide(1);
   }
 
+
+  /* ---- the retro world: the overworld map as videos (make_retro.py) --------------
+   * #retro covers the view with paper; its videos are placed so that the island's card
+   * in their frames lands exactly on cardBox(), the box the island view uses, so an
+   * opening's last frame IS the island view under it. Videos are swapped only once the
+   * new one has presented its first frame, the newest on top. */
+  var retroEl = null, rcur = null, rz = 1, rpool = {}, rposter = null, rlat = { key: 0, moved: 0 };
+  function rurl(name) { return "media/retro/" + name + ".mp4"; }
+  function retroBox() {
+    var C = cardBox(), cd = (RJ && RJ.card) || [268.8, 21.6, 1382.4, 1036.8], s = C.h / cd[3];
+    return { x: C.x - cd[0] * s, y: C.y - cd[1] * s, w: 1920 * s, h: 1080 * s };
+  }
+  function rvid(name) {
+    if (rpool[name]) return rpool[name];
+    var v = video(rurl(name)); v.className = "rvid";
+    if (/^idle-/.test(name)) v.loop = true;
+    retroEl.appendChild(v); place(v, retroBox());
+    rpool[name] = v;
+    return v;
+  }
+  function firstFrame(v) {
+    return new Promise(function (res) {
+      var done = false, fin = function () { if (!done) { done = true; res(); } };
+      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(function () { fin(); });
+      else v.addEventListener("playing", function () { requestAnimationFrame(fin); }, { once: true });
+      setTimeout(fin, 800);
+    });
+  }
+  /* play v from its start and show it over what is shown, once its first frame is up */
+  async function rswap(v, rate) {
+    await ready(v, 6000);
+    if (v.currentTime > 0.001) await seekTo(v, 0);
+    v.playbackRate = rate || 1;
+    v.style.zIndex = ++rz;
+    var p = v.play(); if (p && p.catch) p.catch(function () {});
+    await firstFrame(v);
+    v.classList.add("on");
+    if (!rlat.moved) rlat.moved = performance.now();
+    var old = rcur; rcur = v;
+    if (old && old !== v) { old.classList.remove("on"); try { old.pause(); } catch (e) {} }
+  }
+  function rended(v) {
+    return new Promise(function (res) {
+      if (v.ended) return res();
+      v.addEventListener("ended", res, { once: true });
+      setTimeout(res, ((v.duration || 4) / (v.playbackRate || 1)) * 1000 + 1500);
+    });
+  }
+  function rposterShow(id) { rposter.src = "media/retro/idle-" + id + ".webp"; rposter.style.zIndex = ++rz; }
+  function buildRetro() {
+    if (retroEl) return;
+    retroEl = document.createElement("div"); retroEl.id = "retro";
+    viewEl.insertBefore(retroEl, veil);
+    rposter = document.createElement("img"); rposter.className = "rposter"; rposter.alt = ""; retroEl.appendChild(rposter);
+    WORLD.forEach(function (id, i) {
+      var b = document.createElement("div"); b.className = "bld"; b.dataset.id = id;
+      b.title = ISL[id].sec + " · " + ISL[id].name;
+      b.addEventListener("click", function () { if (S.layer !== "world" || S.busy) return; retroGo(i, true); });
+      retroEl.appendChild(b);
+    });
+    layoutRetro();
+  }
+  function layoutRetro() {
+    if (!retroEl) return;
+    var R = retroBox(), k = R.w / ((RJ && RJ.map && RJ.map[0]) || 480);
+    [].forEach.call(retroEl.querySelectorAll(".rvid"), function (v) { place(v, R); });
+    place(rposter, R);
+    [].forEach.call(retroEl.querySelectorAll(".bld"), function (b) {
+      var bx = RJ.buildings[b.dataset.id].box, p = 3;
+      place(b, { x: R.x + (bx[0] - p) * k, y: R.y + (bx[1] - p) * k, w: (bx[2] - bx[0] + 2 * p) * k, h: (bx[3] - bx[1] + 2 * p) * k });
+    });
+  }
+  function retroShown(on) { retroEl.classList.toggle("on", on); }
+  /* what the next key might play, loaded while Bert idles at building i */
+  function retroPreload(i) {
+    var id = WORLD[i], L = ["idle-" + id, "open-" + id];
+    if (i + 1 < WORLD.length) L.push("walk-" + id + "-" + WORLD[i + 1], "idle-" + WORLD[i + 1]);
+    if (i > 0) L.push("walk-" + id + "-" + WORLD[i - 1], "idle-" + WORLD[i - 1]);
+    L.forEach(function (n) { rvid(n); });
+  }
+  /* Bert idling at building i, shown at once (arrival, or the end of a cut) */
+  async function retroIdle(i) {
+    buildRetro(); retroShown(true);
+    var id = WORLD[i];
+    rposterShow(id);
+    if (!REDUCED) { await rswap(rvid("idle-" + id)); rposter.removeAttribute("src"); }
+    retroPreload(i);
+  }
+  /* walk Bert from his building to building j, one road at a time, then maybe open it */
+  async function retroGo(j, openAfter) {
+    if (j === S.focus) { if (openAfter) return openIsland(WORLD[j]); return; }
+    S.busy = true;
+    var step = j > S.focus ? 1 : -1, far = Math.abs(j - S.focus) > 1;
+    while (S.focus !== j) {
+      var a = WORLD[S.focus], b = WORLD[S.focus + step];
+      if (REDUCED) rposterShow(b);
+      else {
+        var w = rvid("walk-" + a + "-" + b);
+        await rswap(w, far ? 2 : 1);
+        rvid("idle-" + b);
+        await rended(w);
+        await rswap(rvid("idle-" + b));
+      }
+      S.focus += step; markFocus(); update();
+    }
+    retroPreload(S.focus);
+    S.busy = false; update();
+    if (openAfter) return openIsland(WORLD[j]);
+  }
+  /* the island view, made ready UNDER the retro layer: its picture, its loop held at frame 0 */
+  async function prepIsland(id) {
+    S.island = id;
+    await showRest(id, 0);
+    var v = bigVideo(id);
+    await ready(v, 3000);
+    v.pause(); await seekTo(v, 0);
+    clipVids();
+    Object.keys(vids).forEach(function (k) { if (k !== id) { vids[k].classList.remove("on"); vids[k].pause(); } });
+    place(v, loopBox(id)); v.classList.add("on");
+    return v;
+  }
+  async function retroOpen(id) {
+    S.busy = true;
+    await metaReady;
+    buildRetro(); retroShown(true);
+    var loop = prepIsland(id);
+    if (!REDUCED) {
+      var v = rvid("open-" + id);
+      await rswap(v);
+      rvid("close-" + id);
+      await rended(v);
+    }
+    var bv = await loop;
+    document.body.classList.add("in");
+    S.layer = "island"; S.k = 0;
+    retroShown(false);
+    play(bv);
+    hotsEl.innerHTML = ""; buildHots(id); preloadAround(id, 0); keep(id);
+    S.busy = false; update();
+  }
+  async function retroClose(id) {
+    S.busy = true;
+    hotsEl.innerHTML = "";
+    var i = WORLD.indexOf(id); if (i >= 0) S.focus = i;
+    var big = vids[id];
+    if (big) { big.pause(); await seekTo(big, 0); }          /* the island at rest: the closing's first frame */
+    buildRetro();
+    if (!REDUCED) {
+      var v = rvid("close-" + id);
+      rvid("idle-" + id);
+      await ready(v, 6000);
+      if (v.currentTime > 0.001) await seekTo(v, 0);
+      v.style.zIndex = ++rz;
+      var p = v.play(); if (p && p.catch) p.catch(function () {});
+      await firstFrame(v);
+      v.classList.add("on");
+      var old = rcur; rcur = v; if (old && old !== v) { old.classList.remove("on"); old.pause(); }
+      await nextFrame();
+      retroEl.classList.add("clear");            /* until the map is back, the island shows through, never paper */
+      retroShown(true);
+      if (!rlat.moved) rlat.moved = performance.now();
+      await rended(v);
+      await rswap(rvid("idle-" + id));
+      await nextFrame();
+      retroEl.classList.remove("clear");
+    } else { rposterShow(id); retroShown(true); }
+    showVideo(null); hideRest();
+    document.body.classList.remove("in");
+    S.layer = "world"; S.island = null;
+    retroPreload(S.focus);
+    S.busy = false; update();
+  }
+
   /* ---- the keys ----------------------------------------------------------- */
   var NAV = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, Enter: 1, Escape: 1 };
   function onKey(k) {
     if (S.busy) return;
+    rlat.key = performance.now(); rlat.moved = 0;
     var fwd = k === "ArrowRight", back = k === "ArrowLeft", down = k === "ArrowDown" || k === "Enter", up = k === "ArrowUp" || k === "Escape";
     var id = S.island, n = N(id);
+    if (S.layer === "world" && RETRO) {
+      if (fwd || back) {
+        var jj = S.focus + (fwd ? 1 : -1);
+        if (jj < 0 || jj >= WORLD.length) return bump();
+        return retroGo(jj, false);
+      }
+      if (down) return openIsland(WORLD[S.focus]);
+      return bump();
+    }
     if (S.layer === "world") {
       if (fwd || back) {
         var j = S.focus + (fwd ? 1 : -1);
@@ -600,7 +798,7 @@
     onKey(e.key);
   });
   window.addEventListener("resize", function () {
-    layoutWorld();
+    layoutWorld(); layoutRetro();
     if (S.island) {
       Object.keys(vids).forEach(function (id) { place(vids[id], loopBox(id)); });
       var cur = S.layer === "sub" || S.layer === "subslide" ? ISL[S.island].sub : S.island;
@@ -634,6 +832,7 @@
         pos.textContent = id + " · " + at + " / " + all; path = "#/" + id + "/" + S.k;
       }
     }
+    if (RETRO && S.layer === "world" && retroEl) [].forEach.call(retroEl.querySelectorAll(".bld"), function (b, i) { b.classList.toggle("focus", i === S.focus); });
     if (path !== lastHash) { lastHash = path; try { history.replaceState(null, "", path); } catch (e) {} }
   }
 
@@ -653,7 +852,11 @@
     await metaReady;
     var at = parseHash();
     var wi = WORLD.indexOf(at.id); if (wi >= 0) S.focus = wi;
-    if (at.layer === "world") { buildWorld(); markFocus(); update(); return; }
+    if (at.layer === "world") {
+      if (RETRO) { await retroIdle(S.focus); update(); return; }
+      buildWorld(); markFocus(); update(); return;
+    }
+    if (RETRO) buildRetro();
     document.body.classList.add("in");
     S.island = at.id;
     if (at.layer === "island") { await islandView(at.id, 0); update(); return; }
@@ -673,7 +876,8 @@
     get state() {
       return { busy: S.busy, layer: S.layer, id: S.island, k: S.k, sk: S.sk, hash: location.hash, flying: false,
         crumb: crumb.textContent + " | " + pos.textContent, hots: hotsEl.children.length,
-        moves: Object.keys(moves).length, videos: Object.keys(vids) };
+        moves: Object.keys(moves).length, videos: Object.keys(vids), retro: RETRO,
+        latency: rlat.moved ? rlat.moved - rlat.key : null };
     },
     key: onKey,
     spots: function (id) { return spotsFor(id).map(function (s) { return { k: s.k, box: s.box, view: toView(id, s.box) }; }); }

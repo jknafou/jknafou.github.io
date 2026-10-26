@@ -86,3 +86,15 @@ body:not(.in) #hots { display: none; }
 #veil { z-index: 5; }
 #loading { z-index: 6; }
 #view { overflow: hidden; }
+
+/* the retro world (talk.js, make_retro.py): one layer over everything but the veil */
+#retro { position: absolute; inset: 0; z-index: 4; background: var(--paper); opacity: 0; pointer-events: none; overflow: hidden; }
+#retro.on { opacity: 1; pointer-events: auto; }
+#retro .rvid, #retro .rposter { position: absolute; display: block; opacity: 0; object-fit: fill; pointer-events: none;
+  image-rendering: pixelated; user-select: none; }
+#retro .rvid.on { opacity: 1; }
+#retro .rposter[src] { opacity: 1; }
+#retro .bld { position: absolute; box-sizing: border-box; border-radius: 10px; cursor: pointer; z-index: 100000;
+  border: 3px dashed transparent; }
+#retro .bld:hover { border-color: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(34,32,42,.55); }
+#retro.clear { background: transparent; }
