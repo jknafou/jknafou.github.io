@@ -9165,6 +9165,7 @@ window.FIXED_CLICKABLE = {"click": "opens", "min_box_units": 48, "pad_units": 6,
       if (idleTl) idleTl.pause();
       var B = built(S.id), I = B.idle, spec = SLIDES[S.id];
       if (!I) return null;
+      rescale(S.id);
       I.apply(u);
       if (spec.idleAt) spec.idleAt(u, B.w, B.env, I.period);
       return { u: u, period: I.period, beats: I.beats };
