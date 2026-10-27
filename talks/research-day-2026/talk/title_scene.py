@@ -40,14 +40,53 @@ SCENES = {
     "thanks": {
         "lines": [("MERCI", 3, "WHITE"), ("THANK YOU", 4, "YELLOW")],
         "sub": None,
-        "logos": [("swiss-ai-center-logo.png", "light"), ("geneva-ai-summit-logo.png", "dark"),
-                  ("heg-logo.png", "light"), ("sib-logo.png", "light")],
-        "at": "4.1", "top": 36,
+        # the paper, as on the published Hugging Face card: Knafou, J., Mottin, L., Mottaz, A.,
+        # Flament, A., Ruch, P. (2025). Findings of the ACL: EMNLP 2025, pp. 19338-19354,
+        # doi:10.18653/v1/2025.findings-emnlp.1053
+        "cite": {"logo": "emnlp2025-logo.png", "qr": "qr-aclanthology.png",
+                 "lines": [("TransBERT: A Framework for Synthetic Translation", "OUT"),
+                           ("in Domain-Specific Language Modeling", "OUT"),
+                           ("Knafou et al., Findings of EMNLP 2025", "BRICK_D"),
+                           ("aclanthology.org/2025.findings-emnlp.1053", "WATER_D")]},
+        # HEG and SIB are on the opening; left out here so the closing stays uncluttered
+        "logos": [("swiss-ai-center-logo.png", "light"), ("geneva-ai-summit-logo.png", "dark")],
+        "at": "4.1", "top": 14,
     },
 }
 
-EXTRA = {  # glyphs the map's FONT5 lacks
+EXTRA = {  # glyphs the map's FONT5 lacks (g p q y hang one row below the line)
     ":": [".", "#", "#", ".", "#", "#", "."],
+    ",": [".", ".", ".", ".", ".", "#", "#"],
+    "/": ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."],
+    "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
+    "1": ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
+    "2": [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"],
+    "3": ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
+    "4": ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."],
+    "5": ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
+    "6": [".###.", "#....", "#....", "####.", "#...#", "#...#", ".###."],
+    "7": ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
+    "8": [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."],
+    "9": [".###.", "#...#", "#...#", ".####", "....#", "....#", ".###."],
+    "b": ["#....", "#....", "####.", "#...#", "#...#", "#...#", "####."],
+    "c": [".....", ".....", ".####", "#....", "#....", "#....", ".####"],
+    "d": ["....#", "....#", ".####", "#...#", "#...#", "#...#", ".####"],
+    "e": [".....", ".....", ".###.", "#...#", "#####", "#....", ".###."],
+    "g": [".....", ".....", ".####", "#...#", "#...#", ".####", "....#", ".###."],
+    "h": ["#....", "#....", "####.", "#...#", "#...#", "#...#", "#...#"],
+    "i": ["#", ".", "#", "#", "#", "#", "#"],
+    "l": ["#.", "#.", "#.", "#.", "#.", "#.", ".#"],
+    "m": [".....", ".....", "##.#.", "#.#.#", "#.#.#", "#.#.#", "#.#.#"],
+    "p": [".....", ".....", "####.", "#...#", "#...#", "####.", "#....", "#...."],
+    "q": [".....", ".....", ".####", "#...#", "#...#", ".####", "....#", "....#"],
+    "r": ["....", "....", "#.##", "##..", "#...", "#...", "#..."],
+    "s": [".....", ".....", ".####", "#....", ".###.", "....#", "####."],
+    "t": [".#..", ".#..", "####", ".#..", ".#..", ".#..", "..##"],
+    "v": [".....", ".....", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
+    "w": [".....", ".....", "#...#", "#...#", "#.#.#", "#.#.#", ".#.#."],
+    "x": [".....", ".....", "#...#", ".#.#.", "..#..", ".#.#.", "#...#"],
+    "y": [".....", ".....", "#...#", "#...#", "#...#", ".####", "....#", ".###."],
+    "z": [".....", ".....", "#####", "...#.", "..#..", ".#...", "#####"],
     "&": [".##..", "#..#.", ".##..", ".#...", "#.#.#", "#..#.", ".##.#"],
     "a": [".....", ".....", ".###.", "....#", ".####", "#...#", ".####"],
     "f": ["..##.", ".#...", "####.", ".#...", ".#...", ".#...", ".#..."],
@@ -196,6 +235,30 @@ def render(R):
             pastes.append((ic, (bx + (10 * K - ic.width) // 2, by + (10 * K - ic.height) // 2)))
         text(plates, tx + 26, iy + 2, USERNAME, C.OUT)
         y = py + ph + 10
+
+        # the citation plate: the conference's logo | the reference | a QR code of its address
+        ct = cfg.get("cite")
+        if ct:
+            lg = fit(load(ct["logo"]), 64 * K, 30 * K)
+            lgw = math.ceil(lg.width / K)
+            qr = Image.open(os.path.join(MEDIA, ct["qr"])).convert("L")      # 1 module = 1 map pixel
+            textw = max(tw(s) for s, _ in ct["lines"])
+            chh = len(ct["lines"]) * 7 + (len(ct["lines"]) - 1) * 3
+            chh = max(chh, qr.height + 4)
+            cw = 5 + lgw + 7 + textw + 7 + qr.width + 5
+            cx, cy = (MW - cw) // 2, y
+            plate(cx, cy, cw, chh + 8)
+            pastes.append((lg, ((cx + 5) * K, (cy + 4) * K + (chh * K - lg.height) // 2)))
+            ty = cy + 4 + (chh - (len(ct["lines"]) * 7 + (len(ct["lines"]) - 1) * 3)) // 2
+            for s, col in ct["lines"]:
+                text(plates, cx + 5 + lgw + 7, ty, s, getattr(C, col)); ty += 10
+            qx, qy = cx + cw - 5 - qr.width, cy + 4 + (chh - qr.height) // 2
+            q = np.array(qr)
+            for j in range(qr.height):
+                for i in range(qr.width):
+                    if q[j, i] < 128:
+                        plates.put(qx + i, qy + j, "#000000")
+            y = cy + chh + 8 + 10
 
         # the logos strip, each on its own plate (a white logo on a dark one)
         lh = 30
