@@ -963,6 +963,25 @@
     return enterSlide(N(id));
   }
 
+  /* ---- the HES-SO logo (the author, 27 October 2026: "add the hes-so logo ... in all of slide"):
+   * one HTML overlay, small and constant, at the bottom left corner of the 16:9 picture box
+   * (retroBox), which is grass on the map and the skies and the room's floor beside the card at
+   * every island level, so it covers no content; kept inside the view when the box overflows it.
+   * It is in #view, not in #strip, so it shows with ?chrome=0 too. */
+  var logoEl = document.createElement("img");
+  logoEl.id = "hesso"; logoEl.src = "media/title/hes-so-logo.svg"; logoEl.alt = "HES-SO";
+  viewEl.appendChild(logoEl);
+  function layoutLogo() {
+    var R = retroBox(), Vh = viewEl.clientHeight;
+    var h = Math.round(R.h * 0.045), m = Math.round(R.h * 0.014);
+    var w = Math.round(h * 2.6);
+    var x = Math.max(8, R.x + m), y = Math.min(Vh - 8 - h, R.y + R.h - m - h);
+    logoEl.style.left = x + "px"; logoEl.style.top = y + "px"; logoEl.style.width = w + "px"; logoEl.style.height = h + "px";
+    logoEl.style.padding = Math.round(h * 0.14) + "px " + Math.round(h * 0.2) + "px";
+  }
+  layoutLogo();
+  metaReady.then(layoutLogo);
+
   /* ---- the keys: a DESTINATION, composed by the arrows, never blocked ------------------
    * (the author, 27 October 2026: "We can't press multiple time the keys to go faster ... We
    * want to be able to press multple times and see in the navbar where we are going to jump";
@@ -1198,7 +1217,7 @@
     onKey(e.key);
   });
   window.addEventListener("resize", function () {
-    layoutWorld(); layoutRetro(); layoutTitle(); layoutBackdrop(); clipVids();
+    layoutWorld(); layoutRetro(); layoutTitle(); layoutBackdrop(); clipVids(); layoutLogo();
     if (S.island) {
       Object.keys(vids).forEach(function (id) { place(vids[id], loopBox(id)); });
       var cur = S.layer === "sub" || S.layer === "subslide" ? ISL[S.island].sub : S.island;

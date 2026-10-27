@@ -103,6 +103,10 @@ body:not(.in) #hots { display: none; }
 /* the title as a still, with ?world=old (talk.js, THE TITLE) */
 #titlecard { position: absolute; inset: 0; z-index: 4; display: none; cursor: pointer; }
 #titlecard.on { display: block; }
+/* the HES-SO logo over every view (talk.js, layoutLogo): a white chip with the deck's pixel outline */
+#hesso { position: absolute; z-index: 40; box-sizing: border-box; object-fit: contain;
+  background: #fff; border: 2px solid #22202a; box-shadow: 3px 3px 0 rgba(34,32,42,.35); border-radius: 2px;
+  pointer-events: none; user-select: none; }
 #titlecard img { position: absolute; display: block; image-rendering: pixelated; user-select: none; pointer-events: none; }
 
 /* the rooms behind the islands' cards (talk.js, THE ROOMS): under everything of the island */

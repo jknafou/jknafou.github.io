@@ -34,7 +34,7 @@ SCENES = {
     "title": {
         "lines": [("FOUND IN TRANSLATION:", 3, "WHITE"), ("AI BEYOND ENGLISH", 3, "YELLOW")],   # (text, pixel scale, colour)
         "sub": "DON'T TRANSLATE THE MODEL - TRANSLATE THE DATA",
-        "logos": [("heg-logo.png", "light"), ("sib-logo.png", "light")],
+        "logos": [("hes-so-logo.png", "light", 64), ("heg-logo.png", "light"), ("sib-logo.png", "light")],
         "at": "1.1", "top": 34,
     },
     "thanks": {
