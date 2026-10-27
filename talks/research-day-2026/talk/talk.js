@@ -1157,6 +1157,31 @@
     speedUp(); update();
     if (!T.driving) travel();
   }
+  /* letter shortcuts travel straight to a place (the author, 27 October 2026):
+     T the title, W the world map, I/M/R/C the island view of each section */
+  function jumpTo(to) {
+    rlat.key = performance.now(); rlat.moved = 0;
+    if (!T.driving && S.busy) return;
+    var from = T.driving && T.dest ? T.dest : here();
+    if (!from || eq(to, from)) return bump();
+    T.dest = to;
+    speedUp(); update();
+    if (!T.driving) travel();
+  }
+  var JUMP = {
+    t: function () { return { L: "title" }; },
+    w: function () { var c = here(), i = c && c.id ? WORLD.indexOf(c.id) : c && c.L === "map" ? c.i : 0; return { L: "map", i: Math.max(0, i) }; },
+    i: function () { return { L: "island", id: WORLD[0] }; },
+    m: function () { return { L: "island", id: WORLD[1] }; },
+    r: function () { return { L: "island", id: WORLD[2] }; },
+    c: function () { return { L: "island", id: WORLD[3] }; }
+  };
+  window.addEventListener("keydown", function (e) {
+    var f = JUMP[(e.key || "").toLowerCase()];
+    if (!f || e.altKey || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    jumpTo(f());
+  });
   function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
   function prevW(id) { var i = WORLD.indexOf(id); return i > 0 ? WORLD[i - 1] : null; }
   window.addEventListener("keydown", function (e) {
