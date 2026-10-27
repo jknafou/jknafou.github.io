@@ -1282,6 +1282,21 @@
    * ZIP backup). The bar shows "offline 42 %" while it runs, then a small ✓. */
   var OFF = { state: "idle", done: 0, total: 0, files: 0, of: 0, ready: false };
   var offEl = document.createElement("span"); offEl.id = "off"; strip.insertBefore(offEl, pos);
+  /* the talk timer, rightmost in the bar: S starts it at 0:00, and S again restarts it
+     (the author, 27 October 2026); hidden until first started */
+  var timerEl = document.createElement("span"); timerEl.id = "timer"; strip.appendChild(timerEl);
+  var timerT0 = 0, timerTick = null;
+  function timerShow() {
+    var s = Math.floor((Date.now() - timerT0) / 1000);
+    timerEl.textContent = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+  }
+  window.addEventListener("keydown", function (e) {
+    if ((e.key === "s" || e.key === "S") && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      timerT0 = Date.now(); timerShow();
+      if (!timerTick) timerTick = setInterval(timerShow, 250);
+    }
+  });
   var offPanel = null;
   var canOffline = /^https?:/.test(location.protocol) && "serviceWorker" in navigator && "caches" in window;
   function mb(b) { return (b / 1048576).toFixed(0); }

@@ -137,3 +137,5 @@ html.nocursor, html.nocursor * { cursor: none !important; }
 #view { container-type: size; background-color: var(--paper); transition: background-color .3s; }
 #box { position: absolute; inset: 0; margin: auto; overflow: hidden;
        width: min(100cqw, calc(100cqh * 16 / 9)); height: min(100cqh, calc(100cqw * 9 / 16)); }
+#timer { margin-left: 1.2em; font-variant-numeric: tabular-nums; opacity: .75; }
+#timer:empty { display: none; }
