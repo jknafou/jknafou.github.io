@@ -1323,6 +1323,22 @@
   window.addEventListener("keydown", function (e) {
     if ((e.key === "o" || e.key === "O") && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleOffPanel(); }
   });
+  /* in full screen the pointer hides after 1.5 s without moving (the author, 27 October 2026:
+   * "In Full screen can it remove the mouse pointer when it is not being moved?") */
+  (function () {
+    var timer = null, root = document.documentElement;
+    function full() { return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+      (window.innerHeight >= screen.height - 1 && window.innerWidth >= screen.width - 1)); }
+    function arm() {
+      root.classList.remove("nocursor"); clearTimeout(timer);
+      if (full()) timer = setTimeout(function () { if (full()) root.classList.add("nocursor"); }, 1500);
+    }
+    window.addEventListener("mousemove", arm, true);
+    document.addEventListener("fullscreenchange", arm); document.addEventListener("webkitfullscreenchange", arm);
+    window.addEventListener("resize", arm);
+    arm();
+  })();
+
   if (canOffline) {
     navigator.serviceWorker.register("sw.js").catch(function () {});
     setTimeout(fillCache, 4000);

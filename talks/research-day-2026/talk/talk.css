@@ -129,3 +129,4 @@ body.plain #retro { transition: opacity .3s; }
 #offpanel button { font: inherit; margin: 6px 0; padding: 3px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); cursor: pointer; }
 #offpanel .zip, #offpanel .hint { font-size: 12px; opacity: .8; margin-top: 4px; }
 #offpanel a { color: inherit; }
+html.nocursor, html.nocursor * { cursor: none !important; }
