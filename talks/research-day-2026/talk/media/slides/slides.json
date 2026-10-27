@@ -568,7 +568,7 @@
     "last": 38.9
    }
   },
-  "bytes": 10403560,
+  "bytes": 10447139,
   "loops": {
    "1": {
     "period": 9.3,
@@ -1108,12 +1108,12 @@
     "handoff": 41.4
    },
    "5": {
-    "period": 9.8667,
-    "pagePeriod": 9.8667,
-    "beats": 7.4,
-    "frames": 296,
-    "seam": 74.3,
-    "handoff": 34.9
+    "period": 9.1667,
+    "pagePeriod": 9.1733,
+    "beats": 6.88,
+    "frames": 275,
+    "seam": 75.5,
+    "handoff": 33.1
    }
   }
  },
