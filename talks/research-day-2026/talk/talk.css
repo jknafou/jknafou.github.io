@@ -120,3 +120,12 @@ body.plain #retro { transition: opacity .3s; }
 /* a pending target: the bar says where the stage is going */
 #strip.going { opacity: 1; }
 #strip.going #crumb { font-style: italic; }
+
+/* offline: the bar's small mark, and the panel O shows */
+#off { margin-left: auto; margin-right: 14px; opacity: .55; font-size: 11px; }
+#offpanel { position: fixed; right: 16px; bottom: calc(var(--strip) + 8px); z-index: 50; max-width: 420px;
+            background: var(--paper); color: var(--ink); border: 2px solid var(--ink); border-radius: 10px;
+            padding: 10px 14px; font: 13px/1.5 Georgia, "Times New Roman", serif; }
+#offpanel button { font: inherit; margin: 6px 0; padding: 3px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); cursor: pointer; }
+#offpanel .zip, #offpanel .hint { font-size: 12px; opacity: .8; margin-top: 4px; }
+#offpanel a { color: inherit; }

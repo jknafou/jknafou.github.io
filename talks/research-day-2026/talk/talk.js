@@ -1259,9 +1259,78 @@
   }
   arrive();
 
+  /* ---- OFFLINE (the author, 27 October 2026: "Couldn't we have a download button? or a way to
+   * make sure that once [loaded] it keep all the presentation in memory"). sw.js serves the shell
+   * network-first and the media cache-first; this fills its media cache from offline-manifest.json
+   * (offline.py), file by file, each stored with its hash so a changed file is fetched again. It
+   * starts by itself a few seconds after the page opens; O shows the panel (progress, again, the
+   * ZIP backup). The bar shows "offline 42 %" while it runs, then a small ✓. */
+  var OFF = { state: "idle", done: 0, total: 0, files: 0, of: 0, ready: false };
+  var offEl = document.createElement("span"); offEl.id = "off"; strip.insertBefore(offEl, pos);
+  var offPanel = null;
+  var canOffline = /^https?:/.test(location.protocol) && "serviceWorker" in navigator && "caches" in window;
+  function mb(b) { return (b / 1048576).toFixed(0); }
+  function offShow() {
+    offEl.textContent = OFF.ready ? "✓" : OFF.state === "run" ? "offline " + Math.floor(100 * OFF.done / Math.max(1, OFF.total)) + " %" : OFF.state === "error" ? "offline ✗" : "";
+    offEl.title = OFF.ready ? "Ready offline" : "";
+    if (!offPanel) return;
+    offPanel.querySelector(".st").textContent = OFF.ready ? "✓ Ready offline · " + mb(OFF.total) + " MB in this browser" :
+      OFF.state === "run" ? "Offline: " + mb(OFF.done) + " / " + mb(OFF.total) + " MB (" + OFF.files + " / " + OFF.of + " files)" :
+      OFF.state === "error" ? "Offline: stopped (" + (OFF.err || "network") + "), " + mb(OFF.done) + " / " + mb(OFF.total) + " MB" :
+      canOffline ? "Offline: not started" : "Offline needs the page served over http(s)";
+  }
+  async function fillCache() {
+    if (!canOffline || OFF.state === "run") return;
+    OFF.state = "run"; OFF.ready = false; OFF.err = null; offShow();
+    try {
+      try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+      var man = await (await fetch("offline-manifest.json", { cache: "no-store" })).json();
+      var cache = await caches.open("talk-media"), base = new URL("./", location.href).href;
+      var list = man.files.slice(); OFF.total = man.bytes; OFF.of = list.length; OFF.done = 0; OFF.files = 0;
+      var want = {}; list.forEach(function (f) { want[base + f[0]] = 1; });
+      (await cache.keys()).forEach(function (r) { if (!want[r.url]) cache.delete(r); });      /* files gone from the talk */
+      var next = 0, failed = 0;
+      async function worker() {
+        for (;;) {
+          var f = list[next++]; if (!f) return;
+          var u = base + f[0], hit = await cache.match(u);
+          if (!(hit && hit.headers.get("X-Hash") === f[2])) {
+            try {
+              var r = await fetch(u + "?fill=" + f[2], { cache: "no-store" });
+              if (!r.ok) throw new Error(r.status);
+              var blob = await r.blob();
+              await cache.put(u, new Response(blob, { headers: { "Content-Type": r.headers.get("Content-Type") || blob.type, "X-Hash": f[2], "Content-Length": String(blob.size) } }));
+            } catch (e) { failed++; OFF.err = String(e.message || e); }
+          }
+          OFF.done += f[1]; OFF.files++; offShow();
+        }
+      }
+      await Promise.all([worker(), worker(), worker(), worker()]);
+      OFF.state = failed ? "error" : "done"; OFF.ready = !failed;
+    } catch (e) { OFF.state = "error"; OFF.err = String(e.message || e); }
+    offShow();
+  }
+  function toggleOffPanel() {
+    if (offPanel) { offPanel.remove(); offPanel = null; return; }
+    offPanel = document.createElement("div"); offPanel.id = "offpanel";
+    offPanel.innerHTML = '<div class="st"></div><button type="button">Download for offline</button>' +
+      '<div class="zip">ZIP backup: <a href="../talk-offline-a.zip">part A</a> + <a href="../talk-offline-b.zip">part B</a>, unzip both side by side, then start.command (Mac) or start.bat (Windows) in research-day-talk/</div>' +
+      '<div class="hint">Open once online and wait for ✓; a normal reload then works offline. O closes this.</div>';
+    offPanel.querySelector("button").addEventListener("click", function () { fillCache(); });
+    document.body.appendChild(offPanel);
+    offShow();
+  }
+  window.addEventListener("keydown", function (e) {
+    if ((e.key === "o" || e.key === "O") && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleOffPanel(); }
+  });
+  if (canOffline) {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+    setTimeout(fillCache, 4000);
+  }
+
   window.Talk = {
     get state() {
-      return { busy: S.busy || T.driving, driving: T.driving, target: T.dest ? JSON.stringify(T.dest) : null,
+      return { offline: OFF.state + (OFF.ready ? " ready" : "") + " " + OFF.files + "/" + OFF.of, busy: S.busy || T.driving, driving: T.driving, target: T.dest ? JSON.stringify(T.dest) : null,
         loop: loopKey, layer: S.layer, id: S.island, k: S.k, sk: S.sk, hash: location.hash, flying: false,
         crumb: crumb.textContent + " | " + pos.textContent, hots: hotsEl.children.length,
         moves: Object.keys(moves).length, videos: Object.keys(vids), retro: RETRO,
