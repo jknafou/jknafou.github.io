@@ -5,6 +5,8 @@
  *   node world/talk/make_media.mjs --ffmpeg <path to ffmpeg> [--tmp <dir>] [--only 2.2,3.1] [--workers 8]
  *   node world/talk/make_media.mjs --slides --ffmpeg <path> [--only 3.1] [--workers 10] [--crf 26]
  *        (every slide move as video, every rest as a still: see "--slides" below)
+ *   node world/talk/make_media.mjs --rest --ffmpeg <path> [--only 2.2] [--workers 8] [--crf 27]
+ *        (each slide's resting loop, after --slides: see "--rest" below)
  *
  * writes world/talk/media/<id>.mp4 + .webm (the island view: the island at up to
  * 1920x1080, framed exactly as its living view's viewBox, like stills/), and
@@ -277,6 +279,65 @@ async function slidesFor(id, workers) {
     "MB:", (bytes / 1048576).toFixed(1), "in", ((Date.now() - t0) / 1000).toFixed(0), "s");
   delete info.durs;
   return Object.assign(info, { checks, bytes });
+}
+/* ---- --rest: each slide's RESTING LOOP (the author, 27 October 2026: "important animation
+ * of some slides disapear, e.g. tokenizer, pretraining, fine-tuning, those were looping for a
+ * reason"). A slide loops at rest when its page starts an idle after the entry
+ * (EntryStage.idling). The loop is captured by the page's own clock: the slide is entered
+ * for real, then EntryStage.idleSeek(u) is driven over one period, u = f / N, N = period x 30.
+ * Writes media/slides/<island>/loop-<k>.mp4 and, in slides.json, <island>.loops[k] =
+ * { period, frames, seam (dB, u = 1 against u = 0), handoff (dB, u = 0 against rest-<k>) }. */
+async function restLoops(id, workers) {
+  const t0 = Date.now();
+  const sp = join(OUT, "slides", "slides.json"), sm = JSON.parse(readFileSync(sp, "utf8"));
+  const order = sm[id].order;
+  const out = join(OUT, "slides", id), fr = join(TMP, "loops-" + id); mkdirSync(fr, { recursive: true });
+  const jobs = order.map((k, i) => ({ k, n: i + 1 }));
+  const loops = {};
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(workers, jobs.length) }, async () => {
+    const b = await openSlides(id, 1);
+    try {
+      for (;;) {
+        const j = jobs[next++]; if (!j) break;
+        await b.evaluate(`(function(){ var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); E.enter(${JSON.stringify(j.k)}); })()`);
+        for (let i = 0; i < 600; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'slide' && !EntryStage.flying")) break; }
+        const info = await b.evaluate(`(function(){ var a = EntryStage.idling ? EntryStage.idleSeek(0) : null; return a ? { period: a.period } : null; })()`);
+        if (info && info.period > 0) {
+          const N = Math.max(2, Math.round(info.period * FPS));
+          const md = join(fr, "loop-" + j.n); mkdirSync(md, { recursive: true });
+          for (let f = 0; f <= N; f++) {                       /* f = N is the seam check */
+            await b.evaluate(`(function(){ EntryStage.idleSeek(${(f / N).toFixed(6)}); return ${RAF}; })()`);
+            const s = await b.send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
+            writeFileSync(join(md, String(f).padStart(4, "0") + ".jpg"), Buffer.from(s.data, "base64"));
+          }
+          loops[j.n] = { period: +info.period.toFixed(4), frames: N, dir: md };
+        }
+        await b.evaluate("EntryStage.leave()");
+        for (let i = 0; i < 300; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'map' && !EntryStage.flying")) break; }
+      }
+    } finally { b.close(); }
+  }));
+  const x264 = ["-c:v", "libx264", "-preset", "slow", "-crf", String(arg("crf", "27")), "-pix_fmt", "yuv420p", "-g", String(FPS), "-movflags", "+faststart", "-an"];
+  let bytes = 0;
+  for (const n of Object.keys(loops)) {
+    const L = loops[n], f0 = join(L.dir, "0000.jpg"), fN = join(L.dir, String(L.frames).padStart(4, "0") + ".jpg");
+    ff(["-framerate", String(FPS), "-start_number", "0", "-i", join(L.dir, "%04d.jpg"), "-frames:v", String(L.frames), ...x264, join(out, "loop-" + n + ".mp4")]);
+    bytes += statSync(join(out, "loop-" + n + ".mp4")).size;
+    const restJ = join(TMP, "slides-" + id + "-rest-" + n + ".jpg");
+    L.seam = +(+psnr(f0, fN) || 99).toFixed(1);
+    L.handoff = existsSync(restJ) ? +(+psnr(f0, restJ) || 99).toFixed(1) : null;
+    delete L.dir;
+  }
+  const s2 = JSON.parse(readFileSync(sp, "utf8"));          /* re-read: other islands may have written meanwhile */
+  s2[id].loops = loops;
+  writeFileSync(sp, JSON.stringify(s2, null, 1) + "\n");
+  console.log(id, "loops:", Object.keys(loops).length, "MB:", (bytes / 1048576).toFixed(1), "in", ((Date.now() - t0) / 1000).toFixed(0), "s", JSON.stringify(loops));
+}
+if (process.argv.includes("--rest")) {
+  const ids = ONLY ? ONLY.split(",") : Object.keys(ISLANDS);
+  for (const id of ids) await restLoops(id, WORKERS);     /* one island at a time: slides.json is shared */
+  process.exit(0);
 }
 if (process.argv.includes("--slides")) {
   mkdirSync(join(OUT, "slides"), { recursive: true });
