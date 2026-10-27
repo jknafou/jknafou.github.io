@@ -5,7 +5,7 @@
  *   node world/talk/make_media.mjs --ffmpeg <path to ffmpeg> [--tmp <dir>] [--only 2.2,3.1] [--workers 8]
  *   node world/talk/make_media.mjs --slides --ffmpeg <path> [--only 3.1] [--workers 10] [--crf 26]
  *        (every slide move as video, every rest as a still: see "--slides" below)
- *   node world/talk/make_media.mjs --rest --ffmpeg <path> [--only 2.2] [--workers 8] [--crf 27]
+ *   node world/talk/make_media.mjs --rest --ffmpeg <path> [--only 2.2] [--loops 3] [--workers 8] [--crf 27]
  *        (each slide's resting loop, after --slides: see "--rest" below)
  *
  * writes world/talk/media/<id>.mp4 + .webm (the island view: the island at up to
@@ -295,15 +295,48 @@ async function slidesFor(id, workers) {
  * with the camembert, and it should loop after a pause". So: the page's loop up to its beats (ours),
  * then the entry's own build of CamemBERT's half (E(t), t 0.56 -> 1, slide-01.py BUILD), then a
  * pause on the rest picture. */
+/* 2.2's fine-tuning (slide 3): the page's loop lights the board's four cards in turn but never
+ * touches the lists; the author, 27 October 2026: "the tag words is still not opaque, it use to go
+ * from partially transparent to opaque while the fine-tuning of their module get animated". So
+ * (["rows", seconds], LOOP_JS): the board's own loop on its clock, and over it every list (card
+ * copy, task name, dataset names) dims to translucent during the board's lamp, then each task's
+ * list goes back to opaque while its card is fine-tuned (bead in, card lit), in book order; tag
+ * words, which has no card on the board, last, to full ink; a pause on everything opaque; tag
+ * words eases back to its signed 0.55, so the last frame is the rest picture, frame 0. */
 const LOOP_PLANS = {
-  "2.2/1": [["idle", 0, "beats"], ["E", 0.56, 1.0, 2.4], ["hold", 1.8]]
+  "2.2/1": [["idle", 0, "beats"], ["E", 0.56, 1.0, 2.4], ["hold", 1.8]],
+  "2.2/3": [["rows", 7.2]]
+};
+const LOOP_JS = {
+  "2.2/3": `(function () {
+    var T = 0.2, LAMP = 0.8, GROUPS = [["s7-card-0", "s7-head-ner", 0, 6], ["s7-card-1", "s7-head-cls", 6, 10],
+      ["s7-card-2", "s7-head-sts", 10, 12], ["s7-card-3", "s7-head-qa", 12, 13], ["s7-card-pos", "s7-head-pos", 13, 15]];
+    var q = function (k) { return document.querySelector('[data-dyn="' + k + '"]'); };
+    var els = GROUPS.map(function (g) { var a = [q(g[0]), q(g[1])]; for (var j = g[2]; j < g[3]; j++) a.push(q("s7-ds-" + j)); return a; });
+    var rest = els.map(function (a) { return a.map(function (e) { return e.getAttribute("opacity"); }); });
+    var sm = function (x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    var span = function (u, a, b) { return sm((u - a) / (b - a)); };
+    window.__mmLoop = function (u) {
+      if (u < 0) { els.forEach(function (a, i) { a.forEach(function (e, j) { e.setAttribute("opacity", rest[i][j]); }); }); EntryStage.idleSeek(0); return; }
+      EntryStage.idleSeek(Math.min(u, 6.6));
+      els.forEach(function (a, i) {
+        var r = +rest[i][0], dim = span(u, 0.15, 0.65), o;
+        var up = i < 4 ? span(u, LAMP + i + 0.35, LAMP + i + 0.85) : span(u, 4.85, 5.35);
+        o = r + (T - r) * dim;                                   /* rest -> translucent */
+        o = o + (1 - o) * up;                                    /* translucent -> opaque, with its card */
+        if (i === 4) o = o + (r - o) * span(u, 6.7, 7.0);         /* tag words back to its signed ink */
+        a.forEach(function (e) { e.setAttribute("opacity", o.toFixed(4)); });
+      });
+    };
+  })()`
 };
 async function restLoops(id, workers) {
   const t0 = Date.now();
   const sp = join(OUT, "slides", "slides.json"), sm = JSON.parse(readFileSync(sp, "utf8"));
   const order = sm[id].order;
   const out = join(OUT, "slides", id), fr = join(TMP, "loops-" + id); mkdirSync(fr, { recursive: true });
-  const jobs = order.map((k, i) => ({ k, n: i + 1 }));
+  const LOOPS = arg("loops", null);                       /* --loops 3[,1]: only those slides' loops, the others kept */
+  const jobs = order.map((k, i) => ({ k, n: i + 1 })).filter((j) => !LOOPS || LOOPS.split(",").includes(String(j.n)));
   const loops = {};
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(workers, jobs.length) }, async () => {
@@ -321,13 +354,15 @@ async function restLoops(id, workers) {
            * PLAN where the page's loop leaves out what the slide shows (see LOOP_PLANS) */
           const plan = LOOP_PLANS[id + "/" + j.n];
           const exprs = [];
+          if (LOOP_JS[id + "/" + j.n]) await b.evaluate(LOOP_JS[id + "/" + j.n]);
           if (!plan) for (let f = 0; f <= Math.round(info.period * FPS); f++) exprs.push(`EntryStage.idleSeek(${(f / FPS).toFixed(5)})`);
           else for (const seg of plan) {
             if (seg[0] === "idle") { const to = seg[2] === "beats" ? info.beats : seg[2]; for (let u = seg[1]; u < to - 1e-6; u += 1 / FPS) exprs.push(`EntryStage.idleSeek(${u.toFixed(5)})`); }
             if (seg[0] === "E") { const n = Math.round(seg[3] * FPS); for (let f = 0; f < n; f++) exprs.push(`EntryStage.seek(${JSON.stringify(j.k)}, ${(seg[1] + (seg[2] - seg[1]) * f / (n - 1)).toFixed(5)})`); }
+            if (seg[0] === "rows") { const n = Math.round(seg[1] * FPS); for (let f = 0; f < n; f++) exprs.push(`window.__mmLoop(${(f / FPS).toFixed(5)})`); }
             if (seg[0] === "hold") { const n = Math.round(seg[1] * FPS); for (let f = 0; f < n; f++) exprs.push(`EntryStage.seek(${JSON.stringify(j.k)}, 1)`); }
           }
-          if (plan) exprs.push(`EntryStage.idleSeek(0)`);                    /* the seam check: back to frame 0 */
+          if (plan) exprs.push(LOOP_JS[id + "/" + j.n] ? `window.__mmLoop(-1)` : `EntryStage.idleSeek(0)`);                    /* the seam check: back to frame 0 */
           const N = exprs.length - 1;
           const md = join(fr, "loop-" + j.n); mkdirSync(md, { recursive: true });
           for (let f = 0; f <= N; f++) {                       /* f = N is the seam check */
@@ -354,7 +389,7 @@ async function restLoops(id, workers) {
     delete L.dir;
   }
   const s2 = JSON.parse(readFileSync(sp, "utf8"));          /* re-read: other islands may have written meanwhile */
-  s2[id].loops = loops;
+  s2[id].loops = LOOPS ? Object.assign(s2[id].loops || {}, loops) : loops;
   writeFileSync(sp, JSON.stringify(s2, null, 1) + "\n");
   console.log(id, "loops:", Object.keys(loops).length, "MB:", (bytes / 1048576).toFixed(1), "in", ((Date.now() - t0) / 1000).toFixed(0), "s", JSON.stringify(loops));
 }

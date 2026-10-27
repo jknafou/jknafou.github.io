@@ -588,12 +588,13 @@
     "handoff": 43.8
    },
    "3": {
-    "period": 6.6667,
+    "period": 7.2,
     "pagePeriod": 6.6667,
     "beats": 5,
-    "frames": 200,
-    "seam": 76.7,
-    "handoff": 33.8
+    "frames": 216,
+    "plan": "[[\"rows\",7.2]]",
+    "seam": 76.9,
+    "handoff": 31.0
    }
   }
  },
