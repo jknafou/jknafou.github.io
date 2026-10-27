@@ -104,7 +104,9 @@
   "open-4.1": 86,
   "close-4.1": 86,
   "title-down": 90,
-  "title-up": 90
+  "title-up": 90,
+  "thanks-down": 90,
+  "thanks-up": 90
  },
  "backdrops": {
   "1.1": "rgb(172,197,183)",
@@ -116,6 +118,10 @@
  "title": {
   "sky": "#3f86d8",
   "logo": null,
+  "tilt": 3
+ },
+ "sky": {
+  "sky": "#3f86d8",
   "tilt": 3
  }
 }

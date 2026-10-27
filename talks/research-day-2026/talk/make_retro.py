@@ -19,10 +19,10 @@ Writes, at 1920x1080 and 30 fps (the map is 480x270 pixels, 4 screen pixels each
   backdrop-<id>.webp      the room inside building <id> (backdrops.py), the card's frame drawn round the
                           card's place and the card's place left as paper: the shell shows it behind the
                           island's card at every level of that island (2.1 uses 2.2's, the factory)
-  title.webp              the title scene: the pixel sky above the map, the title, the author, the logos
-                          (title_scene.py; its inputs in world/talk/media/title/)
-  title-down.mp4          the camera tilts down from the title to the map, landing on idle-1.1's loop;
-  title-up.mp4            and back up (--only title re-renders these three)
+  title.webp, thanks.webp the two sky scenes above the map (title_scene.py; inputs in media/title/):
+                          the opening title, and the closing "thank you"
+  title-down.mp4 ...      the camera tilting down from each sky to the map, landing on idle-1.1's loop
+  thanks-up.mp4 ...       (title) or idle-4.1's (thanks), and back up (--only title re-renders them)
   retro.json              the map's size, each building's box and door, each video's length, each
                           backdrop's edge colour (the view is filled with it beyond the picture)
 
@@ -52,7 +52,6 @@ ap.add_argument("--deck", default=os.path.normpath(os.path.join(HERE, "..", ".."
 ap.add_argument("--out", default=None)
 ap.add_argument("--islands", default=None)
 ap.add_argument("--only", default="backdrop,idle,walk,open,title")
-ap.add_argument("--no-plate", action="store_true", help="title: leave out the research day's empty plate when its logo is missing")
 ap.add_argument("--crf", default="20")
 A = ap.parse_args()
 OUT = A.out or os.path.join(A.deck, "world", "talk", "media", "retro")

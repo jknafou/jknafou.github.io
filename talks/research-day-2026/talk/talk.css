@@ -98,6 +98,12 @@ body:not(.in) #hots { display: none; }
   border: 3px dashed transparent; }
 #retro .bld:hover { border-color: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(34,32,42,.55); }
 #retro.clear { background: transparent !important; }
+#retro.title .bld { display: none; }
+#retro.title { cursor: pointer; }
+/* the title as a still, with ?world=old (talk.js, THE TITLE) */
+#titlecard { position: absolute; inset: 0; z-index: 4; display: none; cursor: pointer; }
+#titlecard.on { display: block; }
+#titlecard img { position: absolute; display: block; image-rendering: pixelated; user-select: none; pointer-events: none; }
 
 /* the rooms behind the islands' cards (talk.js, THE ROOMS): under everything of the island */
 #backdrop { position: absolute; inset: 0; z-index: 0; display: none; overflow: hidden; }

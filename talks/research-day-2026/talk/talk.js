@@ -43,6 +43,14 @@
  * colour (measured on every rest picture and every move video), so only paper is cut, and
  * the signed card is shown untouched. Each room carries its title sign (backdrops.py),
  * which the opening switches on or drops into place. ?plain=1 turns the rooms off.
+ *
+ * THE TITLE (the author, 27 October 2026, the day of the talk: "the sky with the same texture
+ * with the title, then with -> the camera tilt down to get to the city"). The talk opens on
+ * media/retro/title.webp, the pixel sky above the map (title_scene.py, rendered by make_retro.py
+ * --only title). →, ↓ or Enter (or a click) plays title-down.mp4, which lands on idle-1.1's loop:
+ * Bert at the hospital. ← or ↑ from the map at the hospital plays title-up.mp4 back to it.
+ * Hash: #/ is the title, #/world the city at the hospital. With ?world=old or ?reduced=1 the
+ * title is a still and the moves are cuts.
  */
 (function () {
   "use strict";
@@ -656,6 +664,7 @@
     retroEl = document.createElement("div"); retroEl.id = "retro";
     viewEl.insertBefore(retroEl, veil);
     rposter = document.createElement("img"); rposter.className = "rposter"; rposter.alt = ""; retroEl.appendChild(rposter);
+    retroEl.addEventListener("click", function (e) { if (S.layer === "title" && !S.busy && !e.target.classList.contains("bld")) titleDown(); });
     WORLD.forEach(function (id, i) {
       var b = document.createElement("div"); b.className = "bld"; b.dataset.id = id;
       b.title = ISL[id].sec + " · " + ISL[id].name;
@@ -688,6 +697,7 @@
     var id = WORLD[i], L = ["idle-" + id, "open-" + id];
     if (i + 1 < WORLD.length) L.push("walk-" + id + "-" + WORLD[i + 1], "idle-" + WORLD[i + 1]);
     if (i > 0) L.push("walk-" + id + "-" + WORLD[i - 1], "idle-" + WORLD[i - 1]);
+    else L.push("title-up");
     L.forEach(function (n) { rvid(n); });
   }
   /* Bert idling at building i, shown at once (arrival, or the end of a cut) */
@@ -787,6 +797,77 @@
     S.busy = false; update();
   }
 
+  /* ---- the title: the sky above the map (title_scene.py) ------------------------
+   * In the retro world it is #retro's poster; title-down.mp4 tilts the camera down onto
+   * idle-1.1's loop and title-up.mp4 back up onto the poster. With ?world=old it is a still
+   * (#titlecard) over the four tiles, and the moves are cuts. */
+  var TITLE = "media/retro/title.webp", titleCard = null;
+  function skyColour() { return (RJ && RJ.title && RJ.title.sky) || "#3f86d8"; }
+  function titleImg() { var im = new Image(); im.src = TITLE; return im.decode ? im.decode().catch(function () {}) : Promise.resolve(); }
+  function oldTitle(on) {
+    if (!titleCard) {
+      titleCard = document.createElement("div"); titleCard.id = "titlecard";
+      var im = document.createElement("img"); im.alt = "The title"; im.src = TITLE; titleCard.appendChild(im);
+      titleCard.addEventListener("click", function () { if (S.layer === "title" && !S.busy) titleDown(); });
+      viewEl.insertBefore(titleCard, veil);
+      layoutTitle();
+    }
+    titleCard.style.backgroundColor = skyColour();
+    titleCard.classList.toggle("on", on);
+  }
+  function layoutTitle() { if (titleCard) place(titleCard.firstChild, retroBox()); }
+  async function showTitle() {
+    S.layer = "title"; S.focus = 0;
+    if (!RETRO) { oldTitle(true); return; }
+    buildRetro(); retroShown(true); retroEdge(skyColour(), 0);
+    retroEl.classList.add("title");
+    await titleImg();
+    rposter.src = TITLE; rposter.style.zIndex = ++rz;
+    if (rcur) { rcur.classList.remove("on"); try { rcur.pause(); } catch (e) {} rcur = null; }
+    if (!REDUCED) { rvid("title-down"); rvid("idle-" + WORLD[0]); }
+  }
+  async function titleDown() {
+    S.busy = true;
+    if (!RETRO) {
+      buildWorld(); S.focus = 0; markFocus(); oldTitle(false);
+      S.layer = "world"; S.busy = false; update(); return;
+    }
+    if (REDUCED) { rposterShow(WORLD[0]); }
+    else {
+      var v = rvid("title-down");
+      await rswap(v);
+      rposter.removeAttribute("src");
+      retroEdge(GRASS, 2200, 400);
+      rvid("idle-" + WORLD[0]);
+      await rended(v);
+      await rswap(rvid("idle-" + WORLD[0]));
+    }
+    retroEl.classList.remove("title");
+    S.layer = "world"; S.focus = 0; markFocus();
+    retroPreload(0);
+    S.busy = false; update();
+  }
+  async function titleUp() {
+    S.busy = true;
+    if (!RETRO) { oldTitle(true); S.layer = "title"; S.busy = false; update(); return; }
+    retroEl.classList.add("title");
+    var poster = titleImg();
+    if (!REDUCED) {
+      var v = rvid("title-up");
+      await rswap(v);
+      retroEdge(skyColour(), 2200, 0);
+      await rended(v);
+    }
+    await poster;
+    rposter.src = TITLE; rposter.style.zIndex = ++rz;
+    await nextFrame();
+    if (rcur) { rcur.classList.remove("on"); try { rcur.pause(); } catch (e) {} rcur = null; }
+    retroEdge(skyColour(), 0);
+    S.layer = "title";
+    rvid("title-down");
+    S.busy = false; update();
+  }
+
   /* ---- the keys ----------------------------------------------------------- */
   var NAV = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, Enter: 1, Escape: 1 };
   function onKey(k) {
@@ -794,6 +875,8 @@
     rlat.key = performance.now(); rlat.moved = 0;
     var fwd = k === "ArrowRight", back = k === "ArrowLeft", down = k === "ArrowDown" || k === "Enter", up = k === "ArrowUp" || k === "Escape";
     var id = S.island, n = N(id);
+    if (S.layer === "title") return (fwd || down) ? titleDown() : bump();
+    if (S.layer === "world" && S.focus === 0 && (back || (up && RETRO))) return titleUp();
     if (S.layer === "world" && RETRO) {
       if (fwd || back) {
         var jj = S.focus + (fwd ? 1 : -1);
@@ -855,7 +938,7 @@
     onKey(e.key);
   });
   window.addEventListener("resize", function () {
-    layoutWorld(); layoutRetro(); layoutBackdrop(); clipVids();
+    layoutWorld(); layoutRetro(); layoutTitle(); layoutBackdrop(); clipVids();
     if (S.island) {
       Object.keys(vids).forEach(function (id) { place(vids[id], loopBox(id)); });
       var cur = S.layer === "sub" || S.layer === "subslide" ? ISL[S.island].sub : S.island;
@@ -868,11 +951,14 @@
   var lastHash = null;
   function update() {
     var path, id = S.island;
-    if (S.layer === "world" || !id) {
+    if (S.layer === "title") {
+      crumb.textContent = "The talk · title · → into the city";
+      pos.textContent = "title"; path = "#/";
+    } else if (S.layer === "world" || !id) {
       var I0 = ISL[WORLD[S.focus]];
       crumb.textContent = "The talk · " + I0.sec + " › " + I0.name;
       pos.textContent = "island " + (S.focus + 1) + " / " + WORLD.length;
-      path = S.focus ? "#/@" + WORLD[S.focus] : "#/";
+      path = S.focus ? "#/@" + WORLD[S.focus] : "#/world";
     } else {
       var I = ISL[id], subN = I.sub ? 1 : 0, all = N(id) + subN, trail = I.sec + " › " + I.name;
       if (S.layer === "island") { crumb.textContent = trail; pos.textContent = "island view"; path = "#/" + id; }
@@ -896,7 +982,8 @@
   /* ---- arrival ------------------------------------------------------------ */
   function parseHash() {
     var h = (location.hash || "").replace(/^#\/?/, "");
-    if (!h) return { layer: "world", id: WORLD[0] };
+    if (!h) return { layer: "title", id: WORLD[0] };
+    if (h === "world") return { layer: "world", id: WORLD[0] };
     if (h[0] === "@") return { layer: "world", id: h.slice(1) };
     var p = h.split("/");
     if (p[0] === "2.1") p = ["2.2", "translation"].concat(p.slice(1));
@@ -909,6 +996,7 @@
     await metaReady;
     var at = parseHash();
     var wi = WORLD.indexOf(at.id); if (wi >= 0) S.focus = wi;
+    if (at.layer === "title") { await showTitle(); update(); return; }
     if (at.layer === "world") {
       if (RETRO) { await retroIdle(S.focus); update(); return; }
       buildWorld(); markFocus(); update(); return;
