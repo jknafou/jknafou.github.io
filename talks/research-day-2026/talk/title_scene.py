@@ -48,9 +48,16 @@ SCENES = {
                            ("in Domain-Specific Language Modeling", "OUT"),
                            ("Knafou et al., Findings of EMNLP 2025", "BRICK_D"),
                            ("aclanthology.org/2025.findings-emnlp.1053", "WATER_D")]},
-        # HEG and SIB are on the opening; left out here so the closing stays uncluttered
-        "logos": [("swiss-ai-center-logo.png", "light"), ("geneva-ai-summit-logo.png", "dark")],
-        "at": "4.1", "top": 14,
+        # HEG and SIB are on the opening; left out here so the closing stays uncluttered.
+        # AI Days 2027, as https://ai-days.swiss-ai-center.ch/en/call-for-papers#key-dates states it
+        # (27 October 2026): submission deadline 25 November 2026; conference 17-19 February 2027,
+        # 17 February Geneva, 18 February Yverdon-les-Bains, 19 February Fribourg
+        "logos": [{"card": "ai-days-logo.webp", "lines": [("AI Days 2027", "OUT"), ("Submission: 25 Nov 2026", "BRICK_D"),
+                                                          ("17-19 Feb 2027", "OUT"), ("Geneva, Yverdon, Fribourg", "WATER_D")]},
+                  ("swiss-ai-center-logo.png", "light", 96), ("geneva-ai-summit-logo.png", "dark")],
+        "centre": 1,                     # this logo's plate is centred on the scene, the others beside it
+        "lh": 38,
+        "at": "4.1", "top": 6, "gap": 8,
     },
 }
 
@@ -234,7 +241,7 @@ def render(R):
             bx, by = (tx + k * 12) * K, iy * K
             pastes.append((ic, (bx + (10 * K - ic.width) // 2, by + (10 * K - ic.height) // 2)))
         text(plates, tx + 26, iy + 2, USERNAME, C.OUT)
-        y = py + ph + 10
+        y = py + ph + cfg.get("gap", 10)
 
         # the citation plate: the conference's logo | the reference | a QR code of its address
         ct = cfg.get("cite")
@@ -258,20 +265,41 @@ def render(R):
                 for i in range(qr.width):
                     if q[j, i] < 128:
                         plates.put(qx + i, qy + j, "#000000")
-            y = cy + chh + 8 + 10
+            y = cy + chh + 8 + cfg.get("gap", 10)
 
         # the logos strip, each on its own plate (a white logo on a dark one)
-        lh = 30
+        lh = cfg.get("lh", 30)
         items = []
-        for name, tone in cfg["logos"]:
-            f = fit(load(name), 120 * K, lh * K)
-            items.append((f, math.ceil(f.width / K) + 8, C.WHITE if tone == "light" else C.SKY_BOARD))
-        gap = 12
-        x = (MW - (sum(w for _, w, _ in items) + gap * (len(items) - 1))) // 2
-        for im, w, fill in items:
+        for it in cfg["logos"]:
+            if isinstance(it, dict):                   # a card: lines of text, its logo before the first
+                f = fit(load(it["card"]), 10 * K, 10 * K)
+                lw = math.ceil(f.width / K)
+                tws = [tw(s) for s, _ in it["lines"]]
+                w = 5 + max([lw + 4 + tws[0]] + tws[1:]) + 5
+                items.append(("card", f, w, C.WHITE, it))
+            else:
+                name, tone = it[0], it[1]
+                f = fit(load(name), (it[2] if len(it) > 2 else 120) * K, lh * K)
+                items.append(("img", f, math.ceil(f.width / K) + 8, C.WHITE if tone == "light" else C.SKY_BOARD, None))
+        gap = 10
+        if "centre" in cfg:
+            ci = cfg["centre"]
+            x = (MW - items[ci][2]) // 2 - sum(w + gap for _, _, w, _, _ in items[:ci])
+        else:
+            x = (MW - (sum(w for _, _, w, _, _ in items) + gap * (len(items) - 1))) // 2
+        assert x >= 3, "the logo row does not fit: %d" % x
+        for kind, im, w, fill, it in items:
             plate(x, y, w, lh + 8, fill)
-            pastes.append((im, (x * K + (w * K - im.width) // 2, (y + 4) * K + (lh * K - im.height) // 2)))
+            if kind == "img":
+                pastes.append((im, (x * K + (w * K - im.width) // 2, (y + 4) * K + (lh * K - im.height) // 2)))
+            else:
+                n = len(it["lines"]); pitch = (lh - 7) // max(1, n - 1) if n > 1 else 0
+                lw = math.ceil(im.width / K)
+                pastes.append((im, ((x + 5) * K, (y + 4) * K + (7 * K - im.height) // 2)))
+                for k, (s, col) in enumerate(it["lines"]):
+                    text(plates, x + 5 + (lw + 4 if k == 0 else 0), y + 4 + k * pitch, s, getattr(C, col))
             x += w + gap
+        assert x - gap <= MW - 3, "the logo row does not fit on the right: %d" % (x - gap)
 
         cv = Image.new("RGBA", (MW, MH), (0, 0, 0, 0))
         for L in [sky, halo, sun, clouds, hz, trees, near, g, shadow, words, sub, plates]:
