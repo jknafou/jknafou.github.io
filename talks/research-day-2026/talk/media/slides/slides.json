@@ -1933,18 +1933,18 @@
    },
    "fw-6": {
     "frames": 234,
-    "first": 30.5,
+    "first": 30.8,
     "last": 32.7
    },
    "fw-5": {
     "frames": 206,
     "first": 36.6,
-    "last": 30.5
+    "last": 30.8
    },
    "bw-6": {
     "frames": 206,
     "first": 32.7,
-    "last": 30.5
+    "last": 30.8
    },
    "in-4": {
     "frames": 206,
@@ -1959,11 +1959,11 @@
    "in-2": {
     "frames": 202,
     "first": 99,
-    "last": 33.7
+    "last": 34.4
    },
    "fw-2": {
     "frames": 199,
-    "first": 33.7,
+    "first": 34.4,
     "last": 32.8
    },
    "bw-3": {
@@ -1978,23 +1978,23 @@
    },
    "fw-1": {
     "frames": 196,
-    "first": 28.7,
-    "last": 33.7
+    "first": 28.9,
+    "last": 34.4
    },
    "bw-2": {
     "frames": 196,
     "first": 32.8,
-    "last": 33.7
+    "last": 34.4
    },
    "in-6": {
     "frames": 196,
     "first": 99,
-    "last": 30.5
+    "last": 30.8
    },
    "fw-3": {
     "frames": 193,
     "first": 32.8,
-    "last": 35.4
+    "last": 35.5
    },
    "fw-4": {
     "frames": 193,
@@ -2008,22 +2008,22 @@
    },
    "bw-5": {
     "frames": 193,
-    "first": 30.5,
+    "first": 30.8,
     "last": 36.6
    },
    "in-1": {
     "frames": 180,
     "first": 99,
-    "last": 28.7
+    "last": 28.9
    },
    "bw-1": {
     "frames": 166,
-    "first": 33.7,
-    "last": 28.7
+    "first": 34.4,
+    "last": 28.9
    },
    "out-1": {
     "frames": 78,
-    "first": 28.7,
+    "first": 28.9,
     "last": 99
    },
    "out-4": {
@@ -2043,7 +2043,7 @@
    },
    "out-2": {
     "frames": 73,
-    "first": 33.7,
+    "first": 34.4,
     "last": 99
    },
    "out-3": {
@@ -2053,11 +2053,11 @@
    },
    "out-6": {
     "frames": 67,
-    "first": 30.5,
+    "first": 30.8,
     "last": 99
    }
   },
-  "bytes": 17036613,
+  "bytes": 18066049,
   "loops": {
    "1": {
     "period": 4,
@@ -2065,7 +2065,7 @@
     "beats": 3,
     "frames": 120,
     "seam": 99,
-    "handoff": 28.7
+    "handoff": 28.9
    },
    "2": {
     "period": 3.4667,
@@ -2073,7 +2073,7 @@
     "beats": 2.6,
     "frames": 104,
     "seam": 67.4,
-    "handoff": 33.7
+    "handoff": 34.4
    },
    "3": {
     "period": 4.4,
