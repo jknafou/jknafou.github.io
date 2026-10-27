@@ -166,6 +166,9 @@ function encode(id, R) {
  * media/slides/slides.json: order, names, the page's ground, its frame, every
  * clickable region's boxes in the drawing's units, and the hand-off checks. */
 const SLIDE_SIZE = [1920, 1080];
+/* --moves in-3,out-3,fw-2,rest-3: only those moves and rest stills are re-rendered (the rest
+ * jpegs for the hand-off checks are always shot); slides.json keeps every other entry */
+const MOVES = arg("moves", null) ? arg("moves").split(",") : null;
 async function openSlides(id, dpr) {
   const b = await browser();
   await b.send("Emulation.setDeviceMetricsOverride", { width: SLIDE_SIZE[0], height: SLIDE_SIZE[1], deviceScaleFactor: dpr || 1, mobile: false });
@@ -214,6 +217,7 @@ async function captureMoves(id, info, dir, workers) {
       moves.push({ name: "bw-" + n, dur: info.durs[i].bw, pre: `E.seek(${c}, 1)`, at: (j) => `E.journeySeek(${c}, ${a}, ${j})` });
     }
   });
+  if (MOVES) moves.splice(0, moves.length, ...moves.filter((m) => MOVES.includes(m.name)));
   moves.sort((x, y) => y.dur - x.dur);                       /* the longest first, spread over the workers */
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(workers, moves.length) }, async () => {
@@ -244,7 +248,7 @@ async function captureRests(id, info, dir) {
       await b.evaluate(`(function(){ var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); ${expr}; return ${RAF}; })()`);
       await sleep(150);
       const s = await b.send("Page.captureScreenshot", { format: "webp", quality: 90 });
-      writeFileSync(join(dir, name), Buffer.from(s.data, "base64"));
+      if (!MOVES || MOVES.includes(name.replace(".webp", ""))) writeFileSync(join(dir, name), Buffer.from(s.data, "base64"));
       /* and a 1x jpeg of the same state, for the hand-off check */
       await b.send("Emulation.setDeviceMetricsOverride", { width: SLIDE_SIZE[0], height: SLIDE_SIZE[1], deviceScaleFactor: 1, mobile: false });
       await b.evaluate(RAF);
@@ -297,15 +301,16 @@ async function slidesFor(id, workers) {
  * pause on the rest picture. */
 /* 2.2's fine-tuning (slide 3): the page's loop lights the board's four cards in turn but never
  * touches the lists; the author, 27 October 2026: "the tag words is still not opaque, it use to go
- * from partially transparent to opaque while the fine-tuning of their module get animated". So
- * (["rows", seconds], LOOP_JS): the board's own loop on its clock, and over it every list (card
- * copy, task name, dataset names) dims to translucent during the board's lamp, then each task's
- * list goes back to opaque while its card is fine-tuned (bead in, card lit), in book order; tag
- * words, which has no card on the board, last, to full ink; a pause on everything opaque; tag
- * words eases back to its signed 0.55, so the last frame is the rest picture, frame 0. */
+ * from partially transparent to opaque while the fine-tuning of their module get animated", and
+ * "it must be coherant with the animations". So (["rows", seconds], LOOP_JS): the board's own loop
+ * on its clock, and over it every list (card copy, task name, dataset names), tag words included,
+ * dims to translucent during the board's lamp; each list goes back to full ink while its card is
+ * fine-tuned (bead in, card lit), in book order; tag words, which has no card on the board, last,
+ * its list's card copy lit (a brightening, as the board's cards flood) as its fine-tuning cue;
+ * then a pause on the rest picture, which is frame 0 (slide-07.py: POS_FAINT 1, all lists alike). */
 const LOOP_PLANS = {
   "2.2/1": [["idle", 0, "beats"], ["E", 0.56, 1.0, 2.4], ["hold", 1.8]],
-  "2.2/3": [["rows", 7.2]]
+  "2.2/3": [["rows", 7.0]]
 };
 const LOOP_JS = {
   "2.2/3": `(function () {
@@ -314,19 +319,21 @@ const LOOP_JS = {
     var q = function (k) { return document.querySelector('[data-dyn="' + k + '"]'); };
     var els = GROUPS.map(function (g) { var a = [q(g[0]), q(g[1])]; for (var j = g[2]; j < g[3]; j++) a.push(q("s7-ds-" + j)); return a; });
     var rest = els.map(function (a) { return a.map(function (e) { return e.getAttribute("opacity"); }); });
+    var pos = q("s7-card-pos"), posF = pos.style.filter;
     var sm = function (x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
     var span = function (u, a, b) { return sm((u - a) / (b - a)); };
     window.__mmLoop = function (u) {
-      if (u < 0) { els.forEach(function (a, i) { a.forEach(function (e, j) { e.setAttribute("opacity", rest[i][j]); }); }); EntryStage.idleSeek(0); return; }
+      if (u < 0) { els.forEach(function (a, i) { a.forEach(function (e, j) { e.setAttribute("opacity", rest[i][j]); }); }); pos.style.filter = posF; EntryStage.idleSeek(0); return; }
       EntryStage.idleSeek(Math.min(u, 6.6));
       els.forEach(function (a, i) {
-        var r = +rest[i][0], dim = span(u, 0.15, 0.65), o;
-        var up = i < 4 ? span(u, LAMP + i + 0.35, LAMP + i + 0.85) : span(u, 4.85, 5.35);
-        o = r + (T - r) * dim;                                   /* rest -> translucent */
-        o = o + (1 - o) * up;                                    /* translucent -> opaque, with its card */
-        if (i === 4) o = o + (r - o) * span(u, 6.7, 7.0);         /* tag words back to its signed ink */
+        var r = +rest[i][0], s0 = LAMP + i;                        /* task i's turn: the board's own L, 1 s each; tag words the fifth */
+        var o = r + (T - r) * span(u, 0.15, 0.65);                 /* rest -> translucent, all five alike */
+        o = o + (1 - o) * span(u, s0 + 0.35, s0 + 0.85);           /* -> full ink, with its card's fine-tuning */
         a.forEach(function (e) { e.setAttribute("opacity", o.toFixed(4)); });
       });
+      /* tag words' cue: its card copy floods bright as the board's cards do (+0.45 .. +0.85 of its turn) */
+      var s4 = LAMP + 4, g = span(u, s4 + 0.40, s4 + 0.55) * (1 - span(u, s4 + 0.85, s4 + 1.0));
+      pos.style.filter = g > 0 ? "brightness(" + (1 + 0.45 * g).toFixed(3) + ") drop-shadow(0 0 " + (6 * g).toFixed(2) + "px rgba(255,255,255," + (0.9 * g).toFixed(3) + "))" : posF;
     };
   })()`
 };
@@ -404,7 +411,7 @@ if (process.argv.includes("--slides")) {
   const sm = existsSync(sp) ? JSON.parse(readFileSync(sp, "utf8")) : {};
   const ids = ONLY ? ONLY.split(",") : Object.keys(ISLANDS);
   const res = await Promise.all(ids.map(async (id) => [id, await slidesFor(id, WORKERS)]));
-  for (const [id, r] of res) sm[id] = r;
+  for (const [id, r] of res) sm[id] = MOVES && sm[id] ? Object.assign(sm[id], r, { checks: Object.assign(sm[id].checks || {}, r.checks) }) : r;
   writeFileSync(sp, JSON.stringify(sm, null, 1) + "\n");
   console.log("frames kept in", TMP);
   process.exit(0);

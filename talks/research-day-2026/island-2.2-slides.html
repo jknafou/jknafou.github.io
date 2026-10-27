@@ -6623,7 +6623,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
   "use strict";
   var E = G.Entry, FL = G.FixedLive;
   var LIFT = [0.18, 0.5], LIFT_EACH = 0.17, PLACE = [0.5, 0.56], FAINT = 0.22, BUILD = [0.56, 1];
-  var TRAVEL = [[[414.077,884.721,0.31000],[761.860,772.448,0.20497]],[[532.117,884.721,0.31000],[970.037,772.448,0.20497]],[[414.077,1005.249,0.31000],[761.860,944.479,0.20497]],[[532.117,1005.249,0.31000],[970.037,944.479,0.20497]]], ORDER = ["ner","cls","sts","qa","pos"], NDS = 15, NPOS = 2, POS_FAINT = 0.55;
+  var TRAVEL = [[[414.077,884.721,0.31000],[761.860,772.448,0.20497]],[[532.117,884.721,0.31000],[970.037,772.448,0.20497]],[[414.077,1005.249,0.31000],[761.860,944.479,0.20497]],[[532.117,1005.249,0.31000],[970.037,944.479,0.20497]]], ORDER = ["ner","cls","sts","qa","pos"], NDS = 15, NPOS = 2, POS_FAINT = 1;
   var TOTAL = 15, BOARD_LAMP = 0.8, ONE = "dataset";
 
   /* ⚠️ THE LOOP IS THE ISLAND'S OWN CLOCK, READ OFF THE MAP: the board's lamp
@@ -6686,7 +6686,7 @@ window.FIXED_CLICKABLE = {"regions": [{"id": "1", "name": "Translation", "parent
       /* (c) build: one accelerating curve */
       var acc = Math.pow(E.span(t, BUILD[0], BUILD[1]), 1.5);
       ORDER.forEach(function (k) { w.head[k](!placed ? 0 : (k === "pos" ? POS_FAINT : 1) * (built ? 1 : FAINT)); });
-      w.pos(!placed ? 0 : POS_FAINT * (built ? 1 : FAINT));
+      w.pos(!placed ? 0 : POS_FAINT);   /* stands with the others' cards: whole as soon as it is placed */
       /* the names step on in reading order; the tag-words ones at their faint ink */
       var on = placed ? onCount(acc, NDS) : 0;
       for (var j = 0; j < NDS; j++) w.ds[j](j < on ? (j >= NDS - NPOS ? POS_FAINT : 1) : 0);
