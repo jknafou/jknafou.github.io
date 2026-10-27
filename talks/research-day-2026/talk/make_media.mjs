@@ -307,15 +307,19 @@ async function slidesFor(id, workers) {
  * dims to translucent during the board's lamp; each list goes back to full ink while its card is
  * fine-tuned (bead in, card lit), in book order; tag words, which has no card on the board, last,
  * its list's card copy lit (a brightening, as the board's cards flood) as its fine-tuning cue;
- * then a pause on the rest picture, which is frame 0 (slide-07.py: POS_FAINT 1, all lists alike). */
+ * then a pause on the rest picture, which is frame 0 (slide-07.py: POS_FAINT 1, all lists alike).
+ * ⚠️ 27 October 2026, the day of the talk: "answer questions" is CROSSED OUT (QA was not carried
+ * over) and FrenchMedMCQA is off the slide. The page's loop stops after the third card (slide-07.py
+ * QA_SKIP), so the crossed group dims with the others, gets no turn, and comes back to its rest
+ * (QA_DIM) before the pause; tag words takes the fourth turn. The crosses themselves never move. */
 const LOOP_PLANS = {
   "2.2/1": [["idle", 0, "beats"], ["E", 0.56, 1.0, 2.4], ["hold", 1.8]],
-  "2.2/3": [["rows", 7.0]]
+  "2.2/3": [["rows", 6.0]]
 };
 const LOOP_JS = {
   "2.2/3": `(function () {
-    var T = 0.2, LAMP = 0.8, GROUPS = [["s7-card-0", "s7-head-ner", 0, 6], ["s7-card-1", "s7-head-cls", 6, 10],
-      ["s7-card-2", "s7-head-sts", 10, 12], ["s7-card-3", "s7-head-qa", 12, 13], ["s7-card-pos", "s7-head-pos", 13, 15]];
+    var T = 0.2, LAMP = 0.8, GROUPS = [["s7-card-0", "s7-head-ner", 0, 6, 0], ["s7-card-1", "s7-head-cls", 6, 10, 1],
+      ["s7-card-2", "s7-head-sts", 10, 12, 2], ["s7-card-3", "s7-head-qa", 12, 12, -1], ["s7-card-pos", "s7-head-pos", 12, 14, 3]];
     var q = function (k) { return document.querySelector('[data-dyn="' + k + '"]'); };
     var els = GROUPS.map(function (g) { var a = [q(g[0]), q(g[1])]; for (var j = g[2]; j < g[3]; j++) a.push(q("s7-ds-" + j)); return a; });
     var rest = els.map(function (a) { return a.map(function (e) { return e.getAttribute("opacity"); }); });
@@ -324,15 +328,16 @@ const LOOP_JS = {
     var span = function (u, a, b) { return sm((u - a) / (b - a)); };
     window.__mmLoop = function (u) {
       if (u < 0) { els.forEach(function (a, i) { a.forEach(function (e, j) { e.setAttribute("opacity", rest[i][j]); }); }); pos.style.filter = posF; EntryStage.idleSeek(0); return; }
-      EntryStage.idleSeek(Math.min(u, 6.6));
+      EntryStage.idleSeek(u);                                       /* past the page's beats it is the signed picture */
       els.forEach(function (a, i) {
-        var r = +rest[i][0], s0 = LAMP + i;                        /* task i's turn: the board's own L, 1 s each; tag words the fifth */
+        var r = +rest[i][0], turn = GROUPS[i][4], s0 = LAMP + turn; /* the board's own L, 1 s each; tag words the fourth */
         var o = r + (T - r) * span(u, 0.15, 0.65);                 /* rest -> translucent, all five alike */
-        o = o + (1 - o) * span(u, s0 + 0.35, s0 + 0.85);           /* -> full ink, with its card's fine-tuning */
+        if (turn >= 0) o = o + (1 - o) * span(u, s0 + 0.35, s0 + 0.85);   /* -> full ink, with its card's fine-tuning */
+        else o = o + (r - o) * span(u, 4.9, 5.4);                  /* the crossed task: no turn, back to its rest before the pause */
         a.forEach(function (e) { e.setAttribute("opacity", o.toFixed(4)); });
       });
       /* tag words' cue: its card copy floods bright as the board's cards do (+0.45 .. +0.85 of its turn) */
-      var s4 = LAMP + 4, g = span(u, s4 + 0.40, s4 + 0.55) * (1 - span(u, s4 + 0.85, s4 + 1.0));
+      var s4 = LAMP + 3, g = span(u, s4 + 0.40, s4 + 0.55) * (1 - span(u, s4 + 0.85, s4 + 1.0));
       pos.style.filter = g > 0 ? "brightness(" + (1 + 0.45 * g).toFixed(3) + ") drop-shadow(0 0 " + (6 * g).toFixed(2) + "px rgba(255,255,255," + (0.9 * g).toFixed(3) + "))" : posF;
     };
   })()`
