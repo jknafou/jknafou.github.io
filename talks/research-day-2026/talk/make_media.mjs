@@ -300,7 +300,9 @@ async function restLoops(id, workers) {
     try {
       for (;;) {
         const j = jobs[next++]; if (!j) break;
-        await b.evaluate(`(function(){ var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); E.enter(${JSON.stringify(j.k)}); })()`);
+        /* enter() writes the page's own hud and hint, which the shell never shows: hidden here too */
+        await b.evaluate(`(function(){ if (!document.getElementById("mm-nohud")) { var s = document.createElement("style"); s.id = "mm-nohud"; s.textContent = "#entry-hud,#fixed-live-hint{display:none!important}"; document.head.appendChild(s); }
+          var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); E.enter(${JSON.stringify(j.k)}); })()`);
         for (let i = 0; i < 600; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'slide' && !EntryStage.flying")) break; }
         const info = await b.evaluate(`(function(){ var a = EntryStage.idling ? EntryStage.idleSeek(0) : null; return a ? { period: a.period } : null; })()`);
         if (info && info.period > 0) {

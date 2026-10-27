@@ -111,3 +111,12 @@ body.themed.in #backdrop { display: block; }
 #backdrop img { position: absolute; display: block; image-rendering: pixelated; user-select: none; pointer-events: none; }
 body.themed #vids video { background: transparent; }
 body.plain #retro { transition: opacity .3s; }
+
+/* the resting loops of slides, and the short fade of a jump across several slides */
+#slide .loopvid { position: absolute; display: block; opacity: 0; object-fit: fill; pointer-events: none; z-index: 1; }
+#slide .loopvid.on { opacity: 1; }
+#slide #rest { z-index: 0; }
+#slide .jumpimg { position: absolute; display: block; z-index: 4; pointer-events: none; }
+/* a pending target: the bar says where the stage is going */
+#strip.going { opacity: 1; }
+#strip.going #crumb { font-style: italic; }
