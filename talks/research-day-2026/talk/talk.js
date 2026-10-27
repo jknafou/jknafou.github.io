@@ -98,7 +98,14 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
-  var viewEl = $("view"), worldEl = $("world"), vidsEl = $("vids"), hotsEl = $("hots"), slideEl = $("slide");
+  /* ⚠️ THE STAGE IS ONE 16:9 BOX, fitted whole in the window by CSS (#box in talk.css), and every
+   * layer lives inside it, placed in PERCENTAGES of it: a window that changes size -- full screen
+   * on or off, a 16:10 laptop, a 4:3 projector -- rescales everything at once with no JS, so the
+   * still, the loop, the clip and the hotspots can never drift apart (the author, 27 October 2026:
+   * "we don't see the whole picture ... "motivation" reads "tivation"", and "going full screen and
+   * back creates problems ... cut and repeated twice"). The bands round the box take the colour of
+   * the scene (syncBand). */
+  var outerEl = $("view"), viewEl = $("box"), worldEl = $("world"), vidsEl = $("vids"), hotsEl = $("hots"), slideEl = $("slide");
   var veil = $("veil"), fly = $("fly"), mark = $("mark"), restImg = $("rest");
   var crumb = $("crumb"), pos = $("pos"), strip = $("strip");
 
@@ -160,7 +167,17 @@
       } catch (e) { res(); }
     });
   }
-  function place(el, r) { el.style.left = r.x + "px"; el.style.top = r.y + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; }
+  function place(el, r) {
+    var W = viewEl.clientWidth, H = viewEl.clientHeight;
+    if (!(W > 0 && H > 0)) { el.style.left = r.x + "px"; el.style.top = r.y + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; return; }
+    el.style.left = (100 * r.x / W) + "%"; el.style.top = (100 * r.y / H) + "%";
+    el.style.width = (100 * r.w / W) + "%"; el.style.height = (100 * r.h / H) + "%";
+  }
+  /* the card's clip, in percentages of the box */
+  function cardClip() {
+    var C = cardBox(), W = viewEl.clientWidth || 1, H = viewEl.clientHeight || 1;
+    return "inset(" + (100 * C.y / H) + "% " + (100 * (W - C.x - C.w) / W) + "% " + (100 * (H - C.y - C.h) / H) + "% " + (100 * C.x / W) + "%)";
+  }
   function over(at, to) {
     return "translate(" + (to.x - at.x) + "px," + (to.y - at.y) + "px) scale(" + (to.w / at.w) + "," + (to.h / at.h) + ")";
   }
@@ -260,8 +277,7 @@
     if (!THEMED || !bdEl) return;
     var C = cardBox(), cd = (RJ && RJ.card) || [268.8, 21.6, 1382.4, 1036.8], s = C.h / cd[3];
     place(bdImg, { x: C.x - cd[0] * s, y: C.y - cd[1] * s, w: 1920 * s, h: 1080 * s });
-    var Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
-    slideEl.style.clipPath = "inset(" + C.y + "px " + (Vw - C.x - C.w) + "px " + (Vh - C.y - C.h) + "px " + C.x + "px)";
+    slideEl.style.clipPath = cardClip();
   }
 
   /* ---- the island loop videos ------------------------------------------------ */
@@ -275,8 +291,7 @@
   }
   /* the loops are clipped to the page's card, as the page clips its drawing */
   function clipVids() {
-    var C = cardBox(), Vw = viewEl.clientWidth, Vh = viewEl.clientHeight;
-    vidsEl.style.clipPath = "inset(" + C.y + "px " + (Vw - C.x - C.w) + "px " + (Vh - C.y - C.h) + "px " + C.x + "px)";
+    vidsEl.style.clipPath = cardClip();
   }
   function showVideo(id) {
     clipVids();
@@ -1323,6 +1338,19 @@
   window.addEventListener("keydown", function (e) {
     if ((e.key === "o" || e.key === "O") && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleOffPanel(); }
   });
+  /* the bands round the 16:9 box: the colour of what fills it -- the map's grass or sky, the
+   * room's wall, the paper -- so a 16:10 or a 21:9 screen shows no seam */
+  function syncBand() {
+    var c = "";
+    try {
+      if (titleCard && titleCard.classList.contains("on")) c = skyColour();
+      else if (retroEl && retroEl.classList.contains("on") && !retroEl.classList.contains("clear")) c = getComputedStyle(retroEl).backgroundColor;
+      else if (THEMED && bdEl && document.body.classList.contains("in")) c = bdEl.style.backgroundColor || getComputedStyle(bdEl).backgroundColor;
+    } catch (e) {}
+    if (outerEl.style.backgroundColor !== c) outerEl.style.backgroundColor = c;
+  }
+  setInterval(syncBand, 120);
+
   /* in full screen the pointer hides after 1.5 s without moving (the author, 27 October 2026:
    * "In Full screen can it remove the mouse pointer when it is not being moved?") */
   (function () {

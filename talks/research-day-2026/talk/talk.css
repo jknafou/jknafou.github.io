@@ -130,3 +130,10 @@ body.plain #retro { transition: opacity .3s; }
 #offpanel .zip, #offpanel .hint { font-size: 12px; opacity: .8; margin-top: 4px; }
 #offpanel a { color: inherit; }
 html.nocursor, html.nocursor * { cursor: none !important; }
+
+/* THE 16:9 STAGE (talk.js, viewEl): the largest 16:9 box that fits #view, centred; every layer is
+   inside it and placed in percentages of it, so a resize needs no JS. #view's own colour fills the
+   bands (talk.js syncBand). */
+#view { container-type: size; background-color: var(--paper); transition: background-color .3s; }
+#box { position: absolute; inset: 0; margin: auto; overflow: hidden;
+       width: min(100cqw, calc(100cqh * 16 / 9)); height: min(100cqh, calc(100cqw * 9 / 16)); }

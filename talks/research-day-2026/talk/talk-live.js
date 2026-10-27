@@ -51,7 +51,7 @@
   if (params.get("chrome") === "0") document.body.classList.add("nochrome");
 
   var $ = function (id) { return document.getElementById(id); };
-  var viewEl = $("view"), worldEl = $("world"), stageEl = $("stage"), vidsEl = $("vids"), hotsEl = $("hots");
+  var viewEl = $("box") || $("view"), worldEl = $("world"), stageEl = $("stage"), vidsEl = $("vids"), hotsEl = $("hots");
   var veil = $("veil"), loading = $("loading"), fly = $("fly"), mark = $("mark");
   var crumb = $("crumb"), pos = $("pos"), strip = $("strip");
 
