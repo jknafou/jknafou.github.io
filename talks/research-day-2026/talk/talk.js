@@ -1145,6 +1145,14 @@
   function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
   function prevW(id) { var i = WORLD.indexOf(id); return i > 0 ? WORLD[i - 1] : null; }
   window.addEventListener("keydown", function (e) {
+    // F toggles full screen (the author, 27 October 2026)
+    if ((e.key === "f" || e.key === "F") && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      var d = document;
+      if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+      else { var el = d.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }
+      return;
+    }
     if (!NAV[e.key] || e.altKey || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
     onKey(e.key);
