@@ -1287,8 +1287,8 @@
   var timerEl = document.createElement("span"); timerEl.id = "timer"; strip.appendChild(timerEl);
   var timerT0 = 0, timerTick = null;
   function timerShow() {
-    var s = Math.floor((Date.now() - timerT0) / 1000);
-    timerEl.textContent = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+    // whole minutes only: ticking seconds distract the audience (the author, 27 October 2026)
+    timerEl.textContent = Math.floor((Date.now() - timerT0) / 60000) + " min";
   }
   window.addEventListener("keydown", function (e) {
     if ((e.key === "s" || e.key === "S") && !e.altKey && !e.ctrlKey && !e.metaKey) {
