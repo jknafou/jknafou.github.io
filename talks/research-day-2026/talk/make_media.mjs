@@ -284,7 +284,9 @@ async function slidesFor(id, workers) {
  * of some slides disapear, e.g. tokenizer, pretraining, fine-tuning, those were looping for a
  * reason"). A slide loops at rest when its page starts an idle after the entry
  * (EntryStage.idling). The loop is captured by the page's own clock: the slide is entered
- * for real, then EntryStage.idleSeek(u) is driven over one period, u = f / N, N = period x 30.
+ * for real, then EntryStage.idleSeek(u) is driven over one period, u = f / 30 s, f = 0 .. period x 30:
+ * the beats, then the hold the page itself keeps (period - beats), so the video starts on the
+ * sequence's start, pauses on its end, and loops.
  * Writes media/slides/<island>/loop-<k>.mp4 and, in slides.json, <island>.loops[k] =
  * { period, frames, seam (dB, u = 1 against u = 0), handoff (dB, u = 0 against rest-<k>) }. */
 async function restLoops(id, workers) {
@@ -304,16 +306,18 @@ async function restLoops(id, workers) {
         await b.evaluate(`(function(){ if (!document.getElementById("mm-nohud")) { var s = document.createElement("style"); s.id = "mm-nohud"; s.textContent = "#entry-hud,#fixed-live-hint{display:none!important}"; document.head.appendChild(s); }
           var E = EntryStage; E.base(); E.order.forEach(function (k) { E.seek(k, 0); }); E.enter(${JSON.stringify(j.k)}); })()`);
         for (let i = 0; i < 600; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'slide' && !EntryStage.flying")) break; }
-        const info = await b.evaluate(`(function(){ var a = EntryStage.idling ? EntryStage.idleSeek(0) : null; return a ? { period: a.period } : null; })()`);
+        const info = await b.evaluate(`(function(){ var a = EntryStage.idling ? EntryStage.idleSeek(0) : null; return a ? { period: a.period, beats: a.beats } : null; })()`);
         if (info && info.period > 0) {
           const N = Math.max(2, Math.round(info.period * FPS));
           const md = join(fr, "loop-" + j.n); mkdirSync(md, { recursive: true });
           for (let f = 0; f <= N; f++) {                       /* f = N is the seam check */
-            await b.evaluate(`(function(){ EntryStage.idleSeek(${(f / N).toFixed(6)}); return ${RAF}; })()`);
+            /* ⚠️ u IS SECONDS ON THE IDLE'S OWN CLOCK (compose.py startIdle: idleP.u runs 0 -> period),
+             * not a fraction: read as one, the first capture held only the loop's first second */
+            await b.evaluate(`(function(){ EntryStage.idleSeek(${(f / FPS).toFixed(5)}); return ${RAF}; })()`);
             const s = await b.send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
             writeFileSync(join(md, String(f).padStart(4, "0") + ".jpg"), Buffer.from(s.data, "base64"));
           }
-          loops[j.n] = { period: +info.period.toFixed(4), frames: N, dir: md };
+          loops[j.n] = { period: +info.period.toFixed(4), beats: +(+info.beats).toFixed(4), frames: N, dir: md };
         }
         await b.evaluate("EntryStage.leave()");
         for (let i = 0; i < 300; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'map' && !EntryStage.flying")) break; }
