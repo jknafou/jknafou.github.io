@@ -308,8 +308,9 @@
     slideEl.classList.add("on");
     slideEl.style.background = THEMED ? "transparent" : ((SL[id] && SL[id].bg) || "");
     if (THEMED) { setBackdrop(id); layoutBackdrop(); }
+    if (k > 0) startLoop(id, k); else stopLoop();
   }
-  function hideRest() { slideEl.classList.remove("on"); }
+  function hideRest() { slideEl.classList.remove("on"); stopLoop(); }
 
   /* ---- the move videos: preloaded, at most a handful ------------------------- */
   var moves = {};
@@ -337,25 +338,77 @@
     preload(id, L);
     preImg(id, k + 1); preImg(id, k - 1); preImg(id, 0);
   }
-  /* play one move: it starts on the picture now shown and ends on rest-<to> */
-  async function playMove(id, name, to) {
+  /* ---- the resting loops (make_media.mjs --rest): a slide whose page loops at rest plays
+   * loop-<k>.mp4 over its still, from frame 0, which is the still (slides.json loops) ---- */
+  var loopEl = null, loopKey = null;
+  function hasLoop(id, k) { return !!(k > 0 && SL[id] && SL[id].loops && SL[id].loops[k]); }
+  function stopLoop() {
+    if (!loopEl) return;
+    var v = loopEl; loopEl = null; loopKey = null;
+    v.classList.remove("on"); try { v.pause(); } catch (e) {}
+    while (v.firstChild) v.removeChild(v.firstChild); try { v.load(); } catch (e) {} v.remove();
+  }
+  /* start slide k's loop under whatever is on top; resolves once its first frame is up */
+  async function startLoop(id, k) {
+    if (REDUCED || !hasLoop(id, k)) { stopLoop(); return; }
+    var key = id + "/" + k;
+    if (loopKey === key && loopEl) return;
+    stopLoop();
+    var v = video(slideMedia(id, "loop-" + k + ".mp4"), restUrl(id, k)); v.loop = true; v.className = "loopvid";
+    place(v, slideBox(id)); slideEl.insertBefore(v, restImg.nextSibling);
+    loopEl = v; loopKey = key;
+    await ready(v, 3000);
+    if (loopEl !== v) return;
+    var p = v.play(); if (p && p.catch) p.catch(function () {});
+    await firstFrame(v);
+    if (loopEl === v) v.classList.add("on");
+  }
+  /* play one move: it starts on the picture now shown and ends on rest-<to>; rate speeds it up */
+  var curMove = null;
+  async function playMove(id, name, to, rate) {
     var target = preImg(id, to);
-    if (REDUCED) { await showRest(id, to); return; }
+    if (REDUCED) { stopLoop(); await showRest(id, to); return; }
     var v = moveVideo(id, name);
     place(v, slideBox(id));
     await ready(v, 6000);
     if (v.currentTime !== 0) await seekTo(v, 0);
-    v.classList.add("on");
+    v.playbackRate = rate || 1;
     var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); });
+    v.style.zIndex = 3;
     var p = v.play(); if (p && p.catch) p.catch(function () {});
+    curMove = v;
+    await firstFrame(v);
+    /* over a resting loop the move fades in, so the loop's phase never jumps */
+    v.style.transition = loopEl ? "opacity 120ms ease" : "none";
+    v.classList.add("on");
     slideEl.classList.add("on");
+    if (loopEl) setTimeout(stopLoop, 140);
     await target;
     await ended;
+    curMove = null;
     place(restImg, slideBox(id));
     restImg.src = restUrl(id, to);
     if (restImg.decode) await restImg.decode().catch(function () {});
-    v.classList.remove("on");
-    try { v.pause(); v.currentTime = 0; } catch (e) {}
+    if (to > 0) await startLoop(id, to);
+    v.style.transition = "none";
+    v.classList.remove("on"); v.style.zIndex = "";
+    try { v.pause(); v.currentTime = 0; v.playbackRate = 1; } catch (e) {}
+  }
+  /* several slides at once: a short fade to the target's still, then its loop (no half state) */
+  async function fadeJump(id, k) {
+    await preImg(id, k);
+    var im = document.createElement("img"); im.className = "jumpimg"; im.alt = "";
+    place(im, slideBox(id)); im.src = restUrl(id, k);
+    if (im.decode) await im.decode().catch(function () {});
+    im.style.opacity = 0; slideEl.appendChild(im);
+    await nextFrame();
+    im.style.transition = REDUCED ? "none" : "opacity 220ms ease"; im.style.opacity = 1;
+    await sleep(REDUCED ? 0 : 240);
+    stopLoop();
+    place(restImg, slideBox(id)); restImg.src = restUrl(id, k);
+    if (restImg.decode) await restImg.decode().catch(function () {});
+    await startLoop(id, k);
+    im.remove();
   }
 
   /* ---- hotspots over the island view ------------------------------------------ */
@@ -496,14 +549,14 @@
   }
 
   /* island view -> slide k (its entry video) */
-  async function enterSlide(k, idOverride) {
+  async function enterSlide(k, idOverride, rate) {
     var id = idOverride || S.island;
     S.busy = true;
     hotsEl.innerHTML = "";
     var v = vids[id];
     /* the entry starts on the island at rest: the loop goes back to its still first */
     if (v && v.classList.contains("on")) { v.pause(); await seekTo(v, 0); }
-    var p = playMove(id, "in-" + k, k);
+    var p = playMove(id, "in-" + k, k, rate);
     await sleep(60);
     showVideo(null);
     await p;
@@ -513,18 +566,18 @@
     S.busy = false; update();
   }
   /* slide k -> the island view (its leave video), the loop taking over at its still */
-  async function leaveSlide(id, k, then) {
+  async function leaveSlide(id, k, then, rate) {
     S.busy = true;
-    await playMove(id, "out-" + k, 0);
+    await playMove(id, "out-" + k, 0, rate);
     var v = bigVideo(id);
     await ready(v, 3000); await seekTo(v, 0);
     showVideo(id);
     S.busy = false;
     return then();
   }
-  async function stepSlide(id, from, to, sub) {
+  async function stepSlide(id, from, to, sub, rate) {
     S.busy = true;
-    await playMove(id, to > from ? "fw-" + from : "bw-" + to, to);
+    await playMove(id, to > from ? "fw-" + from : "bw-" + to, to, rate);
     if (sub) S.sk = to; else S.k = to;
     preloadAround(id, to);
     S.busy = false; update();
@@ -646,7 +699,7 @@
   async function rswap(v, rate) {
     await ready(v, 6000);
     if (v.currentTime > 0.001) await seekTo(v, 0);
-    v.playbackRate = rate || 1;
+    v.playbackRate = rate || 1; curMove = v;
     v.style.zIndex = ++rz;
     var p = v.play(); if (p && p.catch) p.catch(function () {});
     await firstFrame(v);
@@ -746,15 +799,15 @@
     place(v, loopBox(id)); v.classList.add("on");
     return v;
   }
-  async function retroOpen(id) {
-    S.busy = true;
+  async function retroOpen(id, rate) {
+    S.busy = true; rate = rate || 1;
     await metaReady;
     buildRetro(); retroShown(true);
     var loop = prepIsland(id);
     if (!REDUCED) {
       var v = rvid("open-" + id);
-      await rswap(v);
-      if (roomColour(id)) retroEdge(roomColour(id), 1300, 900);
+      await rswap(v, rate);
+      if (roomColour(id)) retroEdge(roomColour(id), 1300 / rate, 900 / rate);
       rvid("close-" + id);
       await rended(v);
     }
@@ -767,8 +820,8 @@
     hotsEl.innerHTML = ""; buildHots(id); preloadAround(id, 0); keep(id);
     S.busy = false; update();
   }
-  async function retroClose(id) {
-    S.busy = true;
+  async function retroClose(id, rate) {
+    S.busy = true; rate = rate || 1;
     hotsEl.innerHTML = "";
     var i = WORLD.indexOf(id); if (i >= 0) S.focus = i;
     var big = vids[id];
@@ -780,7 +833,7 @@
       if (roomColour(id)) retroEdge(roomColour(id), 0);
       await ready(v, 6000);
       if (v.currentTime > 0.001) await seekTo(v, 0);
-      v.style.zIndex = ++rz;
+      v.style.zIndex = ++rz; v.playbackRate = rate; curMove = v;
       var p = v.play(); if (p && p.catch) p.catch(function () {});
       await firstFrame(v);
       v.classList.add("on");
@@ -788,7 +841,7 @@
       await nextFrame();
       retroEl.classList.add("clear");            /* until the map is back, the island shows through, never paper */
       retroShown(true);
-      retroEdge(GRASS, 1300, 200);
+      retroEdge(GRASS, 1300 / rate, 200 / rate);
       if (!rlat.moved) rlat.moved = performance.now();
       await rended(v);
       await rswap(rvid("idle-" + id));
@@ -895,69 +948,213 @@
     return enterSlide(N(id));
   }
 
-  /* ---- the keys ----------------------------------------------------------- */
+  /* ---- the keys: TARGETS, never blocked (the author, 27 October 2026: "We can't press
+   * multiple time the keys to go faster ... we have to wait the end of an animation before
+   * being able to press any arrow key ... We want to be able to press multple times and see in
+   * the navbar where we are going to jump"). Each arrow moves a target one step; a driver
+   * moves the stage towards it, one coherent move at a time, and every move ends at rest:
+   *   the talk's line   1.1's slides, 2.2's translation, 2.2's slides, 3.1's, 4.1's, the thanks;
+   *   the map           Bert's building;
+   *   2.1's depth       2.1's slide.
+   * One step away plays the move as captured; further away, a move already playing is sped up,
+   * slides of one island are crossed by a short fade to the target's still, and islands are
+   * crossed through the map: the slide leaves, the building closes, Bert walks (fast) to the
+   * target's building, it opens, and the target slide is entered ("it would be nice we we
+   * noticed the change in the world view"). */
   var NAV = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, Enter: 1, Escape: 1 };
+  var FAST = 3, CROSS = 3;
+  function line() {
+    var L = [];
+    WORLD.forEach(function (id) {
+      if (ISL[id].sub) L.push({ id: id, k: 0, tr: true });
+      for (var k = 1; k <= N(id); k++) L.push({ id: id, k: k });
+    });
+    L.push({ thanks: true });
+    return L;
+  }
+  function lineIndex(id, k, tr) {
+    var L = line();
+    for (var i = 0; i < L.length; i++) if (L[i].id === id && (tr ? L[i].tr : (!L[i].tr && L[i].k === k))) return i;
+    return -1;
+  }
+  function firstOf(id) { return lineIndex(id, 0, !!ISL[id].sub) >= 0 ? lineIndex(id, 0, !!ISL[id].sub) : lineIndex(id, 1, false); }
+  /* where the stage is on the line, or null (island view, map, skies) */
+  function curLine() {
+    if (S.layer === "slide") return lineIndex(S.island, S.k, false);
+    if (S.layer === "sub") return lineIndex(S.island, 0, true);
+    if (S.layer === "thanks") return line().length - 1;
+    return null;
+  }
+  function speedUp() { if (curMove && !curMove.paused && !REDUCED) { try { curMove.playbackRate = Math.max(curMove.playbackRate, FAST); } catch (e) {} } }
+  var T = { line: null, map: null, sub: null, driving: false };
+
+  async function driveLine() {
+    if (T.driving) return;
+    T.driving = true;
+    try {
+      for (var guard = 0; guard < 60; guard++) {
+        var c = curLine(), L = line();
+        if (T.line == null) break;
+        if (c === T.line) break;
+        var tgt = L[T.line];
+        if (S.layer === "island") {                         /* from an island view */
+          if (tgt.id === S.island && !tgt.thanks) { if (tgt.tr) await zoomIn(); else await enterSlide(tgt.k, null, 1); }
+          else await crossing(S.island, null, tgt.thanks ? L[L.length - 2] : tgt);
+          continue;
+        }
+        if (c == null) break;
+        var cur = L[c];
+        if (tgt.thanks) {
+          if (c === L.length - 2) { await toThanks(); T.line = null; break; }
+          tgt = L[L.length - 2];
+        }
+        if (cur.thanks) { await fromThanks(); continue; }
+        var far = Math.abs(T.line - c) > 1;
+        if (tgt.id === cur.id) {
+          if (cur.tr) { await zoomTranslator(false); S.layer = "island"; S.k = 0; await enterSlide(tgt.k, null, far ? 1.5 : 1); }
+          else if (tgt.tr) { await leaveSlide(cur.id, cur.k, function () { S.layer = "island"; S.k = 0; }, far ? FAST : 1); await zoomIn(); }
+          else if (Math.abs(tgt.k - cur.k) === 1) await stepSlide(cur.id, cur.k, tgt.k, false, 1);
+          else { S.busy = true; await fadeJump(cur.id, tgt.k); S.k = tgt.k; preloadAround(cur.id, tgt.k); S.busy = false; }
+        } else await crossing(cur.id, cur, tgt);
+        update();
+      }
+    } finally { T.driving = false; if (curLine() === T.line) T.line = null; S.busy = false; update(); }
+  }
+  /* from island a (at slide `cur`, or its view when cur is null) to the line stop tgt */
+  async function crossing(a, cur, tgt) {
+    var b = tgt.id;
+    if (!RETRO || REDUCED) {                              /* the old world, or reduced: a fade through paper */
+      S.busy = true; veil.classList.add("on"); await sleep(REDUCED ? 0 : 300);
+      hotsEl.innerHTML = ""; showVideo(null); stopLoop();
+      S.island = b; setBackdrop(b); keep(b);
+      if (tgt.tr) {
+        await showRest(b, 0);
+        var v0 = bigVideo(b); await ready(v0, 3000); await seekTo(v0, 0); v0.pause(); place(v0, loopBox(b)); v0.classList.add("on");
+        S.layer = "island"; veil.classList.remove("on"); await sleep(REDUCED ? 0 : 300); S.busy = false;
+        return zoomIn();
+      }
+      await showRest(b, tgt.k); S.layer = "slide"; S.k = tgt.k; preloadAround(b, tgt.k);
+      veil.classList.remove("on"); await sleep(REDUCED ? 0 : 300); S.busy = false; update(); return;
+    }
+    if (cur && cur.tr) { await zoomTranslator(false); S.layer = "island"; S.k = 0; }
+    else if (cur) await leaveSlide(a, cur.k, function () { S.layer = "island"; S.k = 0; }, CROSS);
+    await retroClose(a, CROSS);
+    var j = WORLD.indexOf(b);
+    await walkTo(j, Math.abs(j - S.focus) > 1 ? FAST + 1 : CROSS);
+    await retroOpen(b, CROSS);
+    if (tgt.tr) await zoomIn();
+    else await enterSlide(tgt.k, null, 2);
+  }
+  /* Bert along the road to building j, one road at a time, without stopping between roads */
+  async function walkTo(j, rate) {
+    S.busy = true;
+    while (S.focus !== j) {
+      var step = j > S.focus ? 1 : -1, a = WORLD[S.focus], b = WORLD[S.focus + step];
+      if (REDUCED) rposterShow(b);
+      else {
+        var w = rvid("walk-" + a + "-" + b);
+        if (S.focus + step !== j) rvid("walk-" + b + "-" + WORLD[S.focus + 2 * step]); else rvid("idle-" + b);
+        await rswap(w, rate);
+        await rended(w);
+      }
+      S.focus += step; markFocus(); update();
+    }
+    if (!REDUCED) await rswap(rvid("idle-" + WORLD[j]));
+    retroPreload(j);
+    S.busy = false;
+  }
+  /* the map: Bert's target building */
+  async function driveMap() {
+    if (T.driving) return;
+    T.driving = true;
+    try {
+      while (T.map != null && S.focus !== T.map && S.layer === "world") {
+        var step = T.map > S.focus ? 1 : -1, a = WORLD[S.focus], b = WORLD[S.focus + step];
+        var rate = Math.abs(T.map - S.focus) > 1 ? FAST : 1;
+        S.busy = true;
+        if (!RETRO || REDUCED) { if (RETRO) rposterShow(b); }
+        else {
+          var w = rvid("walk-" + a + "-" + b);
+          rvid("idle-" + b);
+          await rswap(w, rate);
+          await rended(w);
+        }
+        S.focus += step; markFocus(); update();
+        if (RETRO && !REDUCED && (T.map === S.focus || T.map == null)) await rswap(rvid("idle-" + WORLD[S.focus]));
+      }
+      if (RETRO) retroPreload(S.focus);
+    } finally { T.driving = false; T.map = null; S.busy = false; update(); }
+  }
+  /* 2.1's depth: the target slide */
+  async function driveSub() {
+    if (T.driving) return;
+    T.driving = true;
+    var sb = ISL[S.island].sub;
+    try {
+      while (T.sub != null && S.layer === "subslide" && S.sk !== T.sub) {
+        if (Math.abs(T.sub - S.sk) === 1) await stepSlide(sb, S.sk, T.sub, true, 1);
+        else { S.busy = true; await fadeJump(sb, T.sub); S.sk = T.sub; preloadAround(sb, S.sk); S.busy = false; }
+        update();
+      }
+    } finally { T.driving = false; T.sub = null; S.busy = false; update(); }
+  }
+
   function onKey(k) {
-    if (S.busy) return;
     rlat.key = performance.now(); rlat.moved = 0;
     var fwd = k === "ArrowRight", back = k === "ArrowLeft", down = k === "ArrowDown" || k === "Enter", up = k === "ArrowUp" || k === "Escape";
     var id = S.island, n = N(id);
+    /* an arrow while the stage moves: the target moves, the move under way hurries */
+    if (T.driving) {
+      if (!(fwd || back)) return bump();
+      if (T.line != null) { var Ll = line(); T.line = Math.max(0, Math.min(Ll.length - 1, T.line + (fwd ? 1 : -1))); }
+      else if (T.map != null) T.map = Math.max(0, Math.min(WORLD.length - 1, T.map + (fwd ? 1 : -1)));
+      else if (T.sub != null) T.sub = Math.max(1, Math.min(N(ISL[S.island].sub), T.sub + (fwd ? 1 : -1)));
+      else return bump();
+      speedUp(); update(); return;
+    }
+    if (S.busy) return;
     if (S.layer === "title") return (fwd || down) ? skyDown("title") : bump();
-    if (S.layer === "thanks") return (back || down) ? fromThanks() : bump();
+    if (S.layer === "thanks") { if (back) { T.line = line().length - 2; return driveLine(); } return down ? fromThanks() : bump(); }
     if (S.layer === "world" && S.focus === 0 && (back || (up && RETRO))) return skyUp("title");
     if (S.layer === "world" && S.focus === WORLD.length - 1 && (fwd || (up && RETRO))) return skyUp("thanks");
-    if (S.layer === "world" && RETRO) {
+    if (S.layer === "world") {
       if (fwd || back) {
         var jj = S.focus + (fwd ? 1 : -1);
         if (jj < 0 || jj >= WORLD.length) return bump();
-        return retroGo(jj, false);
+        if (!RETRO) { S.focus = jj; markFocus(); update(); return; }
+        T.map = jj; update(); return driveMap();
       }
       if (down) return openIsland(WORLD[S.focus]);
       return bump();
     }
-    if (S.layer === "world") {
-      if (fwd || back) {
-        var j = S.focus + (fwd ? 1 : -1);
-        if (j < 0 || j >= WORLD.length) return bump();
-        S.focus = j; markFocus(); update();
-      } else if (down) openIsland(WORLD[S.focus]);
-      else bump();
-      return;
-    }
     if (S.layer === "island") {
-      if (down || fwd) return ISL[id].sub ? zoomIn() : enterSlide(1);
+      if (down || fwd) { T.line = firstOf(id); update(); return driveLine(); }
       if (up) return goWorld(id);
-      if (back) { var p0 = prevW(id); return p0 ? crossTo(p0, "last") : bump(); }
+      if (back) { var f0 = firstOf(id); if (f0 <= 0) return bump(); T.line = f0 - 1; update(); return driveLine(); }
       return;
     }
     if (S.layer === "sub") {                       /* 2.1's living view, 2.2's step 1 */
-      var sub = ISL[id].sub;
-      if (fwd) return zoomOut("first");
       if (up) return zoomOut(null);
-      if (down) return enterSlide(1, sub);
-      if (back) { var pb = prevW(id); return pb ? crossTo(pb, "last") : zoomOut(null); }
-      return;
+      if (down) return enterSlide(1, ISL[id].sub);
     }
     if (S.layer === "subslide") {                  /* 2.1's slides, one level deeper */
       var sb = ISL[id].sub, m = N(sb);
       if (up) return leaveSlide(sb, S.sk, function () { S.layer = "sub"; S.sk = 0; preloadAround(sb, 0); update(); });
-      if (fwd) return S.sk < m ? stepSlide(sb, S.sk, S.sk + 1, true) : bump();
-      if (back) return S.sk > 1 ? stepSlide(sb, S.sk, S.sk - 1, true) : bump();
+      if (fwd || back) {
+        var to = S.sk + (fwd ? 1 : -1);
+        if (to < 1 || to > m) return bump();
+        T.sub = to; update(); return driveSub();
+      }
       return bump();
     }
-    /* a slide */
-    if (up) return leaveSlide(id, S.k, function () { S.layer = "island"; S.k = 0; buildHots(id); preloadAround(id, 0); update(); });
+    if (S.layer === "slide" && up) return leaveSlide(id, S.k, function () { S.layer = "island"; S.k = 0; buildHots(id); preloadAround(id, 0); update(); });
     if (down) return bump();
-    if (fwd) {
-      if (S.k < n) return stepSlide(id, S.k, S.k + 1);
-      var nx = nextW(id);
-      if (!nx && id === WORLD[WORLD.length - 1]) return toThanks();
-      return nx ? crossTo(nx, ISL[nx].sub ? "translation" : "first") : bump();
-    }
-    if (back) {
-      if (S.k > 1) return stepSlide(id, S.k, S.k - 1);
-      if (ISL[id].sub) return leaveSlide(id, 1, function () { S.layer = "island"; S.k = 0; return zoomIn(); });
-      var pv = prevW(id); return pv ? crossTo(pv, "last") : bump();
+    if (fwd || back) {                             /* a slide, or 2.1's living view: the talk's line */
+      var c = curLine(), L = line();
+      if (c == null) return bump();
+      var tl = c + (fwd ? 1 : -1);
+      if (tl < 0 || tl >= L.length) return bump();
+      T.line = tl; update(); return driveLine();
     }
   }
   function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
@@ -1008,8 +1205,34 @@
         pos.textContent = id + " · " + at + " / " + all; path = "#/" + id + "/" + S.k;
       }
     }
-    if (RETRO && S.layer === "world" && retroEl) [].forEach.call(retroEl.querySelectorAll(".bld"), function (b, i) { b.classList.toggle("focus", i === S.focus); });
+    var going = pendingText();
+    if (going) { crumb.textContent = going[0]; pos.textContent = going[1]; strip.classList.add("going"); }
+    else strip.classList.remove("going");
+    var fi = T.map != null ? T.map : S.focus;
+    if (RETRO && S.layer === "world" && retroEl) [].forEach.call(retroEl.querySelectorAll(".bld"), function (b, i) { b.classList.toggle("focus", i === fi); });
     if (path !== lastHash) { lastHash = path; try { history.replaceState(null, "", path); } catch (e) {} }
+  }
+
+  var PLACE = { "1.1": "hospital", "2.2": "factory", "3.1": "stadium", "4.1": "station" };
+  /* [crumb, position] of the pending target, or null */
+  function pendingText() {
+    if (T.line != null && T.line !== curLine()) {
+      var L = line(), g = L[T.line];
+      if (g.thanks) return ["→ Thank you", "thanks"];
+      var I = ISL[g.id], subN = I.sub ? 1 : 0, all = N(g.id) + subN;
+      if (g.tr) return ["→ " + I.name + " › " + SUBNAME[I.sub] + " · step 1 / " + all, g.id + " · 1 / " + all];
+      return ["→ " + I.name + " · " + (subN ? "step " + (g.k + subN) + " / " + all : "slide " + g.k + " / " + N(g.id)) + " · " + SL[g.id].names[g.k - 1],
+              g.id + " · " + (g.k + subN) + " / " + all];
+    }
+    if (T.map != null && T.map !== S.focus) {
+      var J = ISL[WORLD[T.map]];
+      return ["→ " + J.sec.replace(/^\d+ /, "") + (RETRO ? " (" + PLACE[WORLD[T.map]] + ")" : "") + " · " + J.name, "island " + (T.map + 1) + " / " + WORLD.length];
+    }
+    if (T.sub != null && T.sub !== S.sk) {
+      var sb = ISL[S.island].sub;
+      return ["→ " + SUBNAME[sb] + " · slide " + T.sub + " / " + N(sb) + " · " + SL[sb].names[T.sub - 1], sb + " " + T.sub + " / " + N(sb)];
+    }
+    return null;
   }
 
   /* ---- arrival ------------------------------------------------------------ */
@@ -1053,7 +1276,8 @@
 
   window.Talk = {
     get state() {
-      return { busy: S.busy, layer: S.layer, id: S.island, k: S.k, sk: S.sk, hash: location.hash, flying: false,
+      return { busy: S.busy || T.driving, driving: T.driving, target: T.line != null ? T.line : (T.map != null ? "map" + T.map : (T.sub != null ? "sub" + T.sub : null)),
+        loop: loopKey, layer: S.layer, id: S.island, k: S.k, sk: S.sk, hash: location.hash, flying: false,
         crumb: crumb.textContent + " | " + pos.textContent, hots: hotsEl.children.length,
         moves: Object.keys(moves).length, videos: Object.keys(vids), retro: RETRO,
         latency: rlat.moved ? rlat.moved - rlat.key : null };
