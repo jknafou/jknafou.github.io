@@ -967,17 +967,18 @@
    * one HTML overlay, small and constant, at the bottom left corner of the 16:9 picture box
    * (retroBox), which is grass on the map and the skies and the room's floor beside the card at
    * every island level, so it covers no content; kept inside the view when the box overflows it.
-   * It is in #view, not in #strip, so it shows with ?chrome=0 too. */
+   * It is in #view, not in #strip, so it shows with ?chrome=0 too. The mark is hes-so-logo.png
+   * cropped to its ink (media/title/hes-so-mark.png). */
   var logoEl = document.createElement("img");
-  logoEl.id = "hesso"; logoEl.src = "media/title/hes-so-logo.svg"; logoEl.alt = "HES-SO";
+  logoEl.id = "hesso"; logoEl.src = "media/title/hes-so-mark.png"; logoEl.alt = "HES-SO";
   viewEl.appendChild(logoEl);
   function layoutLogo() {
     var R = retroBox(), Vh = viewEl.clientHeight;
-    var h = Math.round(R.h * 0.045), m = Math.round(R.h * 0.014);
-    var w = Math.round(h * 2.6);
+    var h = Math.round(R.h * 0.04), m = Math.round(R.h * 0.014);
+    var w = Math.round(h * 0.6 * 4.6 + h * 0.5);         /* the mark (4.6:1) at 60% of the chip's height */
     var x = Math.max(8, R.x + m), y = Math.min(Vh - 8 - h, R.y + R.h - m - h);
     logoEl.style.left = x + "px"; logoEl.style.top = y + "px"; logoEl.style.width = w + "px"; logoEl.style.height = h + "px";
-    logoEl.style.padding = Math.round(h * 0.14) + "px " + Math.round(h * 0.2) + "px";
+    logoEl.style.padding = Math.round(h * 0.2) + "px " + Math.round(h * 0.25) + "px";
   }
   layoutLogo();
   metaReady.then(layoutLogo);
