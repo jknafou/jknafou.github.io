@@ -568,7 +568,27 @@
     "last": 38.9
    }
   },
-  "bytes": 8534665
+  "bytes": 8534665,
+  "loops": {
+   "1": {
+    "period": 6.8,
+    "frames": 204,
+    "seam": 28.9,
+    "handoff": 30.6
+   },
+   "2": {
+    "period": 17.2667,
+    "frames": 518,
+    "seam": 25.2,
+    "handoff": 33.2
+   },
+   "3": {
+    "period": 6.6667,
+    "frames": 200,
+    "seam": 57.4,
+    "handoff": 30.7
+   }
+  }
  },
  "1.1": {
   "order": [
@@ -1053,7 +1073,33 @@
     "last": 45.7
    }
   },
-  "bytes": 7730741
+  "bytes": 7730741,
+  "loops": {
+   "1": {
+    "period": 9.7333,
+    "frames": 292,
+    "seam": 38.5,
+    "handoff": 33.8
+   },
+   "2": {
+    "period": 8.5333,
+    "frames": 256,
+    "seam": 44.6,
+    "handoff": 28.1
+   },
+   "4": {
+    "period": 9.5333,
+    "frames": 286,
+    "seam": 43.5,
+    "handoff": 32.8
+   },
+   "5": {
+    "period": 9.8667,
+    "frames": 296,
+    "seam": 33.8,
+    "handoff": 31.2
+   }
+  }
  },
  "2.1": {
   "order": [
@@ -1449,7 +1495,51 @@
     "last": 36.6
    }
   },
-  "bytes": 39262445
+  "bytes": 39262445,
+  "loops": {
+   "2": {
+    "period": 18.9476,
+    "frames": 568,
+    "seam": 26.4,
+    "handoff": 28.2
+   },
+   "3": {
+    "period": 19.4667,
+    "frames": 584,
+    "seam": 26.3,
+    "handoff": 22.7
+   },
+   "4": {
+    "period": 7.6667,
+    "frames": 230,
+    "seam": 17.8,
+    "handoff": 17.5
+   },
+   "5": {
+    "period": 4.3,
+    "frames": 129,
+    "seam": 19.8,
+    "handoff": 28.4
+   },
+   "6": {
+    "period": 10.9,
+    "frames": 327,
+    "seam": 99,
+    "handoff": 29.1
+   },
+   "7": {
+    "period": 7.7333,
+    "frames": 232,
+    "seam": 99,
+    "handoff": 24.7
+   },
+   "8": {
+    "period": 19.0187,
+    "frames": 571,
+    "seam": 23.9,
+    "handoff": 29.3
+   }
+  }
  },
  "3.1": {
   "order": [
@@ -1937,7 +2027,39 @@
     "last": 99
    }
   },
-  "bytes": 17036613
+  "bytes": 17036613,
+  "loops": {
+   "1": {
+    "period": 4,
+    "frames": 120,
+    "seam": 29.6,
+    "handoff": 27.6
+   },
+   "2": {
+    "period": 3.4667,
+    "frames": 104,
+    "seam": 43.7,
+    "handoff": 30.3
+   },
+   "3": {
+    "period": 4.4,
+    "frames": 132,
+    "seam": 44.1,
+    "handoff": 30
+   },
+   "4": {
+    "period": 4,
+    "frames": 120,
+    "seam": 51.3,
+    "handoff": 31.1
+   },
+   "5": {
+    "period": 4.2,
+    "frames": 126,
+    "seam": 39.9,
+    "handoff": 31.5
+   }
+  }
  },
  "4.1": {
   "order": [
@@ -2462,6 +2584,14 @@
     "last": 43.5
    }
   },
-  "bytes": 14100799
+  "bytes": 14100799,
+  "loops": {
+   "1": {
+    "period": 12.1333,
+    "frames": 364,
+    "seam": 32.9,
+    "handoff": 32.1
+   }
+  }
  }
 }
