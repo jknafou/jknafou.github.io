@@ -948,214 +948,199 @@
     return enterSlide(N(id));
   }
 
-  /* ---- the keys: TARGETS, never blocked (the author, 27 October 2026: "We can't press
-   * multiple time the keys to go faster ... we have to wait the end of an animation before
-   * being able to press any arrow key ... We want to be able to press multple times and see in
-   * the navbar where we are going to jump"). Each arrow moves a target one step; a driver
-   * moves the stage towards it, one coherent move at a time, and every move ends at rest:
-   *   the talk's line   1.1's slides, 2.2's translation, 2.2's slides, 3.1's, 4.1's, the thanks;
-   *   the map           Bert's building;
-   *   2.1's depth       2.1's slide.
-   * One step away plays the move as captured; further away, a move already playing is sped up,
-   * slides of one island are crossed by a short fade to the target's still, and islands are
-   * crossed through the map: the slide leaves, the building closes, Bert walks (fast) to the
-   * target's building, it opens, and the target slide is entered ("it would be nice we we
-   * noticed the change in the world view"). */
+  /* ---- the keys: a DESTINATION, composed by the arrows, never blocked ------------------
+   * (the author, 27 October 2026: "We can't press multiple time the keys to go faster ... We
+   * want to be able to press multple times and see in the navbar where we are going to jump";
+   * and "say I am in a slide in motivation ... I would love to go up then 3 -> to go to the
+   * train station down and then see what the question is about").
+   * Every arrow moves a destination D one step in the layer model, starting from where the
+   * stage is (or from D, when one is pending); the stage travels towards D at once, one coherent
+   * hop at a time, each hop ending at rest, and re-reads D after every hop, so further keys
+   * re-target the travel and a playing move hurries (playbackRate). Escape cancels D.
+   * The rules, per layer of D:
+   *   title      → 1.1's first slide        ↓ the map, at the hospital
+   *   map (i)    ←/→ the previous/next building (past the ends: the title, the thanks)
+   *              ↓ that building's island view
+   *   island X   ←/→ the previous/next island's view   ↓ X's first step   ↑ the map at X
+   *   slide      ←/→ the previous/next step of the talk (across islands: through the map)
+   *              ↑ its island's view
+   *   2.2's translation (2.1's living view)   ←/→ the talk's line   ↓ 2.1's first slide
+   *              ↑ 2.2's island view
+   *   2.1's slide   ←/→ within 2.1's nine   ↑ 2.1's living view
+   *   thanks     ← 4.1's last slide          ↓ the map, at the station
+   * So ↑ → → → ↓ from a slide of 1.1 is: 1.1's view, 2.2's, 3.1's, 4.1's, 4.1's first slide.
+   * A hop climbs (slide leaves, building closes), walks the map (straight to the target's
+   * building, fast) and descends (building opens, slide enters); within one island it steps
+   * one slide as captured, or crosses several by a short fade to the target's still. */
   var NAV = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, Enter: 1, Escape: 1 };
   var FAST = 3, CROSS = 3;
   function line() {
-    var L = [];
+    var L = [{ L: "title" }];
     WORLD.forEach(function (id) {
-      if (ISL[id].sub) L.push({ id: id, k: 0, tr: true });
-      for (var k = 1; k <= N(id); k++) L.push({ id: id, k: k });
+      if (ISL[id].sub) L.push({ L: "sub", id: id });
+      for (var k = 1; k <= N(id); k++) L.push({ L: "slide", id: id, k: k });
     });
-    L.push({ thanks: true });
+    L.push({ L: "thanks" });
     return L;
   }
-  function lineIndex(id, k, tr) {
-    var L = line();
-    for (var i = 0; i < L.length; i++) if (L[i].id === id && (tr ? L[i].tr : (!L[i].tr && L[i].k === k))) return i;
-    return -1;
+  function eq(a, b) {
+    if (!a || !b || a.L !== b.L) return false;
+    if (a.L === "map") return a.i === b.i;
+    if (a.L === "title" || a.L === "thanks") return true;
+    return a.id === b.id && (a.L === "island" || a.L === "sub" || a.k === b.k);
   }
-  function firstOf(id) { return lineIndex(id, 0, !!ISL[id].sub) >= 0 ? lineIndex(id, 0, !!ISL[id].sub) : lineIndex(id, 1, false); }
-  /* where the stage is on the line, or null (island view, map, skies) */
-  function curLine() {
-    if (S.layer === "slide") return lineIndex(S.island, S.k, false);
-    if (S.layer === "sub") return lineIndex(S.island, 0, true);
-    if (S.layer === "thanks") return line().length - 1;
+  function here() {
+    switch (S.layer) {
+      case "title": return { L: "title" };
+      case "thanks": return { L: "thanks" };
+      case "world": return { L: "map", i: S.focus };
+      case "island": return { L: "island", id: S.island };
+      case "sub": return { L: "sub", id: S.island };
+      case "slide": return { L: "slide", id: S.island, k: S.k };
+      case "subslide": return { L: "subslide", id: S.island, k: S.sk };
+    }
     return null;
   }
+  /* one arrow applied to a destination; the same destination back means "nowhere to go" */
+  function stepOf(d, k) {
+    var fwd = k === "ArrowRight", back = k === "ArrowLeft", down = k === "ArrowDown" || k === "Enter", up = k === "ArrowUp";
+    var Lw = WORLD.length, wi = d.id ? WORLD.indexOf(d.id) : -1;
+    function onLine(dir) {
+      var L = line();
+      for (var i = 0; i < L.length; i++) if (eq(L[i], d)) { var j = i + dir; return j >= 0 && j < L.length ? L[j] : d; }
+      return d;
+    }
+    switch (d.L) {
+      case "title": return fwd ? onLine(1) : down ? { L: "map", i: 0 } : d;
+      case "thanks": return back ? onLine(-1) : down ? { L: "map", i: Lw - 1 } : d;
+      case "map":
+        if (fwd) return d.i + 1 < Lw ? { L: "map", i: d.i + 1 } : { L: "thanks" };
+        if (back) return d.i > 0 ? { L: "map", i: d.i - 1 } : { L: "title" };
+        if (down) return { L: "island", id: WORLD[d.i] };
+        return d;
+      case "island":
+        if (fwd) return wi + 1 < Lw ? { L: "island", id: WORLD[wi + 1] } : d;
+        if (back) return wi > 0 ? { L: "island", id: WORLD[wi - 1] } : d;
+        if (down) return ISL[d.id].sub ? { L: "sub", id: d.id } : { L: "slide", id: d.id, k: 1 };
+        if (up) return { L: "map", i: wi };
+        return d;
+      case "sub":
+        if (fwd || back) return onLine(fwd ? 1 : -1);
+        if (down) return { L: "subslide", id: d.id, k: 1 };
+        if (up) return { L: "island", id: d.id };
+        return d;
+      case "slide":
+        if (fwd || back) return onLine(fwd ? 1 : -1);
+        if (up) return { L: "island", id: d.id };
+        return d;
+      case "subslide":
+        var m = N(ISL[d.id].sub);
+        if (fwd) return d.k < m ? { L: "subslide", id: d.id, k: d.k + 1 } : d;
+        if (back) return d.k > 1 ? { L: "subslide", id: d.id, k: d.k - 1 } : d;
+        if (up) return { L: "sub", id: d.id };
+        return d;
+    }
+    return d;
+  }
+  function islandOf(d) { return d.L === "map" ? null : d.L === "title" ? null : d.L === "thanks" ? null : d.id; }
   function speedUp() { if (curMove && !curMove.paused && !REDUCED) { try { curMove.playbackRate = Math.max(curMove.playbackRate, FAST); } catch (e) {} } }
-  var T = { line: null, map: null, sub: null, driving: false };
+  var T = { dest: null, driving: false };
 
-  async function driveLine() {
+  async function travel() {
     if (T.driving) return;
-    T.driving = true;
+    T.driving = true; T.hops = 0;
     try {
-      for (var guard = 0; guard < 60; guard++) {
-        var c = curLine(), L = line();
-        if (T.line == null) break;
-        if (c === T.line) break;
-        var tgt = L[T.line];
-        if (S.layer === "island") {                         /* from an island view */
-          if (tgt.id === S.island && !tgt.thanks) { if (tgt.tr) await zoomIn(); else await enterSlide(tgt.k, null, 1); }
-          else await crossing(S.island, null, tgt.thanks ? L[L.length - 2] : tgt);
-          continue;
-        }
-        if (c == null) break;
-        var cur = L[c];
-        if (tgt.thanks) {
-          if (c === L.length - 2) { await toThanks(); T.line = null; break; }
-          tgt = L[L.length - 2];
-        }
-        if (cur.thanks) { await fromThanks(); continue; }
-        var far = Math.abs(T.line - c) > 1;
-        if (tgt.id === cur.id) {
-          if (cur.tr) { await zoomTranslator(false); S.layer = "island"; S.k = 0; await enterSlide(tgt.k, null, far ? 1.5 : 1); }
-          else if (tgt.tr) { await leaveSlide(cur.id, cur.k, function () { S.layer = "island"; S.k = 0; }, far ? FAST : 1); await zoomIn(); }
-          else if (Math.abs(tgt.k - cur.k) === 1) await stepSlide(cur.id, cur.k, tgt.k, false, 1);
-          else { S.busy = true; await fadeJump(cur.id, tgt.k); S.k = tgt.k; preloadAround(cur.id, tgt.k); S.busy = false; }
-        } else await crossing(cur.id, cur, tgt);
+      for (var guard = 0; guard < 80 && T.dest; guard++) {
+        var c = here(), d = T.dest;
+        if (!c || eq(c, d)) break;
+        await hop(c, d); T.hops++;
         update();
       }
-    } finally { T.driving = false; if (curLine() === T.line) T.line = null; S.busy = false; update(); }
+    } finally {
+      T.driving = false; T.dest = null; S.busy = false;
+      if (S.layer === "island" && S.island) { hotsEl.innerHTML = ""; buildHots(S.island); }
+      update();
+    }
   }
-  /* from island a (at slide `cur`, or its view when cur is null) to the line stop tgt */
-  async function crossing(a, cur, tgt) {
-    var b = tgt.id;
-    if (!RETRO || REDUCED) {                              /* the old world, or reduced: a fade through paper */
-      S.busy = true; veil.classList.add("on"); await sleep(REDUCED ? 0 : 300);
-      hotsEl.innerHTML = ""; showVideo(null); stopLoop();
-      S.island = b; setBackdrop(b); keep(b);
-      if (tgt.tr) {
-        await showRest(b, 0);
-        var v0 = bigVideo(b); await ready(v0, 3000); await seekTo(v0, 0); v0.pause(); place(v0, loopBox(b)); v0.classList.add("on");
-        S.layer = "island"; veil.classList.remove("on"); await sleep(REDUCED ? 0 : 300); S.busy = false;
+  /* one hop from c towards d; every hop ends at rest */
+  async function hop(c, d) {
+    var di = islandOf(d);
+    if (c.L === "title") return skyDown("title");
+    if (c.L === "thanks") return skyDown("thanks");
+    if (c.L === "map") {
+      var j = d.L === "title" ? 0 : d.L === "thanks" ? WORLD.length - 1 : d.L === "map" ? d.i : WORLD.indexOf(di);
+      if (S.focus !== j) return walkToward(function () {
+        var e = T.dest; if (!e) return S.focus;
+        return e.L === "title" ? 0 : e.L === "thanks" ? WORLD.length - 1 : e.L === "map" ? e.i : WORLD.indexOf(islandOf(e));
+      }, d.L === "map" && Math.abs(j - S.focus) === 1 ? 1 : (Math.abs(j - S.focus) > 1 ? FAST : CROSS));
+      if (d.L === "title") return skyUp("title");
+      if (d.L === "thanks") return skyUp("thanks");
+      return RETRO ? retroOpen(di, d.L === "island" ? 1 : CROSS) : openIsland(di);
+    }
+    if (c.L === "island") {
+      if (di === c.id) {
+        if (d.L === "slide") return enterSlide(d.k, null, T.hops > 0 ? 2 : 1);   /* the end of a long travel: brisk */
         return zoomIn();
       }
-      await showRest(b, tgt.k); S.layer = "slide"; S.k = tgt.k; preloadAround(b, tgt.k);
-      veil.classList.remove("on"); await sleep(REDUCED ? 0 : 300); S.busy = false; update(); return;
+      return RETRO ? retroClose(c.id, d.L === "map" && d.i === WORLD.indexOf(c.id) ? 1 : CROSS) : goWorld(c.id);
     }
-    if (cur && cur.tr) { await zoomTranslator(false); S.layer = "island"; S.k = 0; }
-    else if (cur) await leaveSlide(a, cur.k, function () { S.layer = "island"; S.k = 0; }, CROSS);
-    await retroClose(a, CROSS);
-    var j = WORLD.indexOf(b);
-    await walkTo(j, Math.abs(j - S.focus) > 1 ? FAST + 1 : CROSS);
-    await retroOpen(b, CROSS);
-    if (tgt.tr) await zoomIn();
-    else await enterSlide(tgt.k, null, 2);
+    if (c.L === "sub") {
+      var sb = ISL[c.id].sub;
+      if (d.L === "subslide" && di === c.id) return enterSlide(d.k, sb, 1);
+      await zoomTranslator(false); S.layer = "island"; S.k = 0;
+      if (d.L === "slide" && di === c.id) return enterSlide(d.k, null, Math.abs(d.k) > 1 ? 1.5 : 1);
+      return;
+    }
+    if (c.L === "slide") {
+      if (d.L === "slide" && di === c.id) {
+        if (Math.abs(d.k - c.k) === 1) return stepSlide(c.id, c.k, d.k, false, 1);
+        S.busy = true; await fadeJump(c.id, d.k); S.k = d.k; preloadAround(c.id, d.k); S.busy = false; return;
+      }
+      var toView = d.L === "island" && di === c.id;
+      return leaveSlide(c.id, c.k, function () { S.layer = "island"; S.k = 0; }, toView ? 1 : CROSS);
+    }
+    if (c.L === "subslide") {
+      var s2 = ISL[c.id].sub;
+      if (d.L === "subslide" && di === c.id) {
+        if (Math.abs(d.k - c.k) === 1) return stepSlide(s2, c.k, d.k, true, 1);
+        S.busy = true; await fadeJump(s2, d.k); S.sk = d.k; preloadAround(s2, d.k); S.busy = false; return;
+      }
+      return leaveSlide(s2, c.k, function () { S.layer = "sub"; S.sk = 0; preloadAround(s2, 0); }, d.L === "sub" && di === c.id ? 1 : CROSS);
+    }
   }
-  /* Bert along the road to building j, one road at a time, without stopping between roads */
-  async function walkTo(j, rate) {
+  /* Bert along the road towards a building that may change while he walks (target()) */
+  async function walkToward(target, rate) {
     S.busy = true;
-    while (S.focus !== j) {
+    for (var g = 0; g < 12; g++) {
+      var j = target();
+      if (j == null || j === S.focus || j < 0) break;
       var step = j > S.focus ? 1 : -1, a = WORLD[S.focus], b = WORLD[S.focus + step];
+      if (!RETRO) { S.focus += step; markFocus(); update(); continue; }
       if (REDUCED) rposterShow(b);
       else {
-        var w = rvid("walk-" + a + "-" + b);
-        if (S.focus + step !== j) rvid("walk-" + b + "-" + WORLD[S.focus + 2 * step]); else rvid("idle-" + b);
-        await rswap(w, rate);
+        var w = rvid("walk-" + a + "-" + b); rvid("idle-" + b);
+        await rswap(w, Math.abs(j - S.focus) > 1 ? Math.max(rate, FAST) : rate);
         await rended(w);
       }
       S.focus += step; markFocus(); update();
     }
-    if (!REDUCED) await rswap(rvid("idle-" + WORLD[j]));
-    retroPreload(j);
+    if (RETRO && !REDUCED) await rswap(rvid("idle-" + WORLD[S.focus]));
+    if (RETRO) retroPreload(S.focus);
     S.busy = false;
-  }
-  /* the map: Bert's target building */
-  async function driveMap() {
-    if (T.driving) return;
-    T.driving = true;
-    try {
-      while (T.map != null && S.focus !== T.map && S.layer === "world") {
-        var step = T.map > S.focus ? 1 : -1, a = WORLD[S.focus], b = WORLD[S.focus + step];
-        var rate = Math.abs(T.map - S.focus) > 1 ? FAST : 1;
-        S.busy = true;
-        if (!RETRO || REDUCED) { if (RETRO) rposterShow(b); }
-        else {
-          var w = rvid("walk-" + a + "-" + b);
-          rvid("idle-" + b);
-          await rswap(w, rate);
-          await rended(w);
-        }
-        S.focus += step; markFocus(); update();
-        if (RETRO && !REDUCED && (T.map === S.focus || T.map == null)) await rswap(rvid("idle-" + WORLD[S.focus]));
-      }
-      if (RETRO) retroPreload(S.focus);
-    } finally { T.driving = false; T.map = null; S.busy = false; update(); }
-  }
-  /* 2.1's depth: the target slide */
-  async function driveSub() {
-    if (T.driving) return;
-    T.driving = true;
-    var sb = ISL[S.island].sub;
-    try {
-      while (T.sub != null && S.layer === "subslide" && S.sk !== T.sub) {
-        if (Math.abs(T.sub - S.sk) === 1) await stepSlide(sb, S.sk, T.sub, true, 1);
-        else { S.busy = true; await fadeJump(sb, T.sub); S.sk = T.sub; preloadAround(sb, S.sk); S.busy = false; }
-        update();
-      }
-    } finally { T.driving = false; T.sub = null; S.busy = false; update(); }
   }
 
   function onKey(k) {
     rlat.key = performance.now(); rlat.moved = 0;
-    var fwd = k === "ArrowRight", back = k === "ArrowLeft", down = k === "ArrowDown" || k === "Enter", up = k === "ArrowUp" || k === "Escape";
-    var id = S.island, n = N(id);
-    /* an arrow while the stage moves: the target moves, the move under way hurries */
-    if (T.driving) {
-      if (!(fwd || back)) return bump();
-      if (T.line != null) { var Ll = line(); T.line = Math.max(0, Math.min(Ll.length - 1, T.line + (fwd ? 1 : -1))); }
-      else if (T.map != null) T.map = Math.max(0, Math.min(WORLD.length - 1, T.map + (fwd ? 1 : -1)));
-      else if (T.sub != null) T.sub = Math.max(1, Math.min(N(ISL[S.island].sub), T.sub + (fwd ? 1 : -1)));
-      else return bump();
-      speedUp(); update(); return;
-    }
-    if (S.busy) return;
-    if (S.layer === "title") return (fwd || down) ? skyDown("title") : bump();
-    if (S.layer === "thanks") { if (back) { T.line = line().length - 2; return driveLine(); } return down ? fromThanks() : bump(); }
-    if (S.layer === "world" && S.focus === 0 && (back || (up && RETRO))) return skyUp("title");
-    if (S.layer === "world" && S.focus === WORLD.length - 1 && (fwd || (up && RETRO))) return skyUp("thanks");
-    if (S.layer === "world") {
-      if (fwd || back) {
-        var jj = S.focus + (fwd ? 1 : -1);
-        if (jj < 0 || jj >= WORLD.length) return bump();
-        if (!RETRO) { S.focus = jj; markFocus(); update(); return; }
-        T.map = jj; update(); return driveMap();
-      }
-      if (down) return openIsland(WORLD[S.focus]);
-      return bump();
-    }
-    if (S.layer === "island") {
-      if (down || fwd) { T.line = firstOf(id); update(); return driveLine(); }
-      if (up) return goWorld(id);
-      if (back) { var f0 = firstOf(id); if (f0 <= 0) return bump(); T.line = f0 - 1; update(); return driveLine(); }
-      return;
-    }
-    if (S.layer === "sub") {                       /* 2.1's living view, 2.2's step 1 */
-      if (up) return zoomOut(null);
-      if (down) return enterSlide(1, ISL[id].sub);
-    }
-    if (S.layer === "subslide") {                  /* 2.1's slides, one level deeper */
-      var sb = ISL[id].sub, m = N(sb);
-      if (up) return leaveSlide(sb, S.sk, function () { S.layer = "sub"; S.sk = 0; preloadAround(sb, 0); update(); });
-      if (fwd || back) {
-        var to = S.sk + (fwd ? 1 : -1);
-        if (to < 1 || to > m) return bump();
-        T.sub = to; update(); return driveSub();
-      }
-      return bump();
-    }
-    if (S.layer === "slide" && up) return leaveSlide(id, S.k, function () { S.layer = "island"; S.k = 0; buildHots(id); preloadAround(id, 0); update(); });
-    if (down) return bump();
-    if (fwd || back) {                             /* a slide, or 2.1's living view: the talk's line */
-      var c = curLine(), L = line();
-      if (c == null) return bump();
-      var tl = c + (fwd ? 1 : -1);
-      if (tl < 0 || tl >= L.length) return bump();
-      T.line = tl; update(); return driveLine();
-    }
+    if (k === "Escape" && T.driving) { T.dest = null; update(); return; }   /* cancel: stop at the end of this hop */
+    if (k === "Escape") k = "ArrowUp";
+    if (!T.driving && S.busy) return;
+    var from = T.driving && T.dest ? T.dest : here();
+    if (!from) return bump();
+    var to = stepOf(from, k);
+    if (eq(to, from)) return bump();
+    T.dest = to;
+    speedUp(); update();
+    if (!T.driving) travel();
   }
   function nextW(id) { var i = WORLD.indexOf(id); return i >= 0 && i + 1 < WORLD.length ? WORLD[i + 1] : null; }
   function prevW(id) { var i = WORLD.indexOf(id); return i > 0 ? WORLD[i - 1] : null; }
@@ -1179,8 +1164,8 @@
   function update() {
     var path, id = S.island;
     if (S.layer === "title") {
-      crumb.textContent = "The talk · title · → into the city";
-      pos.textContent = "title"; path = "#/";
+      crumb.textContent = "The talk · title · → into the first slide, ↓ to the city";
+      pos.textContent = "step 0 · title"; path = "#/";
     } else if (S.layer === "thanks") {
       crumb.textContent = "The talk · thank you · ← back to the last slide";
       pos.textContent = "thanks"; path = "#/thanks";
@@ -1208,32 +1193,24 @@
     var going = pendingText();
     if (going) { crumb.textContent = going[0]; pos.textContent = going[1]; strip.classList.add("going"); }
     else strip.classList.remove("going");
-    var fi = T.map != null ? T.map : S.focus;
+    var fi = T.dest && T.dest.L === "map" ? T.dest.i : S.focus;
     if (RETRO && S.layer === "world" && retroEl) [].forEach.call(retroEl.querySelectorAll(".bld"), function (b, i) { b.classList.toggle("focus", i === fi); });
     if (path !== lastHash) { lastHash = path; try { history.replaceState(null, "", path); } catch (e) {} }
   }
 
   var PLACE = { "1.1": "hospital", "2.2": "factory", "3.1": "stadium", "4.1": "station" };
-  /* [crumb, position] of the pending target, or null */
-  function pendingText() {
-    if (T.line != null && T.line !== curLine()) {
-      var L = line(), g = L[T.line];
-      if (g.thanks) return ["→ Thank you", "thanks"];
-      var I = ISL[g.id], subN = I.sub ? 1 : 0, all = N(g.id) + subN;
-      if (g.tr) return ["→ " + I.name + " › " + SUBNAME[I.sub] + " · step 1 / " + all, g.id + " · 1 / " + all];
-      return ["→ " + I.name + " · " + (subN ? "step " + (g.k + subN) + " / " + all : "slide " + g.k + " / " + N(g.id)) + " · " + SL[g.id].names[g.k - 1],
-              g.id + " · " + (g.k + subN) + " / " + all];
-    }
-    if (T.map != null && T.map !== S.focus) {
-      var J = ISL[WORLD[T.map]];
-      return ["→ " + J.sec.replace(/^\d+ /, "") + (RETRO ? " (" + PLACE[WORLD[T.map]] + ")" : "") + " · " + J.name, "island " + (T.map + 1) + " / " + WORLD.length];
-    }
-    if (T.sub != null && T.sub !== S.sk) {
-      var sb = ISL[S.island].sub;
-      return ["→ " + SUBNAME[sb] + " · slide " + T.sub + " / " + N(sb) + " · " + SL[sb].names[T.sub - 1], sb + " " + T.sub + " / " + N(sb)];
-    }
-    return null;
+  /* [crumb, position] of the pending destination, or null */
+  function describe(g) {
+    if (g.L === "title") return ["→ The title", "step 0"];
+    if (g.L === "thanks") return ["→ Thank you", "thanks"];
+    if (g.L === "map") { var J = ISL[WORLD[g.i]]; return ["→ The city · " + J.sec.replace(/^\d+ /, "") + (RETRO ? " (" + PLACE[WORLD[g.i]] + ")" : "") + " · " + J.name, "map · " + (g.i + 1) + " / " + WORLD.length]; }
+    var I = ISL[g.id], subN = I.sub ? 1 : 0, all = N(g.id) + subN, trail = "→ " + I.sec + " › " + I.name;
+    if (g.L === "island") return [trail + " · island view", "island view"];
+    if (g.L === "sub") return [trail + " › " + SUBNAME[I.sub] + " · step 1 / " + all, g.id + " · 1 / " + all];
+    if (g.L === "subslide") { var sb = I.sub; return [trail + " › " + SUBNAME[sb] + " · slide " + g.k + " / " + N(sb) + " · " + SL[sb].names[g.k - 1], sb + " " + g.k + " / " + N(sb)]; }
+    return [trail + " · " + (subN ? "step " + (g.k + subN) + " / " + all : "slide " + g.k + " / " + N(g.id)) + " · " + SL[g.id].names[g.k - 1], g.id + " · " + (g.k + subN) + " / " + all];
   }
+  function pendingText() { return T.dest && !eq(T.dest, here()) ? describe(T.dest) : null; }
 
   /* ---- arrival ------------------------------------------------------------ */
   function parseHash() {
@@ -1276,7 +1253,7 @@
 
   window.Talk = {
     get state() {
-      return { busy: S.busy || T.driving, driving: T.driving, target: T.line != null ? T.line : (T.map != null ? "map" + T.map : (T.sub != null ? "sub" + T.sub : null)),
+      return { busy: S.busy || T.driving, driving: T.driving, target: T.dest ? JSON.stringify(T.dest) : null,
         loop: loopKey, layer: S.layer, id: S.island, k: S.k, sk: S.sk, hash: location.hash, flying: false,
         crumb: crumb.textContent + " | " + pos.textContent, hots: hotsEl.children.length,
         moves: Object.keys(moves).length, videos: Object.keys(vids), retro: RETRO,
