@@ -289,6 +289,15 @@ async function slidesFor(id, workers) {
  * sequence's start, pauses on its end, and loops.
  * Writes media/slides/<island>/loop-<k>.mp4 and, in slides.json, <island>.loops[k] =
  * { period, frames, seam (dB, u = 1 against u = 0), handoff (dB, u = 0 against rest-<k>) }. */
+/* where a slide's own loop leaves out what it shows. 2.2's tokenizer (slide 1): the page loops
+ * the island's clock, so only OUR tokenizer replays; the author, 27 October 2026: "we should see
+ * the "infarctus du myocard," enter the tokenizer and going out, first with transtokenizer then
+ * with the camembert, and it should loop after a pause". So: the page's loop up to its beats (ours),
+ * then the entry's own build of CamemBERT's half (E(t), t 0.56 -> 1, slide-01.py BUILD), then a
+ * pause on the rest picture. */
+const LOOP_PLANS = {
+  "2.2/1": [["idle", 0, "beats"], ["E", 0.56, 1.0, 2.4], ["hold", 1.8]]
+};
 async function restLoops(id, workers) {
   const t0 = Date.now();
   const sp = join(OUT, "slides", "slides.json"), sm = JSON.parse(readFileSync(sp, "utf8"));
@@ -308,16 +317,25 @@ async function restLoops(id, workers) {
         for (let i = 0; i < 600; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'slide' && !EntryStage.flying")) break; }
         const info = await b.evaluate(`(function(){ var a = EntryStage.idling ? EntryStage.idleSeek(0) : null; return a ? { period: a.period, beats: a.beats } : null; })()`);
         if (info && info.period > 0) {
-          const N = Math.max(2, Math.round(info.period * FPS));
+          /* the frames: the page's own loop (u seconds, 0 .. period, beats then its hold), or a
+           * PLAN where the page's loop leaves out what the slide shows (see LOOP_PLANS) */
+          const plan = LOOP_PLANS[id + "/" + j.n];
+          const exprs = [];
+          if (!plan) for (let f = 0; f <= Math.round(info.period * FPS); f++) exprs.push(`EntryStage.idleSeek(${(f / FPS).toFixed(5)})`);
+          else for (const seg of plan) {
+            if (seg[0] === "idle") { const to = seg[2] === "beats" ? info.beats : seg[2]; for (let u = seg[1]; u < to - 1e-6; u += 1 / FPS) exprs.push(`EntryStage.idleSeek(${u.toFixed(5)})`); }
+            if (seg[0] === "E") { const n = Math.round(seg[3] * FPS); for (let f = 0; f < n; f++) exprs.push(`EntryStage.seek(${JSON.stringify(j.k)}, ${(seg[1] + (seg[2] - seg[1]) * f / (n - 1)).toFixed(5)})`); }
+            if (seg[0] === "hold") { const n = Math.round(seg[1] * FPS); for (let f = 0; f < n; f++) exprs.push(`EntryStage.seek(${JSON.stringify(j.k)}, 1)`); }
+          }
+          if (plan) exprs.push(`EntryStage.idleSeek(0)`);                    /* the seam check: back to frame 0 */
+          const N = exprs.length - 1;
           const md = join(fr, "loop-" + j.n); mkdirSync(md, { recursive: true });
           for (let f = 0; f <= N; f++) {                       /* f = N is the seam check */
-            /* ⚠️ u IS SECONDS ON THE IDLE'S OWN CLOCK (compose.py startIdle: idleP.u runs 0 -> period),
-             * not a fraction: read as one, the first capture held only the loop's first second */
-            await b.evaluate(`(function(){ EntryStage.idleSeek(${(f / FPS).toFixed(5)}); return ${RAF}; })()`);
+            await b.evaluate(`(function(){ ${exprs[f]}; return ${RAF}; })()`);
             const s = await b.send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
             writeFileSync(join(md, String(f).padStart(4, "0") + ".jpg"), Buffer.from(s.data, "base64"));
           }
-          loops[j.n] = { period: +info.period.toFixed(4), beats: +(+info.beats).toFixed(4), frames: N, dir: md };
+          loops[j.n] = { period: +(N / FPS).toFixed(4), pagePeriod: +info.period.toFixed(4), beats: +(+info.beats).toFixed(4), frames: N, plan: plan ? JSON.stringify(plan) : undefined, dir: md };
         }
         await b.evaluate("EntryStage.leave()");
         for (let i = 0; i < 300; i++) { await sleep(100); if (await b.evaluate("EntryStage.phase === 'map' && !EntryStage.flying")) break; }
