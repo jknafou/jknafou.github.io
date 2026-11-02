@@ -33,6 +33,7 @@
  *   A.flip(els, {beat})             a class label on a split-flap board, as a station's departures: every cell
  *                                   starts blank, all turn together through the same alphabet, flap by flap
  *                                   (half a character folding over the midline), each stopping at its own letter
+ *   A.focus(els, {dur})             a fixed word coming in: out of a soft blur, letters drawing together, fading up
  *   A.count(els, {dur})             a number that grows from 0 to its value, its format kept ("2,091,427 passages")
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
@@ -40,8 +41,9 @@
  *                                   1 frame: the whole concept pops (A.pop)
  *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
  *                                     "type" for words someone wrote (A.type), "flip" for a label (A.flip),
- *                                     "count" for a number (A.count); unmarked text ("A", a band's title) is part
- *                                     of the frame; its own stroked lines drawn by pen (A.draw)
+ *                                     "count" for a number (A.count); unmarked text, a fixed word ("Q", "A", a
+ *                                     band's title, the handle), comes into focus (A.focus); its own stroked
+ *                                     lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
  *                                   4 gauges settle (A.fill)
  *                                   5 hand marks written ([data-verdict], A.write)
@@ -244,12 +246,13 @@
   };
 
   /* ---- flip: a split-flap board (Solari), for a label that names a class.
-   * Every character is a cell of the board. All cells start blank together and turn through the
-   * same sequence, one flap per beat, each stopping at its own character, so in "simple" the i
-   * lands before the s. A flap turns as the real one does: the upper half of the old character
-   * falls over the midline (folding to nothing), then the lower half of the new one unfolds from it,
-   * while the board shows the new upper half and the old lower half around the fold. A hairline
-   * in the paper colour splits each cell while it turns. ---- */
+   * The label is laid out as a row of equal cells, one per letter, each a dark card with a pale
+   * letter and a hairline gap across its middle, as on a station's departures board. All cards
+   * start blank and turn together, one flap per beat, through the same alphabet, each stopping at
+   * its own letter (so in "simple" the i lands before the s). A flap turns on its axle: the upper
+   * half of the old card falls forward, shortening and darkening as it tips, revealing the new upper
+   * half behind it; then the lower half of the new card swings down over the old lower half, landing
+   * with a small bounce. When every card has landed, the board gives way to the label in ink. ---- */
   function texts(el) {
     return els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
   }
@@ -259,68 +262,99 @@
     return ch === " " ? " " : " " + ch;                 /* a sign (-, ·, .) has one flap */
   }
   var NS_ = "http://www.w3.org/2000/svg", flapId = 0;
+  function mk(tag, at, parent) {
+    var e = document.createElementNS(NS_, tag);
+    for (var k in at) e.setAttribute(k, at[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
   function flapBoard(n) {
     if (n._board) return n._board;
-    var S = n.textContent, svg = n.ownerSVGElement, defs = svg.querySelector("defs");
-    if (!defs) { defs = document.createElementNS(NS_, "defs"); svg.insertBefore(defs, svg.firstChild); }
-    var g = document.createElementNS(NS_, "g"); g.setAttribute("data-board", ""); g.style.display = "none";
-    n.parentNode.insertBefore(g, n.nextSibling);
-    var cs = getComputedStyle(n), fs = parseFloat(n.getAttribute("font-size")) || parseFloat(cs.fontSize);
-    var y = parseFloat(n.getAttribute("y")), cells = [];
-    for (var i = 0; i < S.length; i++) {
+    var S = n.textContent, svg = n.ownerSVGElement, defs = svg.querySelector("defs") || svg.insertBefore(mk("defs", {}), svg.firstChild);
+    var g = mk("g", { "data-board": "" }); g.style.display = "none"; n.parentNode.insertBefore(g, n.nextSibling);
+    var fs = parseFloat(n.getAttribute("font-size")), y = parseFloat(n.getAttribute("y"));
+    var bb = n.getBBox(), N = S.length, gap = fs * 0.06;
+    var cw = Math.max(fs * 0.3, (bb.width - gap * (N - 1)) / N);                 /* equal cells over the label's own width */
+    var top = y - fs * 0.86, bot = y + fs * 0.22, mid = (top + bot) / 2, ch = bot - top, rx = fs * 0.07;
+    var fam = n.getAttribute("font-family"), wt = n.getAttribute("font-weight") || "400", it = n.getAttribute("font-style");
+    var cells = [];
+    for (var i = 0; i < N; i++) {
       if (S[i] === " ") continue;
-      var x0 = n.getStartPositionOfChar(i).x, x1 = n.getEndPositionOfChar(i).x, cx = (x0 + x1) / 2;
-      var top = y - fs * 0.92, mid = y - fs * 0.36, bot = y + fs * 0.26, w = x1 - x0;     /* a cell is its letter's own advance */
-      var id = "flap" + (++flapId), clips = {};
-      ["t", "b"].forEach(function (h) {
-        var cp = document.createElementNS(NS_, "clipPath"); cp.setAttribute("id", id + h);
-        var r = document.createElementNS(NS_, "rect");
-        r.setAttribute("x", cx - w / 2); r.setAttribute("width", w);
-        r.setAttribute("y", h === "t" ? top : mid); r.setAttribute("height", h === "t" ? mid - top : bot - mid);
-        cp.appendChild(r); defs.appendChild(cp); clips[h] = "url(#" + id + h + ")";
-      });
-      var part = function (clip) {
-        var t = n.cloneNode(false); t.removeAttribute("data-a"); t.removeAttribute("data-anim");
-        t.setAttribute("x", cx); t.setAttribute("text-anchor", "middle"); t.setAttribute("clip-path", clip);
-        t.setAttribute("textLength", (w * 0.94).toFixed(2)); t.setAttribute("lengthAdjust", "spacingAndGlyphs");   /* every letter fits the cell, as on a board */
-        g.appendChild(t); return t;
+      var x = bb.x + i * (cw + gap), cx = x + cw / 2, id = "flap" + (++flapId);
+      var cT = mk("clipPath", { id: id + "t" }, defs); mk("rect", { x: x - 1, y: top - 1, width: cw + 2, height: mid - top + 1 }, cT);
+      var cB = mk("clipPath", { id: id + "b" }, defs); mk("rect", { x: x - 1, y: mid, width: cw + 2, height: bot - mid + 1 }, cB);
+      var half = function (clip, shade) {
+        var h = mk("g", { "clip-path": "url(#" + id + clip + ")" }, g);
+        mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#302E2E" }, h);
+        var t = mk("text", { x: cx, y: y - fs * 0.02, "text-anchor": "middle", "font-family": fam, "font-size": fs * 0.86, "font-weight": wt,
+                             fill: "#FBF8F4" }, h);
+        if (it) t.setAttribute("font-style", it);
+        var sh = shade ? mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#000", opacity: 0 }, h) : null;
+        return { g: h, t: t, sh: sh };
       };
-      var cell = { tl: (w * 0.94).toFixed(2), seq: flapSeq(S[i]), mid: mid, upper: part(clips.t), lower: part(clips.b), flap: part(clips.t) };
-      var split = document.createElementNS(NS_, "line");
-      split.setAttribute("x1", cx - w / 2); split.setAttribute("x2", cx + w / 2); split.setAttribute("y1", mid); split.setAttribute("y2", mid);
-      split.setAttribute("stroke", "#FBF8F4"); split.setAttribute("stroke-width", Math.max(1, fs * 0.04));
-      g.appendChild(split); cell.split = split; cells.push(cell);
+      var c = { room: cw * 0.84, seq: flapSeq(S[i]), mid: mid, id: id, upper: half("t"), lower: half("b"), flap: half("t", true) };
+      mk("line", { x1: x, x2: x + cw, y1: mid, y2: mid, stroke: "#000", "stroke-opacity": 0.55, "stroke-width": Math.max(1, fs * 0.025) }, g);
+      cells.push(c);
     }
     n._board = { g: g, cells: cells };
     return n._board;
   }
+  function blank(s) { return s === " " ? "" : s; }
+  /* a letter on a card: at its own width, narrowed only when it is wider than the card (an m, a w) */
+  function letter(t, ch, room) {
+    if (t._ch === ch) return;
+    t._ch = ch; t.removeAttribute("textLength"); t.textContent = ch;
+    if (ch && t.getComputedTextLength() > room) { t.setAttribute("textLength", room.toFixed(2)); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+  }
   A.flip = function (el, o) {
     need(el, "flip"); o = o || {};
-    var T = texts(el), beat = o.beat || 0.05;
+    var T = texts(el), beat = o.beat || 0.07, hand = 0.3;
     var B = T.map(flapBoard);
     var most = Math.max.apply(null, [1].concat(B.map(function (b) { return Math.max.apply(null, [1].concat(b.cells.map(function (c) { return c.seq.length - 1; }))); })));
-    var dur = most * beat + 0.05;
+    var turn = most * beat + 0.12, dur = turn + hand;
     return A.track(dur, function (u) {
       var t = u * dur;
       T.forEach(function (n, i) {
         var b = B[i];
-        if (u >= 1) { n.style.opacity = ""; b.g.style.display = "none"; return; }
-        n.style.opacity = "0"; b.g.style.display = u <= 0 ? "none" : "";
+        if (u >= 1) { n.style.opacity = ""; n.style.filter = ""; b.g.style.display = "none"; return; }
+        if (u <= 0) { n.style.opacity = "0"; b.g.style.display = "none"; return; }
+        b.g.style.display = "";
+        var h = clamp((t - turn) / hand);                     /* the board gives way to the label */
+        b.g.style.opacity = String(1 - h); n.style.opacity = String(h);
         b.cells.forEach(function (c) {
-          var last = c.seq.length - 1, k = Math.min(last, Math.floor(t / beat)), p = k >= last ? 1 : (t - k * beat) / beat;
-          var cur = c.seq[k], nxt = c.seq[Math.min(last, k + 1)];
-          if (k >= last) {                                   /* landed: whole, no split */
-            c.upper.textContent = cur; c.lower.textContent = cur; c.flap.textContent = ""; c.split.style.display = "none";
-            c.upper.removeAttribute("textLength"); c.lower.removeAttribute("textLength"); return;
+          var last = c.seq.length - 1, k = Math.min(last, Math.floor(t / beat)), p = (t - k * beat) / beat;
+          if (k >= last) {                                    /* landed: a little bounce on the last flap */
+            var q2 = clamp((t - last * beat) / 0.12), bounce = 1 + 0.08 * Math.sin(q2 * Math.PI) * (1 - q2);
+            letter(c.upper.t, blank(c.seq[last]), c.room); letter(c.lower.t, blank(c.seq[last]), c.room);
+            c.flap.g.style.display = "none";
+            c.lower.g.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + bounce.toFixed(3) + ") translate(0 " + (-c.mid) + ")");
+            return;
           }
-          c.split.style.display = "";
-          [c.upper, c.lower, c.flap].forEach(function (x) { x.setAttribute("textLength", c.tl); });
-          c.upper.textContent = nxt; c.lower.textContent = cur;
-          var falling = p < 0.5, s = falling ? 1 - 2 * p : 2 * p - 1;
-          c.flap.textContent = falling ? cur : nxt;
-          c.flap.setAttribute("clip-path", falling ? c.upper.getAttribute("clip-path") : c.lower.getAttribute("clip-path"));
-          c.flap.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + Math.max(0.001, s).toFixed(3) + ") translate(0 " + (-c.mid) + ")");
+          var cur = blank(c.seq[k]), nxt = blank(c.seq[k + 1]);
+          letter(c.upper.t, nxt, c.room); letter(c.lower.t, cur, c.room); c.lower.g.removeAttribute("transform");
+          var falling = p < 0.5, e = falling ? 2 * p : 2 * p - 1;
+          var s = falling ? Math.cos(e * Math.PI / 2) : Math.sin(e * Math.PI / 2);   /* the flap's height as it turns on the axle */
+          c.flap.g.style.display = "";
+          letter(c.flap.t, falling ? cur : nxt, c.room);
+          c.flap.g.setAttribute("clip-path", "url(#" + c.id + (falling ? "t" : "b") + ")");
+          c.flap.g.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + Math.max(0.001, s).toFixed(3) + ") translate(0 " + (-c.mid) + ")");
+          c.flap.sh.setAttribute("opacity", (0.55 * (1 - s)).toFixed(3));       /* darker as it tips away from the light */
         });
+      });
+    });
+  };
+
+  /* ---- focus: a fixed word coming in -- out of a soft blur, its letters drawing together, as it fades up ---- */
+  A.focus = function (el, o) {
+    need(el, "focus"); o = o || {};
+    var T = texts(el), E = o.ease || A.ease.out;
+    return A.track(o.dur == null ? 0.7 : o.dur, function (u) {
+      var e = E(u);
+      T.forEach(function (n) {
+        if (u >= 1) { n.style.opacity = ""; n.style.filter = ""; n.style.letterSpacing = ""; return; }
+        n.style.opacity = String(e);
+        n.style.filter = "blur(" + (6 * (1 - e)).toFixed(2) + "px)";
+        n.style.letterSpacing = (0.22 * (1 - e)).toFixed(3) + "em";
       });
     });
   };
@@ -445,17 +479,18 @@
       if (n.tagName.toLowerCase() === "text") return true;
       return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
     });
-    var kind = function (n) { return n.getAttribute("data-anim"); };
+    var kind = function (n) { return n.getAttribute("data-anim") || "focus"; };   /* a fixed word: focus */
     var steps = [], run = [], runKind = null;
     var flush = function () {
       if (!run.length) return;
       if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
+      else if (runKind === "focus") steps.push(A.stagger(run, function (n) { return A.focus(n); }, 0.12));
       else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n); }, 0.08));
       run = []; runKind = null;
     };
     writing.forEach(function (n) {
       if (n.tagName.toLowerCase() === "text") {
-        if (!n.textContent.trim() || !kind(n)) return;          /* unmarked text is part of the frame */
+        if (!n.textContent.trim()) return;
         var k = kind(n);
         if (k !== runKind) flush();
         runKind = k; run.push(n);
