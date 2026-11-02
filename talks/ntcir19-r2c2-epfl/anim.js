@@ -6,7 +6,7 @@
  * captured frame by frame into video (tools/make_media.mjs seeks t), and run backwards
  * exactly (← seeks t downwards).
  *
- *   A.reveal(el, {dur, dy, dx})     fade in, rising a little (dy units; 0 for a plain fade)
+ *   A.reveal(el, {dur, dy, dx})     fade in (dy, dx: an optional drift in units; none by default)
  *   A.hide(el, {dur})               the reverse: fade out
  *   A.draw(el, {dur})               draw a stroked path (or every path in a group) from its start
  *   A.write(el, {dur, lift})        written by hand: each stroked path of el drawn in turn, at a pen's
@@ -27,6 +27,20 @@
  *                                   old value (circle[data-ghost]) and settles on its new one, the thin link
  *                                   (line[data-link], drawn ghost -> dot) following it; draw the dot where it
  *                                   ends. With no ghost, from is the offset [dx, dy] it starts at
+ *   A.pop(el, {dur})                appears like a balloon: scales up from its centre past its size, and settles
+ *   A.type(els, {dur, typos})       typed on a keyboard: each <text> in turn, character by character with a
+ *                                   caret, now and then a typo that is noticed, erased and retyped
+ *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
+ *                                   level before it sets; value (text[data-value]) counts with it
+ *   A.enter(el)                     ONE CONCEPT ENTERING, LAYER BY LAYER, the deck's standard entry:
+ *                                   1 frame: the whole concept pops (A.pop)
+ *                                   2 writing, in document order: its own <text> typed (A.type),
+ *                                     its own stroked lines drawn by pen (A.draw)
+ *                                   3 marker bands swept (A.highlight)
+ *                                   4 gauges settle (A.fill)
+ *                                   5 hand marks written ([data-verdict], A.write)
+ *                                   Nested concepts and anything under [data-layer="frame"] (a logo) come
+ *                                   in with the frame and are not taken apart.
  *   A.camera(svg, from, to, {dur})  the camera: frames [x, y, w, h] in slide units; a CSS
  *                                   transform on the slide's <svg> box (the compositor's job)
  *   A.seq(a, b, ...)  one after the other     A.par(a, b, ...)  together
@@ -81,7 +95,7 @@
   /* ---- reveal / hide ---- */
   A.reveal = function (el, o) {
     need(el, "reveal"); o = o || {};
-    var dy = o.dy == null ? 10 : o.dy, dx = o.dx || 0, E = o.ease || A.ease.out, L = els(el);
+    var dy = o.dy || 0, dx = o.dx || 0, E = o.ease || A.ease.out, L = els(el);
     return A.track(o.dur == null ? 0.6 : o.dur, function (u) {
       var e = E(u);
       L.forEach(function (n) {
@@ -204,6 +218,134 @@
       var t = u * dur;
       P.forEach(function (p, i) { drawTo(p, Ls[i], u >= 1 ? 1 : pen(clamp((t - spans[i][0]) / spans[i][1]))); });
     });
+  };
+
+  /* ---- pop: a balloon -- scaled up from its centre, past its size, settling ---- */
+  A.pop = function (el, o) {
+    need(el, "pop"); o = o || {};
+    var L = els(el);
+    L.forEach(function (n) { n.style.transformBox = "fill-box"; n.style.transformOrigin = "center"; });
+    return A.track(o.dur == null ? 0.6 : o.dur, function (u) {
+      var k = u >= 1 ? 1 : 1 - Math.cos(u * Math.PI * 2.5) * Math.exp(-4.2 * u);     /* 0 -> ~1.1 -> ~0.97 -> 1 */
+      L.forEach(function (n) {
+        n.style.scale = u >= 1 ? "" : Math.max(0, k).toFixed(4);
+        n.style.opacity = u >= 1 ? "" : String(clamp(u / 0.2));
+      });
+    });
+  };
+
+  /* ---- type: a keyboard -- a pure script of keystrokes per <text>, seeded by its own words ---- */
+  var KEYS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+  function neighbour(ch, r) {
+    var c = ch.toLowerCase();
+    for (var i = 0; i < KEYS.length; i++) {
+      var j = KEYS[i].indexOf(c);
+      if (j < 0) continue;
+      var opts = [KEYS[i][j - 1], KEYS[i][j + 1]].filter(Boolean), k = opts[Math.floor(r * opts.length) % opts.length];
+      return ch === c ? k : k.toUpperCase();
+    }
+    return null;
+  }
+  function seeded(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return function () { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; };
+  }
+  /* [{t, s}]: the string shown from time t on; one typo at most per 30 characters, `typos` at most */
+  function keystrokes(S, cps, budget) {
+    var r = seeded(S), out = [{ t: 0, s: "" }], t = 0, made = 0, step = 1 / cps;
+    var next = 6 + Math.floor(r() * 18);
+    for (var i = 0; i < S.length; i++) {
+      var ch = S[i];
+      if (made < budget && i >= next && /[a-z]/i.test(ch) && i < S.length - 2) {
+        var wrong = neighbour(ch, r());
+        if (wrong) {
+          var extra = r() < 0.5 && /[a-z]/i.test(S[i + 1]) ? 1 : 0;          /* sometimes one more key before it is noticed */
+          t += step * (0.7 + 0.6 * r()); out.push({ t: t, s: S.slice(0, i) + wrong });
+          if (extra) { t += step; out.push({ t: t, s: S.slice(0, i) + wrong + S[i + 1] }); }
+          t += 0.22;                                                          /* noticed */
+          for (var b = extra; b >= 0; b--) { t += 0.07; out.push({ t: t, s: S.slice(0, i) + (b ? wrong : "") }); }
+          t += 0.08; made++; next = i + 30 + Math.floor(r() * 20);
+        }
+      }
+      t += step * (ch === " " ? 1.5 : 0.6 + 0.8 * r());
+      out.push({ t: t, s: S.slice(0, i + 1) });
+    }
+    return { dur: t, keys: out, made: made };
+  }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  A.type = function (el, o) {
+    need(el, "type"); o = o || {};
+    var T = els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
+    var texts = T.map(function (n) { return n.textContent; }), total = texts.join("").length || 1;
+    var cps = Math.max(22, total / (o.dur || 3.2));                           /* a typist's pace, quicker for long text */
+    var budget = o.typos == null ? 2 : o.typos, left = budget;
+    var plans = texts.map(function (S) {
+      var p = keystrokes(S, cps, Math.min(left, S.length >= 24 ? 1 : 0));
+      left -= p.made; return p;
+    });
+    var at = [], d = 0;
+    plans.forEach(function (p) { at.push(d); d += p.dur + 0.05; });
+    var caret = '<tspan fill="#8C8682">|</tspan>';
+    return A.track(d, function (u) {
+      var t = u * d;
+      T.forEach(function (n, i) {
+        if (u >= 1) { n.textContent = texts[i]; return; }
+        var p = plans[i], lt = t - at[i];
+        if (lt < 0 || u <= 0) { n.textContent = ""; return; }      /* not begun: empty, and no caret yet */
+        var s = "";
+        for (var k = 0; k < p.keys.length && p.keys[k].t <= lt; k++) s = p.keys[k].s;
+        var typing = lt < p.dur + 0.05;
+        n.innerHTML = esc(s) + (typing ? caret : "");
+      });
+    });
+  };
+
+  /* ---- fill: a gauge hunting up and down around its level before it sets; its number counts with it ---- */
+  A.fill = function (bar, o) {
+    need(bar, "fill"); o = o || {};
+    var full = parseFloat(bar.getAttribute("data-full")), frac = parseFloat(bar.getAttribute("data-frac"));
+    var w0 = bar.getAttribute("width"), min = parseFloat(bar.getAttribute("height")) || 0;
+    var val = o.value || null, v0 = val ? val.textContent : null, top = parseFloat(v0);
+    return A.track(o.dur == null ? 1.5 : o.dur, function (u) {
+      if (u >= 1) { bar.setAttribute("width", w0); bar.style.opacity = ""; if (val) val.textContent = v0; return; }
+      var k = 1 - Math.cos(u * Math.PI * 3) * Math.pow(1 - u, 2.6);         /* up, down, up, down, set */
+      var f = clamp(frac * k);
+      bar.setAttribute("width", Math.max(min, full * f).toFixed(2));
+      bar.style.opacity = f <= 0.005 ? "0" : "";
+      if (val && !isNaN(top)) val.textContent = String(Math.round(Math.min(100, Math.max(0, top * k))));
+    });
+  };
+
+  /* ---- enter: one concept, layer by layer (see the list at the top) ---- */
+  A.enter = function (el, o) {
+    need(el, "enter"); o = o || {};
+    var root = el.matches && el.matches("[data-concept]") ? el : (el.querySelector("[data-concept]") || el);
+    var own = function (n) {
+      return (n.closest("[data-concept]") === root || !root.matches("[data-concept]"))
+        && !n.closest('[data-layer="frame"]') && !(n.ownerSVGElement && n.closest("svg") !== n.ownerSVGElement);
+    };
+    var q = function (sel) { return [].slice.call(root.querySelectorAll(sel)).filter(own); };
+    var writing = q("text:not([data-value]), path").filter(function (n) {
+      if (n.tagName.toLowerCase() === "text") return true;
+      return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
+    });
+    var steps = [], run = [];
+    var flush = function () { if (run.length) { steps.push(A.type(run, { typos: o.typos })); run = []; } };
+    writing.forEach(function (n) {
+      if (n.tagName.toLowerCase() === "text") { if (n.textContent.trim()) run.push(n); }
+      else { flush(); steps.push(A.draw(n, { dur: Math.min(0.6, Math.max(0.2, n.getTotalLength() / 1400)) })); }
+    });
+    flush();
+    var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
+    var vals = q("text[data-value]");
+    return A.seq(
+      A.pop(root),
+      A.seq.apply(null, steps),
+      hl.length ? A.highlight(hl) : null,
+      bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
+      marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null
+    );
   };
 
   /* ---- flow: the flow arrow's shaft drawn, its head arriving at the end ---- */
