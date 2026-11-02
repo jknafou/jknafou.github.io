@@ -246,13 +246,13 @@
   };
 
   /* ---- flip: a split-flap board (Solari), for a label that names a class.
-   * The label is laid out as a row of equal cells, one per letter, each a dark card with a pale
-   * letter and a hairline gap across its middle, as on a station's departures board. All cards
-   * start blank and turn together, one flap per beat, through the same alphabet, each stopping at
-   * its own letter (so in "simple" the i lands before the s). A flap turns on its axle: the upper
-   * half of the old card falls forward, shortening and darkening as it tips, revealing the new upper
-   * half behind it; then the lower half of the new card swings down over the old lower half, landing
-   * with a small bounce. When every card has landed, the board gives way to the label in ink. ---- */
+   * The board is the label itself: each letter is a flap of the label's own ground (the tag's colour,
+   * or the paper), carrying the label's own letter -- same face, size, weight and ink, at the place it
+   * holds at rest. All flaps start blank and turn together, one per beat, through the same alphabet,
+   * each stopping at its own letter (so in "simple" the i lands before the s). A flap turns on its
+   * axle: the upper half of the old letter falls forward over the fold, shortening and shading as it
+   * tips, then the lower half of the new one swings down. While a flap turns, its fold shows as a
+   * faint darker line; once it has landed the fold fades, so the last frame IS the still. ---- */
   function texts(el) {
     return els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
   }
@@ -262,107 +262,87 @@
     return ch === " " ? " " : " " + ch;                 /* a sign (-, ·, .) has one flap */
   }
   var NS_ = "http://www.w3.org/2000/svg", flapId = 0;
-  /* the board's own face: a condensed grotesque, as departure boards use (Barlow Condensed 600, OFL,
-     assets/barlow-condensed-600-latin.woff2 beside the page, from fonts.gstatic.com on 2 November 2026,
-     sha256 215a93c6...bb2b66; Arial Narrow if it is missing) */
-  var BOARD_FONT = "'Board Face', 'Arial Narrow', 'Helvetica Neue', sans-serif";
-  (function () {
-    if (typeof document === "undefined" || document.getElementById("board-face")) return;
-    var src = (document.currentScript && document.currentScript.src) || "";
-    var url = src ? src.replace(/[^\/]*$/, "") + "assets/barlow-condensed-600-latin.woff2" : "assets/barlow-condensed-600-latin.woff2";
-    var st = document.createElement("style"); st.id = "board-face";
-    st.textContent = "@font-face{font-family:'Board Face';font-weight:600;src:url('" + url + "') format('woff2');}";
-    document.head.appendChild(st);
-    if (document.fonts && document.fonts.load) document.fonts.load("600 40px 'Board Face'");
-  })();
   function mk(tag, at, parent) {
     var e = document.createElementNS(NS_, tag);
     for (var k in at) e.setAttribute(k, at[k]);
     if (parent) parent.appendChild(e);
     return e;
   }
-  function boardDefs(defs) {                        /* the cards' light: lit from above, the lower half in shade */
-    if (defs.querySelector("#board-top")) return;
-    var gt = mk("linearGradient", { id: "board-top", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-    mk("stop", { offset: 0, "stop-color": "#3D3A39" }, gt); mk("stop", { offset: 1, "stop-color": "#2E2C2B" }, gt);
-    var gb = mk("linearGradient", { id: "board-bot", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-    mk("stop", { offset: 0, "stop-color": "#262423" }, gb); mk("stop", { offset: 1, "stop-color": "#1E1C1B" }, gb);
+  /* the label's ground: the filled shape it sits on (a tag), else the paper */
+  function groundOf(n) {
+    var b = n.getBBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    for (var p = n.previousElementSibling; p; p = p.previousElementSibling) {
+      if (p.tagName.toLowerCase() !== "rect") continue;
+      var f = p.getAttribute("fill"), r = p.getBBox();
+      if (f && f !== "none" && cx > r.x && cx < r.x + r.width && cy > r.y && cy < r.y + r.height) return f;
+    }
+    return "#FBF8F4";
   }
   function flapBoard(n) {
     if (n._board) return n._board;
     var S = n.textContent, svg = n.ownerSVGElement, defs = svg.querySelector("defs") || svg.insertBefore(mk("defs", {}), svg.firstChild);
-    boardDefs(defs);
     var g = mk("g", { "data-board": "" }); g.style.display = "none"; n.parentNode.insertBefore(g, n.nextSibling);
-    var fs = parseFloat(n.getAttribute("font-size")), y = parseFloat(n.getAttribute("y"));
-    var bb = n.getBBox(), N = S.length, gap = fs * 0.07;
-    var cw = Math.max(fs * 0.34, (bb.width - gap * (N - 1)) / N);                /* equal cells over the label's own width */
-    var top = y - fs * 0.9, bot = y + fs * 0.24, mid = (top + bot) / 2, ch = bot - top, rx = fs * 0.06;
-    var lsz = ch * 0.78, base = mid + lsz * 0.36;                                /* the letter centred on the fold */
+    var fs = parseFloat(n.getAttribute("font-size")), y = parseFloat(n.getAttribute("y")), ground = groundOf(n);
+    var top = y - fs * 0.88, bot = y + fs * 0.26, mid = y - fs * 0.33;          /* the fold through the middle of the small letters */
     var cells = [];
-    for (var i = 0; i < N; i++) {
+    for (var i = 0; i < S.length; i++) {
       if (S[i] === " ") continue;
-      var x = bb.x + i * (cw + gap), cx = x + cw / 2, id = "flap" + (++flapId);
-      var cT = mk("clipPath", { id: id + "t" }, defs); mk("rect", { x: x - 1, y: top - 1, width: cw + 2, height: mid - top + 1 }, cT);
-      var cB = mk("clipPath", { id: id + "b" }, defs); mk("rect", { x: x - 1, y: mid, width: cw + 2, height: bot - mid + 1 }, cB);
-      mk("rect", { x: x, y: top + fs * 0.03, width: cw, height: ch, rx: rx, fill: "#000", opacity: 0.18 }, g);   /* its shadow on the tag */
-      mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#1E1C1B" }, g);                         /* the housing: a seam shows dark, never the paper */
+      var x0 = n.getStartPositionOfChar(i).x, x1 = n.getEndPositionOfChar(i).x, w = x1 - x0, cx = (x0 + x1) / 2, id = "flap" + (++flapId);
+      var cT = mk("clipPath", { id: id + "t" }, defs); mk("rect", { x: x0, y: top, width: w, height: mid - top }, cT);
+      var cB = mk("clipPath", { id: id + "b" }, defs); mk("rect", { x: x0, y: mid, width: w, height: bot - mid }, cB);
       var half = function (clip, shade) {
         var h = mk("g", { "clip-path": "url(#" + id + clip + ")" }, g);
-        mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: clip === "t" ? "url(#board-top)" : "url(#board-bot)" }, h);
-        var t = mk("text", { x: cx, y: base, "text-anchor": "middle", "font-family": BOARD_FONT, "font-size": lsz, "font-weight": 600, fill: "#F3EEE4" }, h);
-        var sh = shade ? mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#000", opacity: 0 }, h) : null;
-        return { g: h, t: t, sh: sh, r: h.firstChild };
+        mk("rect", { x: x0, y: top, width: w, height: bot - top, fill: ground }, h);   /* the flap is the label's own ground */
+        var t = n.cloneNode(false);
+        t.removeAttribute("data-a"); t.removeAttribute("data-anim"); t.removeAttribute("style");
+        t.setAttribute("x", cx); t.setAttribute("text-anchor", "middle"); h.appendChild(t);
+        var sh = shade ? mk("rect", { x: x0, y: top, width: w, height: bot - top, fill: "#000", opacity: 0 }, h) : null;
+        return { g: h, t: t, sh: sh };
       };
-      var c = { room: cw * 0.86, seq: flapSeq(S[i]), mid: mid, id: id, upper: half("t"), lower: half("b"), flap: half("t", true) };
-      mk("rect", { x: x, y: mid - fs * 0.012, width: cw, height: fs * 0.024, fill: "#0E0D0D" }, g);           /* the hinge: a dark gap, there at every flap and at rest */
-      mk("rect", { x: x - fs * 0.012, y: mid - fs * 0.04, width: fs * 0.024, height: fs * 0.08, rx: fs * 0.01, fill: "#5A5654" }, g);        /* the axle's pins */
-      mk("rect", { x: x + cw - fs * 0.012, y: mid - fs * 0.04, width: fs * 0.024, height: fs * 0.08, rx: fs * 0.01, fill: "#5A5654" }, g);
+      var c = { room: w, seq: flapSeq(S[i]), mid: mid, id: id, upper: half("t"), lower: half("b"), flap: half("t", true) };
+      c.fold = mk("rect", { x: x0, y: mid - fs * 0.008, width: w, height: fs * 0.016, fill: "#000", opacity: 0 }, g);
       cells.push(c);
     }
     n._board = { g: g, cells: cells };
     return n._board;
   }
   function blank(s) { return s === " " ? "" : s; }
-  /* a letter on a card: at its own width, narrowed only when it is wider than the card (an m, a w) */
+  /* a flap's letter: at its own width, narrowed only when wider than the place its final letter holds (an m in an i's place) */
   function letter(t, ch, room) {
     if (t._ch === ch) return;
     t._ch = ch; t.removeAttribute("textLength"); t.textContent = ch;
-    if (ch && t.getComputedTextLength() > room) { t.setAttribute("textLength", room.toFixed(2)); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+    if (ch && t.getComputedTextLength() > room * 1.05) { t.setAttribute("textLength", room.toFixed(2)); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
   }
   A.flip = function (el, o) {
     need(el, "flip"); o = o || {};
-    var T = texts(el), beat = o.beat || 0.07, hand = 0.3;
+    var T = texts(el), beat = o.beat || 0.07, settle = 0.25;
     var B = T.map(flapBoard);
     var most = Math.max.apply(null, [1].concat(B.map(function (b) { return Math.max.apply(null, [1].concat(b.cells.map(function (c) { return c.seq.length - 1; }))); })));
-    var turn = most * beat + 0.12, dur = turn + hand;
+    var dur = most * beat + settle;
     return A.track(dur, function (u) {
       var t = u * dur;
       T.forEach(function (n, i) {
         var b = B[i];
-        if (u >= 1) { n.style.opacity = ""; n.style.filter = ""; b.g.style.display = "none"; return; }
-        if (u <= 0) { n.style.opacity = "0"; b.g.style.display = "none"; return; }
-        b.g.style.display = "";
-        var h = clamp((t - turn) / hand);                     /* the board gives way to the label */
-        b.g.style.opacity = String(1 - h); n.style.opacity = String(h);
+        if (u >= 1) { n.style.opacity = ""; b.g.style.display = "none"; return; }   /* the still, exactly as the board left it */
+        n.style.opacity = "0"; b.g.style.display = u <= 0 ? "none" : "";
         b.cells.forEach(function (c) {
           var last = c.seq.length - 1, k = Math.min(last, Math.floor(t / beat)), p = (t - k * beat) / beat;
-          if (k >= last) {                                    /* landed: a little bounce on the last flap */
-            var q2 = clamp((t - last * beat) / 0.12), bounce = 1 + 0.08 * Math.sin(q2 * Math.PI) * (1 - q2);
+          if (k >= last) {                                   /* landed: the letter at rest, its fold fading */
             letter(c.upper.t, blank(c.seq[last]), c.room); letter(c.lower.t, blank(c.seq[last]), c.room);
             c.flap.g.style.display = "none";
-            c.lower.g.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + bounce.toFixed(3) + ") translate(0 " + (-c.mid) + ")");
+            c.fold.setAttribute("opacity", (0.18 * (1 - clamp((t - last * beat) / settle))).toFixed(3));
             return;
           }
           var cur = blank(c.seq[k]), nxt = blank(c.seq[k + 1]);
-          letter(c.upper.t, nxt, c.room); letter(c.lower.t, cur, c.room); c.lower.g.removeAttribute("transform");
+          letter(c.upper.t, nxt, c.room); letter(c.lower.t, cur, c.room);
           var falling = p < 0.5, e = falling ? 2 * p : 2 * p - 1;
           var s = falling ? Math.cos(e * Math.PI / 2) : Math.sin(e * Math.PI / 2);   /* the flap's height as it turns on the axle */
           c.flap.g.style.display = "";
           letter(c.flap.t, falling ? cur : nxt, c.room);
           c.flap.g.setAttribute("clip-path", "url(#" + c.id + (falling ? "t" : "b") + ")");
-          c.flap.r.setAttribute("fill", falling ? "url(#board-top)" : "url(#board-bot)");
           c.flap.g.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + Math.max(0.001, s).toFixed(3) + ") translate(0 " + (-c.mid) + ")");
-          c.flap.sh.setAttribute("opacity", (0.6 * (1 - s)).toFixed(3));        /* darker as it tips away from the light */
+          c.flap.sh.setAttribute("opacity", (0.12 * (1 - s)).toFixed(3));       /* a shade as it tips away from the light */
+          c.fold.setAttribute("opacity", "0.18");
         });
       });
     });
