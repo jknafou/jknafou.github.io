@@ -28,12 +28,12 @@
  *                                   (line[data-link], drawn ghost -> dot) following it; draw the dot where it
  *                                   ends. With no ghost, from is the offset [dx, dy] it starts at
  *   A.pop(el, {dur})                appears like a balloon: scales up from its centre past its size, and settles
- *   A.type(els, {dur, typos})       typed on a keyboard: each <text> in turn, character by character with a
- *                                   caret, now and then a typo that is noticed, erased and retyped
+ *   A.type(els, {dur, typos, quick}) typed on a keyboard: each <text> in turn, character by character with a
+ *                                   caret, now and then a typo that is noticed, erased and retyped;
+ *                                   quick: a fixed word keyed in at twice the pace, never a typo
  *   A.flip(els, {beat})             a class label on a split-flap board, as a station's departures: every cell
  *                                   starts blank, all turn together through the same alphabet, flap by flap
  *                                   (half a character folding over the midline), each stopping at its own letter
- *   A.focus(els, {dur})             a fixed word coming in: out of a soft blur, letters drawing together, fading up
  *   A.count(els, {dur})             a number that grows from 0 to its value, its format kept ("2,091,427 passages")
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
@@ -41,9 +41,10 @@
  *                                   1 frame: the whole concept pops (A.pop)
  *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
  *                                     "type" for words someone wrote (A.type), "flip" for a label (A.flip),
- *                                     "count" for a number (A.count); unmarked text, a fixed word ("Q", "A", a
- *                                     band's title, the handle), comes into focus (A.focus); its own stroked
- *                                     lines drawn by pen (A.draw)
+ *                                     "flip" for a question type's name only (A.flip), "count" for a number
+ *                                     (A.count); unmarked text or "key", a fixed word ("Q", "A", a band's
+ *                                     title, the handle), keyed in quickly without a typo (A.type quick);
+ *                                     its own stroked lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
  *                                   4 gauges settle (A.fill)
  *                                   5 hand marks written ([data-verdict], A.write)
@@ -348,22 +349,6 @@
     });
   };
 
-  /* ---- focus: a fixed word coming in -- out of a soft blur, its letters drawing together, as it fades up ---- */
-  A.focus = function (el, o) {
-    need(el, "focus"); o = o || {};
-    var T = texts(el), E = o.ease || A.ease.out;
-    return A.track(o.dur == null ? 1.0 : o.dur, function (u) {
-      var e = E(u);
-      T.forEach(function (n) {
-        if (u >= 1) { n.style.opacity = ""; n.style.filter = ""; n.style.letterSpacing = ""; return; }
-        var fs = parseFloat(n.getAttribute("font-size")) || 30;   /* the blur in proportion to the type */
-        n.style.opacity = String(Math.min(1, e * 1.3));
-        n.style.filter = "blur(" + (fs * 0.35 * (1 - e)).toFixed(2) + "px)";
-        n.style.letterSpacing = (0.35 * (1 - e)).toFixed(3) + "em";
-      });
-    });
-  };
-
   /* ---- count: a number grows from 0 to its value; the words around it and its format stay ---- */
   A.count = function (el, o) {
     need(el, "count"); o = o || {};
@@ -432,8 +417,8 @@
     need(el, "type"); o = o || {};
     var T = els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
     var texts = T.map(function (n) { return n.textContent; }), total = texts.join("").length || 1;
-    var cps = Math.max(22, total / (o.dur || 3.2));                           /* a typist's pace, quicker for long text */
-    var budget = o.typos == null ? 2 : o.typos, left = budget;
+    var cps = Math.max(o.quick ? 48 : 22, total / (o.dur || (o.quick ? 1.2 : 3.2)));   /* a typist's pace, quicker for long text */
+    var budget = o.quick ? 0 : o.typos == null ? 2 : o.typos, left = budget;
     var plans = texts.map(function (S) {
       var p = keystrokes(S, cps, Math.min(left, S.length >= 24 ? 1 : 0));
       left -= p.made; return p;
@@ -484,13 +469,13 @@
       if (n.tagName.toLowerCase() === "text") return true;
       return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
     });
-    var kind = function (n) { return n.getAttribute("data-anim") || "focus"; };   /* a fixed word: focus */
+    var kind = function (n) { return n.getAttribute("data-anim") || "key"; };     /* a fixed word: keyed in quickly */
     var steps = [], run = [], runKind = null;
     var flush = function () {
       if (!run.length) return;
       if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
-      else if (runKind === "focus") steps.push(A.stagger(run, function (n) { return A.focus(n); }, 0.12));
-      else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n); }, 0.08));
+      else if (runKind === "key") steps.push(A.type(run, { quick: true }));
+      else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n, { dur: 0.6 }); }, 0.06));
       run = []; runKind = null;
     };
     writing.forEach(function (n) {
