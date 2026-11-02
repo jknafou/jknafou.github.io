@@ -355,9 +355,10 @@
   /* ---- count: a number grows from 0 to its value; the words around it and its format stay ---- */
   A.count = function (el, o) {
     need(el, "count"); o = o || {};
-    var T = texts(el), P = T.map(function (n) {
-      var s0 = n.textContent, m = s0.match(/\d[\d,]*(\.\d+)?/);
-      if (!m) return { s0: s0 };
+    var T = texts(el), P = T.map(function (n) {                /* the first number, or the last with data-count="last" */
+      var s0 = n.textContent, all = s0.match(/\d[\d,]*(\.\d+)?/g) || [], m = null, re = /\d[\d,]*(\.\d+)?/g, x;
+      while ((x = re.exec(s0))) { m = x; if (n.getAttribute("data-count") !== "last") break; }
+      if (!m || !all.length) return { s0: s0 };
       return { s0: s0, pre: s0.slice(0, m.index), post: s0.slice(m.index + m[0].length), v: parseFloat(m[0].replace(/,/g, "")),
                dec: m[1] ? m[1].length - 1 : 0, comma: m[0].indexOf(",") >= 0 };
     });
@@ -366,8 +367,9 @@
       if (p.comma) { var parts = s1.split("."); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ","); s1 = parts.join("."); }
       return p.pre + s1 + p.post;
     };
+    var E = o.ease || A.ease.out;
     return A.track(o.dur == null ? 1.1 : o.dur, function (u) {
-      var e = A.ease.out(u);
+      var e = E(u);
       T.forEach(function (n, i) {
         var p = P[i];
         if (u >= 1 || p.v == null) { n.textContent = u <= 0 && p.v == null ? "" : p.s0; return; }
@@ -429,10 +431,23 @@
     var at = [], d = 0;
     plans.forEach(function (p) { at.push(d); d += p.dur + 0.05; });
     var caret = '<tspan fill="#8C8682">|</tspan>';
+    var fix = T.map(function (n) {                     /* an end- or middle-anchored line is typed from where it will start */
+      var a = n.getAttribute("text-anchor");
+      if (a !== "end" && a !== "middle") return null;
+      var x = parseFloat(n.getAttribute("x")), w = n.getComputedTextLength ? n.getComputedTextLength() : 0;
+      return { a: a, x: n.getAttribute("x"), left: (a === "end" ? x - w : x - w / 2).toFixed(2) };
+    });
+    var place = function (i, typing) {
+      var f = fix[i], n = T[i];
+      if (!f) return;
+      n.setAttribute("text-anchor", typing ? "start" : f.a);
+      n.setAttribute("x", typing ? f.left : f.x);
+    };
     var tr = A.track(d, function (u) {
       var t = u * d;
       T.forEach(function (n, i) {
-        if (u >= 1) { n.textContent = texts[i]; return; }
+        if (u >= 1) { place(i, false); n.textContent = texts[i]; return; }
+        place(i, true);
         var p = plans[i], lt = t - at[i];
         if (lt < 0 || u <= 0) { n.textContent = ""; return; }      /* not begun: empty, and no caret yet */
         var s = "";
@@ -441,12 +456,15 @@
         n.innerHTML = esc(s) + (typing ? caret : "");
       });
     });
-    tr.cue = function (word) {                       /* the second at which `word` is fully typed, or null */
+    tr.cue = function (word, after) {                /* the second `word` is fully typed (its first time after `after`), or null */
+      var re = new RegExp("\\b" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g"), m;
       for (var i = 0; i < texts.length; i++) {
-        var m = texts[i].search(new RegExp("\\b" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b"));
-        if (m < 0) continue;
-        var e = m + word.length, want = texts[i].slice(0, e), K = plans[i].keys;
-        for (var k = 0; k < K.length; k++) if (K[k].s.length >= e && K[k].s.slice(0, e) === want) return at[i] + K[k].t;
+        re.lastIndex = 0;
+        while ((m = re.exec(texts[i]))) {
+          var e = m.index + word.length, want = texts[i].slice(0, e), K = plans[i].keys, c = null;
+          for (var k = 0; k < K.length; k++) if (K[k].s.length >= e && K[k].s.slice(0, e) === want) { c = at[i] + K[k].t; break; }
+          if (c != null && (after == null || c > after)) return c;
+        }
       }
       return null;
     };
@@ -483,12 +501,15 @@
     var w0 = bar.getAttribute("width"), min = parseFloat(bar.getAttribute("height")) || 0;
     var val = o.value || null, v0 = val ? val.textContent : null, top = parseFloat(v0);
     return A.track(o.dur == null ? 1.5 : o.dur, function (u) {
-      if (u >= 1) { bar.setAttribute("width", w0); bar.style.opacity = ""; if (val) val.textContent = v0; return; }
+      if (u >= 1) { bar.setAttribute("width", w0); bar.style.opacity = ""; if (val) { val.textContent = v0; val.style.opacity = ""; } return; }
+      if (val) val.style.opacity = u <= 0 ? "0" : "";                         /* the number belongs to the gauge's beat */
       var k = 1 - Math.cos(u * Math.PI * 3) * Math.pow(1 - u, 2.6);         /* up, down, up, down, set */
-      var f = clamp(frac * k);
+      var f = frac * k;
+      if (k > 1 && f > 0.985) f = frac - (k - 1) * frac;                       /* near the top the swing goes down, never flat at the clamp */
+      f = clamp(f);
       bar.setAttribute("width", Math.max(min, full * f).toFixed(2));
       bar.style.opacity = f <= 0.005 ? "0" : "";
-      if (val && !isNaN(top)) val.textContent = String(Math.round(Math.min(100, Math.max(0, top * k))));
+      if (val && !isNaN(top)) val.textContent = String(Math.round(Math.min(100, Math.max(0, frac > 0 ? top * f / frac : 0))));
     });
   };
 
@@ -501,7 +522,10 @@
         && !n.closest('[data-layer="frame"]') && !(n.ownerSVGElement && n.closest("svg") !== n.ownerSVGElement);
     };
     var q = function (sel) { return [].slice.call(root.querySelectorAll(sel)).filter(own); };
+    var drawn = root.getAttribute("data-enter") === "drawn";
+    var board = drawn ? q('text[data-anim="flip"]') : [];                       /* a list's run name turns in first */
     var writing = q("text:not([data-value]), path, g[data-empty]").filter(function (n) {
+      if (n.hasAttribute("data-callout") || board.indexOf(n) >= 0) return false;   /* a callout's leader is drawn with its callout */
       if (n.tagName.toLowerCase() === "g") return true;                          /* an empty place: it appears whole */
       if (n.closest("[data-empty]")) return false;
       if (n.tagName.toLowerCase() === "text") return true;
@@ -512,7 +536,11 @@
     var flush = function () {
       if (!run.length) return;
       if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
-      else if (runKind === "ai") steps.push(A.seq.apply(null, run.map(function (n) { return A.seq(A.think(n), A.type([n], { typos: o.typos })); })));
+      else if (runKind === "ai") {                     /* one ring where the text starts, then all its rows typed */
+        var th = A.think(run[0]), ty = A.type(run, { typos: o.typos }), ai = A.seq(th, ty);
+        ai.cue = function (w, after) { var c = ty.cue(w, after == null ? null : after - th.dur); return c == null ? null : th.dur + c; };
+        steps.push(ai);
+      }
       else if (runKind === "key") steps.push(A.type(run, { quick: true }));
       else if (runKind === "empty") steps.push(A.stagger(run, function (n) { return A.reveal(n, { dur: 0.3 }); }, 0.08));
       else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n, { dur: 0.6 }); }, 0.06));
@@ -530,17 +558,21 @@
       } else { flush(); steps.push(A.draw(n, { dur: Math.min(0.6, Math.max(0.2, n.getTotalLength() / 1400)) })); }
     });
     flush();
-    var drawn = root.getAttribute("data-enter") === "drawn";
     var first, calls = [];
+    var pose = function (m) { A.act(m, { hold: 0 }).set(+m.getAttribute("data-t")); };   /* an emblem is its scene, posed */
     if (drawn) {
       var frames = q("rect[data-frame]");
       var kids = [].slice.call(root.querySelectorAll("[data-concept]")).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
-      var marks_ = kids.filter(function (n) { return n.getAttribute("data-concept") === "emblem"; });
-      calls = kids.filter(function (n) { return n.hasAttribute("data-callout"); });
-      kids = kids.filter(function (n) { return marks_.indexOf(n) < 0 && calls.indexOf(n) < 0; });
-      marks_.forEach(function (m) { A.act(m, { hold: 0 }).set(+m.getAttribute("data-t")); });   /* an emblem is its scene, posed */
-      first = A.seq(frames.length ? A.draw(frames, { dur: 0.9 }) : null,
-                    kids.length ? A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)) : null,   /* each row enters by its own layers */
+      calls = [].slice.call(root.querySelectorAll("[data-callout]")).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
+      var marks_ = kids.filter(function (n) { return n.getAttribute("data-concept") === "emblem" && calls.indexOf(n) < 0; });
+      kids = kids.filter(function (n) { return n.getAttribute("data-concept") !== "emblem" && calls.indexOf(n) < 0; });
+      marks_.forEach(pose);
+      first = A.seq(board.length ? A.stagger(board, function (n) { return A.flip(n); }, 0.06) : null,
+                    frames.length ? A.draw(frames, { dur: 0.9 }) : null,
+                    !kids.length ? null
+                    : kids.some(function (n) { return n.querySelector('text[data-anim="key"], text[data-anim="type"]'); })
+                    ? A.seq.apply(null, kids.map(function (n) { return A.enter(n); }))                       /* rows with words: one after another */
+                    : A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)),   /* ruled rows: in a ripple */
                     marks_.length ? A.stagger(marks_, function (n) { return A.pop(n); }, 0.08) : null);
     } else first = A.pop(root);
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
@@ -550,9 +582,9 @@
       first,
       scenes.length ? (function () {                    /* the scene acts the words out as they are written */
         var words = A.seq.apply(null, steps);
-        var cue = function (w) {
+        var cue = function (w, after) {                  /* when `w` is typed, its first time after `after` */
           for (var i = 0, off = 0; i < steps.length; off += steps[i].dur, i++) {
-            var c = steps[i].cue ? steps[i].cue(w) : null;
+            var c = steps[i].cue ? steps[i].cue(w, after == null ? null : after - off) : null;
             if (c != null) return off + c;
           }
           return null;
@@ -563,7 +595,10 @@
       bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
       marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null,
       calls.length ? A.seq.apply(null, calls.map(function (n) {     /* the passages worth reading, one by one, each with what it gave */
-        return n.getAttribute("data-concept") === "flow_arrow" ? A.flow(n) : A.enter(n);
+        var c = n.getAttribute("data-concept");
+        if (!c) return A.draw(n, { dur: 0.45 });                              /* the leader from its row */
+        if (c === "emblem") { pose(n); return A.pop(n, { dur: 0.45 }); }      /* its row's mark, once its story is told */
+        return c === "flow_arrow" ? A.flow(n) : A.enter(n);
       })) : null
     );
   };
@@ -580,6 +615,21 @@
                o: org, v: p.getAttribute("data-v"),
                base: p._actBase != null ? p._actBase : (p._actBase = p.getAttribute("transform") || "") };   /* read once: a second track must not take the first's frame for the drawing */
     });
+    parts.forEach(function (p) {             /* words keyed in, numbers counted, lines drawn: from what the drawing holds */
+      if (p.kind === "key" || p.kind === "count") {
+        if (p.n._full == null) p.n._full = p.n.textContent;
+        p.n.textContent = p.n._full;               /* a track reads the words as drawn, never as a last frame left them */
+        p.tr = p.kind === "key" ? A.type(p.n, { quick: true })
+             : A.count(p.n, { dur: p.dur, ease: p.v === "linear" ? A.ease.lin : null });   /* "linear": in step with what it counts */
+        if (p.kind === "key") p.dur = Math.max(0.001, p.tr.dur);
+      } else if (p.kind === "draw") {
+        if (p.n._d0 == null) p.n._d0 = p.n.getAttribute("d");
+        p.n.setAttribute("d", p.n._d0);
+        var L = p.n.getTotalLength(), k = Math.max(8, Math.ceil(L / 3));
+        p.pts = [];
+        for (var i = 0; i <= k; i++) { var q = p.n.getPointAtLength(L * i / k); p.pts.push(q.x.toFixed(2) + "," + q.y.toFixed(2)); }
+      }
+    });
     var end = parts.reduce(function (m, p) { return Math.max(m, p.at + p.dur); }, 0);
     var about = function (p, t) { return " translate(" + p.o[0] + "," + p.o[1] + ") " + t + " translate(" + (-p.o[0]) + "," + (-p.o[1]) + ")"; };
     var put = function (p, t, op) {
@@ -588,25 +638,31 @@
       p.n.style.opacity = op == null ? "" : String(op);
     };
     var len = end + (o.hold || 0.2);
-    /* cue: inside a passage, each beat "word:second" of data-cues waits for its word to be typed;
-       between beats the scene plays at its own pace and holds, or hurries if the words come faster */
+    /* cue: inside a card, each beat "word:second" of data-cues waits for its word to be typed ("word:0": the whole
+       scene waits); between beats the scene keeps its own pace, and once a part has begun it runs on real time */
     var marks = [[0, 0]];
     if (o.cue) (el.getAttribute("data-cues") || "").split(",").filter(Boolean).forEach(function (c) {
-      var kv = c.split(":"), r = o.cue(kv[0]), sc = +kv[1], last = marks[marks.length - 1];
-      if (r != null && sc > last[0] && r > last[1]) marks.push([sc, r]);
+      var i = c.lastIndexOf(":"), last = marks[marks.length - 1];
+      var r = o.cue(c.slice(0, i), last[1]), sc = +c.slice(i + 1);                 /* searched after the beat before it */
+      if (r == null) return;
+      if (sc === 0 && marks.length === 1) marks[0] = [0, r];                   /* "word:0": nothing moves before the word */
+      else if (sc > last[0] && r > last[1]) marks.push([sc, r]);
     });
     var lastM = marks[marks.length - 1], real = lastM[1] + (len - lastM[0]);
-    var warp = function (r) {
+    var unwarp = function (st) {                     /* the first real second the scene reaches its second st */
       for (var i = 0; i < marks.length - 1; i++) {
         var a = marks[i], b = marks[i + 1];
-        if (r < b[1]) { var sg = b[0] - a[0], rg = b[1] - a[1]; return rg >= sg ? a[0] + Math.min(r - a[1], sg) : a[0] + (r - a[1]) * sg / rg; }
+        if (st === b[0]) return b[1];                                          /* a part on a cue's second waits for its word */
+        if (st < b[0]) { var sg = b[0] - a[0], rg = b[1] - a[1]; return a[1] + (st - a[0]) * (rg >= sg ? 1 : rg / sg); }
       }
-      return lastM[0] + (r - lastM[1]);
+      return lastM[1] + (st - lastM[0]);
     };
+    parts.forEach(function (p) { p.r0 = unwarp(p.at); });   /* begun, every part runs on real time: nothing frozen mid-word or mid-bounce */
+    parts.forEach(function (p) { real = Math.max(real, p.r0 + p.dur + (o.hold || 0.2)); });
     return A.track(real, function (u) {
-      var t = warp(u * real);
+      var now = u * real;
       parts.forEach(function (p) {
-        var v = clamp((t - p.at) / p.dur), e = A.ease.io(v);
+        var v = clamp((now - p.r0) / p.dur), e = A.ease.io(v);
         if (p.kind === "pop") {
           if (v <= 0) return put(p, about(p, "scale(0.001)"), 0);
           put(p, v >= 1 ? "" : about(p, "scale(" + Math.max(0.001, 1 - Math.cos(2.5 * Math.PI * v) * Math.exp(-4.2 * v)).toFixed(4) + ")"));
@@ -631,6 +687,15 @@
           var l = (p.v || "0,-100,1").split(",").map(Number), ei = v * v;
           put(p, v <= 0 ? "" : "translate(" + (l[0] * ei).toFixed(2) + "," + (l[1] * ei).toFixed(2) + ")" + about(p, "scale(" + (1 + (l[2] - 1) * ei).toFixed(4) + ")"),
               v <= 0.7 ? null : Math.max(0, (1 - v) / 0.3));
+        } else if (p.kind === "key" || p.kind === "count") {
+          p.tr.set(Math.max(0, now - p.r0));
+          put(p, "", now < p.r0 ? 0 : null);
+        } else if (p.kind === "draw") {                                         /* from its first point to its last, dashes and all */
+          var dv = clamp((now - p.r0) / p.dur), de = p.v === "linear" ? dv : A.ease.io(dv);
+          if (dv >= 1) { p.n.setAttribute("d", p.n._d0); put(p, ""); return; }
+          var m = Math.max(1, Math.round(de * (p.pts.length - 1)));
+          p.n.setAttribute("d", "M" + p.pts.slice(0, m + 1).join("L"));
+          put(p, "", dv <= 0 ? 0 : null);
         } else if (p.kind === "show") put(p, "", v <= 0 ? 0 : v >= 1 ? null : v);
         else if (p.kind === "hide") put(p, "", v <= 0 ? null : v >= 1 ? 0 : 1 - v);
         else if (p.kind === "pulse") put(p, "", v <= 0 || v >= 1 ? null : 1 - 0.75 * Math.sin(Math.PI * v));
@@ -647,8 +712,7 @@
     return A.track(o.dur == null ? 0.9 : o.dur, function (u) {
       drawTo(shaft, L, E(clamp(u / (1 - H))));
       if (head) {
-        var h = clamp((u - (1 - H)) / H);
-        head.style.opacity = h >= 1 ? "" : String(h);
+        head.style.opacity = u >= 1 - H ? "" : "0";                            /* lands as the pen reaches it, no ghost */
       }
     });
   };
