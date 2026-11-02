@@ -262,38 +262,61 @@
     return ch === " " ? " " : " " + ch;                 /* a sign (-, ·, .) has one flap */
   }
   var NS_ = "http://www.w3.org/2000/svg", flapId = 0;
+  /* the board's own face: a condensed grotesque, as departure boards use (Barlow Condensed 600, OFL,
+     assets/barlow-condensed-600-latin.woff2 beside the page, from fonts.gstatic.com on 2 November 2026,
+     sha256 215a93c6...bb2b66; Arial Narrow if it is missing) */
+  var BOARD_FONT = "'Board Face', 'Arial Narrow', 'Helvetica Neue', sans-serif";
+  (function () {
+    if (typeof document === "undefined" || document.getElementById("board-face")) return;
+    var src = (document.currentScript && document.currentScript.src) || "";
+    var url = src ? src.replace(/[^\/]*$/, "") + "assets/barlow-condensed-600-latin.woff2" : "assets/barlow-condensed-600-latin.woff2";
+    var st = document.createElement("style"); st.id = "board-face";
+    st.textContent = "@font-face{font-family:'Board Face';font-weight:600;src:url('" + url + "') format('woff2');}";
+    document.head.appendChild(st);
+    if (document.fonts && document.fonts.load) document.fonts.load("600 40px 'Board Face'");
+  })();
   function mk(tag, at, parent) {
     var e = document.createElementNS(NS_, tag);
     for (var k in at) e.setAttribute(k, at[k]);
     if (parent) parent.appendChild(e);
     return e;
   }
+  function boardDefs(defs) {                        /* the cards' light: lit from above, the lower half in shade */
+    if (defs.querySelector("#board-top")) return;
+    var gt = mk("linearGradient", { id: "board-top", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    mk("stop", { offset: 0, "stop-color": "#3D3A39" }, gt); mk("stop", { offset: 1, "stop-color": "#2E2C2B" }, gt);
+    var gb = mk("linearGradient", { id: "board-bot", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    mk("stop", { offset: 0, "stop-color": "#262423" }, gb); mk("stop", { offset: 1, "stop-color": "#1E1C1B" }, gb);
+  }
   function flapBoard(n) {
     if (n._board) return n._board;
     var S = n.textContent, svg = n.ownerSVGElement, defs = svg.querySelector("defs") || svg.insertBefore(mk("defs", {}), svg.firstChild);
+    boardDefs(defs);
     var g = mk("g", { "data-board": "" }); g.style.display = "none"; n.parentNode.insertBefore(g, n.nextSibling);
     var fs = parseFloat(n.getAttribute("font-size")), y = parseFloat(n.getAttribute("y"));
-    var bb = n.getBBox(), N = S.length, gap = fs * 0.06;
-    var cw = Math.max(fs * 0.3, (bb.width - gap * (N - 1)) / N);                 /* equal cells over the label's own width */
-    var top = y - fs * 0.86, bot = y + fs * 0.22, mid = (top + bot) / 2, ch = bot - top, rx = fs * 0.07;
-    var fam = n.getAttribute("font-family"), wt = n.getAttribute("font-weight") || "400", it = n.getAttribute("font-style");
+    var bb = n.getBBox(), N = S.length, gap = fs * 0.07;
+    var cw = Math.max(fs * 0.34, (bb.width - gap * (N - 1)) / N);                /* equal cells over the label's own width */
+    var top = y - fs * 0.9, bot = y + fs * 0.24, mid = (top + bot) / 2, ch = bot - top, rx = fs * 0.06;
+    var lsz = ch * 0.78, base = mid + lsz * 0.36;                                /* the letter centred on the fold */
     var cells = [];
     for (var i = 0; i < N; i++) {
       if (S[i] === " ") continue;
       var x = bb.x + i * (cw + gap), cx = x + cw / 2, id = "flap" + (++flapId);
       var cT = mk("clipPath", { id: id + "t" }, defs); mk("rect", { x: x - 1, y: top - 1, width: cw + 2, height: mid - top + 1 }, cT);
       var cB = mk("clipPath", { id: id + "b" }, defs); mk("rect", { x: x - 1, y: mid, width: cw + 2, height: bot - mid + 1 }, cB);
+      mk("rect", { x: x, y: top + fs * 0.03, width: cw, height: ch, rx: rx, fill: "#000", opacity: 0.18 }, g);   /* its shadow on the tag */
+      mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#1E1C1B" }, g);                         /* the housing: a seam shows dark, never the paper */
       var half = function (clip, shade) {
         var h = mk("g", { "clip-path": "url(#" + id + clip + ")" }, g);
-        mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#302E2E" }, h);
-        var t = mk("text", { x: cx, y: y - fs * 0.02, "text-anchor": "middle", "font-family": fam, "font-size": fs * 0.86, "font-weight": wt,
-                             fill: "#FBF8F4" }, h);
-        if (it) t.setAttribute("font-style", it);
+        mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: clip === "t" ? "url(#board-top)" : "url(#board-bot)" }, h);
+        var t = mk("text", { x: cx, y: base, "text-anchor": "middle", "font-family": BOARD_FONT, "font-size": lsz, "font-weight": 600, fill: "#F3EEE4" }, h);
         var sh = shade ? mk("rect", { x: x, y: top, width: cw, height: ch, rx: rx, fill: "#000", opacity: 0 }, h) : null;
-        return { g: h, t: t, sh: sh };
+        return { g: h, t: t, sh: sh, r: h.firstChild };
       };
-      var c = { room: cw * 0.84, seq: flapSeq(S[i]), mid: mid, id: id, upper: half("t"), lower: half("b"), flap: half("t", true) };
-      mk("line", { x1: x, x2: x + cw, y1: mid, y2: mid, stroke: "#000", "stroke-opacity": 0.55, "stroke-width": Math.max(1, fs * 0.025) }, g);
+      var c = { room: cw * 0.86, seq: flapSeq(S[i]), mid: mid, id: id, upper: half("t"), lower: half("b"), flap: half("t", true) };
+      mk("rect", { x: x, y: mid - fs * 0.012, width: cw, height: fs * 0.024, fill: "#0E0D0D" }, g);           /* the hinge: a dark gap, there at every flap and at rest */
+      mk("rect", { x: x - fs * 0.012, y: mid - fs * 0.04, width: fs * 0.024, height: fs * 0.08, rx: fs * 0.01, fill: "#5A5654" }, g);        /* the axle's pins */
+      mk("rect", { x: x + cw - fs * 0.012, y: mid - fs * 0.04, width: fs * 0.024, height: fs * 0.08, rx: fs * 0.01, fill: "#5A5654" }, g);
       cells.push(c);
     }
     n._board = { g: g, cells: cells };
@@ -337,8 +360,9 @@
           c.flap.g.style.display = "";
           letter(c.flap.t, falling ? cur : nxt, c.room);
           c.flap.g.setAttribute("clip-path", "url(#" + c.id + (falling ? "t" : "b") + ")");
+          c.flap.r.setAttribute("fill", falling ? "url(#board-top)" : "url(#board-bot)");
           c.flap.g.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + Math.max(0.001, s).toFixed(3) + ") translate(0 " + (-c.mid) + ")");
-          c.flap.sh.setAttribute("opacity", (0.55 * (1 - s)).toFixed(3));       /* darker as it tips away from the light */
+          c.flap.sh.setAttribute("opacity", (0.6 * (1 - s)).toFixed(3));        /* darker as it tips away from the light */
         });
       });
     });
