@@ -21,6 +21,10 @@
  *   A.grow(el, {dur, dir, from})    this much: a filled bar (a <rect>, or every rect[data-bar] in a group)
  *                                   extends from its base to its drawn size; dir "right" (default) or
  *                                   "up"; from is the starting fraction (default 0)
+ *   A.settle(el, {dur, from})       a value moves: a dot (circle[data-dot]) travels from the faint ghost of its
+ *                                   old value (circle[data-ghost]) and settles on its new one, the thin link
+ *                                   (line[data-link], drawn ghost -> dot) following it; draw the dot where it
+ *                                   ends. With no ghost, from is the offset [dx, dy] it starts at
  *   A.camera(svg, from, to, {dur})  the camera: frames [x, y, w, h] in slide units; a CSS
  *                                   transform on the slide's <svg> box (the compositor's job)
  *   A.seq(a, b, ...)  one after the other     A.par(a, b, ...)  together
@@ -134,6 +138,35 @@
           r.setAttribute("height", (H * k).toFixed(2)); r.setAttribute("y", (Y + H * (1 - k)).toFixed(2));
         } else r.setAttribute("width", (parseFloat(g.w) * k).toFixed(2));
         r.style.opacity = k <= 0 ? "0" : "";            /* a zero bar's stroke would show as a hairline */
+      });
+    });
+  };
+
+  /* ---- settle: a dot travels from its old value to its new one, a link drawn behind it ---- */
+  A.settle = function (el, o) {
+    need(el, "settle"); o = o || {};
+    var E = o.ease || A.ease.io;
+    var S = els(el).map(function (g) {
+      var dot = g.matches("[data-dot]") ? g : g.querySelector("[data-dot]");
+      if (!dot) throw new Error("anim.settle: no [data-dot]");
+      var link = g.querySelector("[data-link]"), ghost = g.querySelector("[data-ghost]");
+      var at = function (n, k) { return parseFloat(n.getAttribute(k)); };
+      var dx = 0, dy = 0, L = null;
+      if (link) { L = { x1: at(link, "x1"), y1: at(link, "y1"), x2: at(link, "x2"), y2: at(link, "y2") }; dx = L.x1 - L.x2; dy = L.y1 - L.y2; }
+      else if (ghost) { dx = at(ghost, "cx") - at(dot, "cx"); dy = at(ghost, "cy") - at(dot, "cy"); }
+      else if (o.from) { dx = o.from[0]; dy = o.from[1]; }
+      return { dot: dot, link: link, L: L, dx: dx, dy: dy };
+    });
+    return A.track(o.dur == null ? 1.0 : o.dur, function (u) {
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u);
+      S.forEach(function (s) {
+        var x = (1 - e) * s.dx, y = (1 - e) * s.dy;
+        s.dot.style.translate = (!x && !y) ? "" : x.toFixed(3) + "px " + y.toFixed(3) + "px";
+        if (s.link) {
+          s.link.setAttribute("x2", (s.L.x1 + (s.L.x2 - s.L.x1) * e).toFixed(2));
+          s.link.setAttribute("y2", (s.L.y1 + (s.L.y2 - s.L.y1) * e).toFixed(2));
+          s.link.style.opacity = e <= 0 ? "0" : "";
+        }
       });
     });
   };
