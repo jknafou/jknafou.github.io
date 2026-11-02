@@ -612,6 +612,17 @@
           var f = (p.v || "0,100,0,1").split(",").map(Number), g = v * v;          /* gravity: distance grows as the square of time */
           put(p, v <= 0 ? "" : "translate(" + (f[0] * g).toFixed(2) + "," + (f[1] * g).toFixed(2) + ")" +
               about(p, "rotate(" + (f[2] * A.ease.out(v)).toFixed(2) + ") scale(" + (1 + (f[3] - 1) * g).toFixed(4) + ")"));
+        } else if (p.kind === "move") {                                         /* drawn where it ends; comes from data-v away */
+          var m = (p.v || "0,0").split(",").map(Number);
+          put(p, v >= 1 ? "" : "translate(" + (m[0] * (1 - e)).toFixed(2) + "," + (m[1] * (1 - e)).toFixed(2) + ")");
+        } else if (p.kind === "throw") {                                        /* the same, along an arc data-v[2] high */
+          var w = (p.v || "0,0,30").split(",").map(Number);
+          if (v <= 0) return put(p, "", 0);
+          put(p, v >= 1 ? "" : "translate(" + (w[0] * (1 - v)).toFixed(2) + "," + (w[1] * (1 - v) - w[2] * 4 * v * (1 - v)).toFixed(2) + ")");
+        } else if (p.kind === "leave") {                                        /* drawn where it starts; goes data-v away, shrinking, and fades */
+          var l = (p.v || "0,-100,1").split(",").map(Number), ei = v * v;
+          put(p, v <= 0 ? "" : "translate(" + (l[0] * ei).toFixed(2) + "," + (l[1] * ei).toFixed(2) + ")" + about(p, "scale(" + (1 + (l[2] - 1) * ei).toFixed(4) + ")"),
+              v <= 0.7 ? null : Math.max(0, (1 - v) / 0.3));
         } else if (p.kind === "show") put(p, "", v <= 0 ? 0 : v >= 1 ? null : v);
         else if (p.kind === "hide") put(p, "", v <= 0 ? null : v >= 1 ? 0 : 1 - v);
         else if (p.kind === "pulse") put(p, "", v <= 0 || v >= 1 ? null : 1 - 0.75 * Math.sin(Math.PI * v));
