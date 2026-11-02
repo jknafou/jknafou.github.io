@@ -429,7 +429,7 @@
     var at = [], d = 0;
     plans.forEach(function (p) { at.push(d); d += p.dur + 0.05; });
     var caret = '<tspan fill="#8C8682">|</tspan>';
-    return A.track(d, function (u) {
+    var tr = A.track(d, function (u) {
       var t = u * d;
       T.forEach(function (n, i) {
         if (u >= 1) { n.textContent = texts[i]; return; }
@@ -441,6 +441,16 @@
         n.innerHTML = esc(s) + (typing ? caret : "");
       });
     });
+    tr.cue = function (word) {                       /* the second at which `word` is fully typed, or null */
+      for (var i = 0; i < texts.length; i++) {
+        var m = texts[i].search(new RegExp("\\b" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b"));
+        if (m < 0) continue;
+        var e = m + word.length, want = texts[i].slice(0, e), K = plans[i].keys;
+        for (var k = 0; k < K.length; k++) if (K[k].s.length >= e && K[k].s.slice(0, e) === want) return at[i] + K[k].t;
+      }
+      return null;
+    };
+    return tr;
   };
 
   /* ---- think: a loading ring turning where the generated text will start, then gone ---- */
@@ -530,13 +540,83 @@
     } else first = A.pop(root);
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
     var vals = q("text[data-value]");
+    var scenes = [].slice.call(root.querySelectorAll('[data-concept="scene"]')).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
     return A.seq(
       first,
-      A.seq.apply(null, steps),
+      scenes.length ? (function () {                    /* the scene acts the words out as they are written */
+        var words = A.seq.apply(null, steps);
+        var cue = function (w) {
+          for (var i = 0, off = 0; i < steps.length; off += steps[i].dur, i++) {
+            var c = steps[i].cue ? steps[i].cue(w) : null;
+            if (c != null) return off + c;
+          }
+          return null;
+        };
+        return A.par(words, A.par.apply(null, scenes.map(function (n) { return A.act(n, { cue: cue }); })));
+      })() : A.seq.apply(null, steps),
       hl.length ? A.highlight(hl) : null,
       bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
       marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null
     );
+  };
+
+  /* ---- act: a scene's parts on one clock (concepts/scene.py). Each [data-act] part names its
+     kind, its start data-at and length data-dur in seconds, its origin data-o and its value data-v;
+     the part's own transform is kept and the act's is appended, so a part is a function of time only. */
+  A.act = function (el, o) {
+    need(el, "act"); o = o || {};
+    var parts = [].slice.call(el.querySelectorAll("[data-act]")).map(function (p) {
+      var num = function (k, d) { var v = p.getAttribute(k); return v == null ? d : +v; };
+      var org = (p.getAttribute("data-o") || "0,0").split(",").map(Number);
+      return { n: p, kind: p.getAttribute("data-act"), at: num("data-at", 0), dur: Math.max(0.001, num("data-dur", 0.5)),
+               o: org, v: p.getAttribute("data-v"),
+               base: p._actBase != null ? p._actBase : (p._actBase = p.getAttribute("transform") || "") };   /* read once: a second track must not take the first's frame for the drawing */
+    });
+    var end = parts.reduce(function (m, p) { return Math.max(m, p.at + p.dur); }, 0);
+    var about = function (p, t) { return " translate(" + p.o[0] + "," + p.o[1] + ") " + t + " translate(" + (-p.o[0]) + "," + (-p.o[1]) + ")"; };
+    var put = function (p, t, op) {
+      var tf = (p.base + (t ? " " + t : "")).trim();
+      if (tf) p.n.setAttribute("transform", tf); else p.n.removeAttribute("transform");
+      p.n.style.opacity = op == null ? "" : String(op);
+    };
+    var len = end + (o.hold || 0.2);
+    /* cue: inside a passage, each beat "word:second" of data-cues waits for its word to be typed;
+       between beats the scene plays at its own pace and holds, or hurries if the words come faster */
+    var marks = [[0, 0]];
+    if (o.cue) (el.getAttribute("data-cues") || "").split(",").filter(Boolean).forEach(function (c) {
+      var kv = c.split(":"), r = o.cue(kv[0]), sc = +kv[1], last = marks[marks.length - 1];
+      if (r != null && sc > last[0] && r > last[1]) marks.push([sc, r]);
+    });
+    var lastM = marks[marks.length - 1], real = lastM[1] + (len - lastM[0]);
+    var warp = function (r) {
+      for (var i = 0; i < marks.length - 1; i++) {
+        var a = marks[i], b = marks[i + 1];
+        if (r < b[1]) { var sg = b[0] - a[0], rg = b[1] - a[1]; return rg >= sg ? a[0] + Math.min(r - a[1], sg) : a[0] + (r - a[1]) * sg / rg; }
+      }
+      return lastM[0] + (r - lastM[1]);
+    };
+    return A.track(real, function (u) {
+      var t = warp(u * real);
+      parts.forEach(function (p) {
+        var v = clamp((t - p.at) / p.dur), e = A.ease.io(v);
+        if (p.kind === "pop") {
+          if (v <= 0) return put(p, about(p, "scale(0.001)"), 0);
+          put(p, v >= 1 ? "" : about(p, "scale(" + Math.max(0.001, 1 - Math.cos(2.5 * Math.PI * v) * Math.exp(-4.2 * v)).toFixed(4) + ")"));
+        } else if (p.kind === "grow" || p.kind === "shrink") {
+          var k = p.kind === "grow" ? A.ease.out(v) : 1 - A.ease.io(v);
+          var s = p.v === "y" ? "scale(1," + Math.max(0.001, k).toFixed(4) + ")" : "scale(" + Math.max(0.001, k).toFixed(4) + ",1)";
+          put(p, k >= 1 ? "" : about(p, s), k <= 0 ? 0 : null);
+        } else if (p.kind === "turn") {
+          put(p, v >= 1 ? "" : about(p, "rotate(" + ((1 - e) * +p.v).toFixed(2) + ")"));      /* from data-v degrees to the drawn pose */
+        } else if (p.kind === "fall") {
+          var f = (p.v || "0,100,0,1").split(",").map(Number), g = v * v;          /* gravity: distance grows as the square of time */
+          put(p, v <= 0 ? "" : "translate(" + (f[0] * g).toFixed(2) + "," + (f[1] * g).toFixed(2) + ")" +
+              about(p, "rotate(" + (f[2] * A.ease.out(v)).toFixed(2) + ") scale(" + (1 + (f[3] - 1) * g).toFixed(4) + ")"));
+        } else if (p.kind === "show") put(p, "", v <= 0 ? 0 : v >= 1 ? null : v);
+        else if (p.kind === "hide") put(p, "", v <= 0 ? null : v >= 1 ? 0 : 1 - v);
+        else if (p.kind === "pulse") put(p, "", v <= 0 || v >= 1 ? null : 1 - 0.75 * Math.sin(Math.PI * v));
+      });
+    });
   };
 
   /* ---- flow: the flow arrow's shaft drawn, its head arriving at the end ---- */
