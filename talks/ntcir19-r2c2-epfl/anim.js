@@ -562,7 +562,9 @@
       hl.length ? A.highlight(hl) : null,
       bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
       marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null,
-      calls.length ? A.seq.apply(null, calls.map(function (n) { return A.enter(n); })) : null   /* the passages worth reading, one by one */
+      calls.length ? A.seq.apply(null, calls.map(function (n) {     /* the passages worth reading, one by one, each with what it gave */
+        return n.getAttribute("data-concept") === "flow_arrow" ? A.flow(n) : A.enter(n);
+      })) : null
     );
   };
 
