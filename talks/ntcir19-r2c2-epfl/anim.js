@@ -348,13 +348,14 @@
   A.focus = function (el, o) {
     need(el, "focus"); o = o || {};
     var T = texts(el), E = o.ease || A.ease.out;
-    return A.track(o.dur == null ? 0.7 : o.dur, function (u) {
+    return A.track(o.dur == null ? 1.0 : o.dur, function (u) {
       var e = E(u);
       T.forEach(function (n) {
         if (u >= 1) { n.style.opacity = ""; n.style.filter = ""; n.style.letterSpacing = ""; return; }
-        n.style.opacity = String(e);
-        n.style.filter = "blur(" + (6 * (1 - e)).toFixed(2) + "px)";
-        n.style.letterSpacing = (0.22 * (1 - e)).toFixed(3) + "em";
+        var fs = parseFloat(n.getAttribute("font-size")) || 30;   /* the blur in proportion to the type */
+        n.style.opacity = String(Math.min(1, e * 1.3));
+        n.style.filter = "blur(" + (fs * 0.35 * (1 - e)).toFixed(2) + "px)";
+        n.style.letterSpacing = (0.35 * (1 - e)).toFixed(3) + "em";
       });
     });
   };
