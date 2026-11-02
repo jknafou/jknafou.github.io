@@ -30,8 +30,9 @@
  *   A.pop(el, {dur})                appears like a balloon: scales up from its centre past its size, and settles
  *   A.type(els, {dur, typos})       typed on a keyboard: each <text> in turn, character by character with a
  *                                   caret, now and then a typo that is noticed, erased and retyped
- *   A.flip(els, {dur})              a label on a split-flap board, as a station's departures: each character
- *                                   rattles through letters and lands, left to right
+ *   A.flip(els, {beat})             a class label on a split-flap board, as a station's departures: every cell
+ *                                   starts blank, all turn together through the same alphabet, flap by flap
+ *                                   (half a character folding over the midline), each stopping at its own letter
  *   A.count(els, {dur})             a number that grows from 0 to its value, its format kept ("2,091,427 passages")
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
@@ -39,8 +40,8 @@
  *                                   1 frame: the whole concept pops (A.pop)
  *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
  *                                     "type" for words someone wrote (A.type), "flip" for a label (A.flip),
- *                                     "count" for a number (A.count; unmarked text holding a digit counts,
- *                                     other unmarked text flips); its own stroked lines drawn by pen (A.draw)
+ *                                     "count" for a number (A.count); unmarked text ("A", a band's title) is part
+ *                                     of the frame; its own stroked lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
  *                                   4 gauges settle (A.fill)
  *                                   5 hand marks written ([data-verdict], A.write)
@@ -242,29 +243,84 @@
     });
   };
 
-  /* ---- flip: a split-flap board; each character rattles through its alphabet, then lands, left to right ---- */
-  var FLAP = { lo: "abcdefghijklmnopqrstuvwxyz", up: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", d: "0123456789" };
+  /* ---- flip: a split-flap board (Solari), for a label that names a class.
+   * Every character is a cell of the board. All cells start blank together and turn through the
+   * same sequence, one flap per beat, each stopping at its own character, so in "simple" the i
+   * lands before the s. A flap turns as the real one does: the upper half of the old character
+   * falls over the midline (folding to nothing), then the lower half of the new one unfolds from it,
+   * while the board shows the new upper half and the old lower half around the fold. A hairline
+   * in the paper colour splits each cell while it turns. ---- */
   function texts(el) {
     return els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
   }
+  var FLAP_SEQ = [" ABCDEFGHIJKLMNOPQRSTUVWXYZ", " abcdefghijklmnopqrstuvwxyz", " 0123456789"];
+  function flapSeq(ch) {
+    for (var i = 0; i < FLAP_SEQ.length; i++) if (FLAP_SEQ[i].indexOf(ch) > 0) return FLAP_SEQ[i].slice(0, FLAP_SEQ[i].indexOf(ch) + 1);
+    return ch === " " ? " " : " " + ch;                 /* a sign (-, ·, .) has one flap */
+  }
+  var NS_ = "http://www.w3.org/2000/svg", flapId = 0;
+  function flapBoard(n) {
+    if (n._board) return n._board;
+    var S = n.textContent, svg = n.ownerSVGElement, defs = svg.querySelector("defs");
+    if (!defs) { defs = document.createElementNS(NS_, "defs"); svg.insertBefore(defs, svg.firstChild); }
+    var g = document.createElementNS(NS_, "g"); g.setAttribute("data-board", ""); g.style.display = "none";
+    n.parentNode.insertBefore(g, n.nextSibling);
+    var cs = getComputedStyle(n), fs = parseFloat(n.getAttribute("font-size")) || parseFloat(cs.fontSize);
+    var y = parseFloat(n.getAttribute("y")), cells = [];
+    for (var i = 0; i < S.length; i++) {
+      if (S[i] === " ") continue;
+      var x0 = n.getStartPositionOfChar(i).x, x1 = n.getEndPositionOfChar(i).x, cx = (x0 + x1) / 2;
+      var top = y - fs * 0.92, mid = y - fs * 0.36, bot = y + fs * 0.26, w = x1 - x0;     /* a cell is its letter's own advance */
+      var id = "flap" + (++flapId), clips = {};
+      ["t", "b"].forEach(function (h) {
+        var cp = document.createElementNS(NS_, "clipPath"); cp.setAttribute("id", id + h);
+        var r = document.createElementNS(NS_, "rect");
+        r.setAttribute("x", cx - w / 2); r.setAttribute("width", w);
+        r.setAttribute("y", h === "t" ? top : mid); r.setAttribute("height", h === "t" ? mid - top : bot - mid);
+        cp.appendChild(r); defs.appendChild(cp); clips[h] = "url(#" + id + h + ")";
+      });
+      var part = function (clip) {
+        var t = n.cloneNode(false); t.removeAttribute("data-a"); t.removeAttribute("data-anim");
+        t.setAttribute("x", cx); t.setAttribute("text-anchor", "middle"); t.setAttribute("clip-path", clip);
+        t.setAttribute("textLength", (w * 0.94).toFixed(2)); t.setAttribute("lengthAdjust", "spacingAndGlyphs");   /* every letter fits the cell, as on a board */
+        g.appendChild(t); return t;
+      };
+      var cell = { tl: (w * 0.94).toFixed(2), seq: flapSeq(S[i]), mid: mid, upper: part(clips.t), lower: part(clips.b), flap: part(clips.t) };
+      var split = document.createElementNS(NS_, "line");
+      split.setAttribute("x1", cx - w / 2); split.setAttribute("x2", cx + w / 2); split.setAttribute("y1", mid); split.setAttribute("y2", mid);
+      split.setAttribute("stroke", "#FBF8F4"); split.setAttribute("stroke-width", Math.max(1, fs * 0.04));
+      g.appendChild(split); cell.split = split; cells.push(cell);
+    }
+    n._board = { g: g, cells: cells };
+    return n._board;
+  }
   A.flip = function (el, o) {
     need(el, "flip"); o = o || {};
-    var T = texts(el), S = T.map(function (n) { return n.textContent; });
-    var per = 0.045, rattle = 0.28, tick = 0.05;
-    var dur = o.dur || Math.max.apply(null, S.map(function (x) { return rattle + x.length * per; }));
+    var T = texts(el), beat = o.beat || 0.05;
+    var B = T.map(flapBoard);
+    var most = Math.max.apply(null, [1].concat(B.map(function (b) { return Math.max.apply(null, [1].concat(b.cells.map(function (c) { return c.seq.length - 1; }))); })));
+    var dur = most * beat + 0.05;
     return A.track(dur, function (u) {
-      var t = u * dur, step = Math.floor(t / tick);
+      var t = u * dur;
       T.forEach(function (n, i) {
-        if (u >= 1) { n.textContent = S[i]; return; }
-        if (u <= 0) { n.textContent = ""; return; }
-        var out = "";
-        for (var k = 0; k < S[i].length; k++) {
-          var ch = S[i][k], start = k * per * 0.5, land = rattle + k * per;
-          if (t < start) break;                                      /* this flap has not turned yet */
-          var set = /[a-z]/.test(ch) ? FLAP.lo : /[A-Z]/.test(ch) ? FLAP.up : /\d/.test(ch) ? FLAP.d : null;
-          out += t >= land || !set ? ch : set[(ch.charCodeAt(0) * 7 + step * 13 + k * 5) % set.length];
-        }
-        n.textContent = out;
+        var b = B[i];
+        if (u >= 1) { n.style.opacity = ""; b.g.style.display = "none"; return; }
+        n.style.opacity = "0"; b.g.style.display = u <= 0 ? "none" : "";
+        b.cells.forEach(function (c) {
+          var last = c.seq.length - 1, k = Math.min(last, Math.floor(t / beat)), p = k >= last ? 1 : (t - k * beat) / beat;
+          var cur = c.seq[k], nxt = c.seq[Math.min(last, k + 1)];
+          if (k >= last) {                                   /* landed: whole, no split */
+            c.upper.textContent = cur; c.lower.textContent = cur; c.flap.textContent = ""; c.split.style.display = "none";
+            c.upper.removeAttribute("textLength"); c.lower.removeAttribute("textLength"); return;
+          }
+          c.split.style.display = "";
+          [c.upper, c.lower, c.flap].forEach(function (x) { x.setAttribute("textLength", c.tl); });
+          c.upper.textContent = nxt; c.lower.textContent = cur;
+          var falling = p < 0.5, s = falling ? 1 - 2 * p : 2 * p - 1;
+          c.flap.textContent = falling ? cur : nxt;
+          c.flap.setAttribute("clip-path", falling ? c.upper.getAttribute("clip-path") : c.lower.getAttribute("clip-path"));
+          c.flap.setAttribute("transform", "translate(0 " + c.mid + ") scale(1 " + Math.max(0.001, s).toFixed(3) + ") translate(0 " + (-c.mid) + ")");
+        });
       });
     });
   };
@@ -389,10 +445,7 @@
       if (n.tagName.toLowerCase() === "text") return true;
       return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
     });
-    var kind = function (n) {
-      var k = n.getAttribute("data-anim");
-      return k || (/\d/.test(n.textContent) ? "count" : "flip");
-    };
+    var kind = function (n) { return n.getAttribute("data-anim"); };
     var steps = [], run = [], runKind = null;
     var flush = function () {
       if (!run.length) return;
@@ -402,7 +455,7 @@
     };
     writing.forEach(function (n) {
       if (n.tagName.toLowerCase() === "text") {
-        if (!n.textContent.trim()) return;
+        if (!n.textContent.trim() || !kind(n)) return;          /* unmarked text is part of the frame */
         var k = kind(n);
         if (k !== runKind) flush();
         runKind = k; run.push(n);
