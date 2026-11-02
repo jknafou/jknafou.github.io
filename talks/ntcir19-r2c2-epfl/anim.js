@@ -31,6 +31,8 @@
  *   A.type(els, {dur, typos, quick}) typed on a keyboard: each <text> in turn, character by character with a
  *                                   caret, now and then a typo that is noticed, erased and retyped;
  *                                   quick: a fixed word keyed in at twice the pace, never a typo
+ *   A.think(el, {dur})              the AI thinking: a loading ring turning just before the text it will
+ *                                   generate (put it right before A.type of that text)
  *   A.flip(els, {beat})             a class label on a split-flap board, as a station's departures: every cell
  *                                   starts blank, all turn together through the same alphabet, flap by flap
  *                                   (half a character folding over the midline), each stopping at its own letter
@@ -41,9 +43,10 @@
  *                                   1 frame: the whole concept pops (A.pop)
  *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
  *                                     "type" for words someone wrote (A.type), "flip" for a label (A.flip),
- *                                     "flip" for a question type's name only (A.flip), "count" for a number
- *                                     (A.count); unmarked text or "key", a fixed word ("Q", "A", a band's
- *                                     title, the handle), keyed in quickly without a typo (A.type quick);
+ *                                     "ai" for generated words (A.think, then A.type), "flip" for a question
+ *                                     type's or a run's name only (A.flip), "count" for a number (A.count);
+ *                                     unmarked text or "key", presented words ("Q", "A", a band's title, the
+ *                                     handle), keyed in quickly without a typo (A.type quick);
  *                                     its own stroked lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
  *                                   4 gauges settle (A.fill)
@@ -51,7 +54,7 @@
  *                                   Nested concepts and anything under [data-layer="frame"] (a logo) come
  *                                   in with the frame and are not taken apart. A container marked
  *                                   data-enter="drawn" (a list) instead has its rect[data-frame] drawn by hand,
- *                                   then its nested concepts pop one after another.
+ *                                   then its nested concepts enter, each by its own layers, one after another.
  *   A.camera(svg, from, to, {dur})  the camera: frames [x, y, w, h] in slide units; a CSS
  *                                   transform on the slide's <svg> box (the compositor's job)
  *   A.seq(a, b, ...)  one after the other     A.par(a, b, ...)  together
@@ -440,6 +443,29 @@
     });
   };
 
+  /* ---- think: a loading ring turning where the generated text will start, then gone ---- */
+  A.think = function (el, o) {
+    need(el, "think"); o = o || {};
+    var n = els(el)[0], fs = parseFloat(n.getAttribute("font-size")) || 30, r = fs * 0.3;
+    var bx = parseFloat(n.getAttribute("x")), by = parseFloat(n.getAttribute("y")) - fs * 0.34;
+    var anchor = n.getAttribute("text-anchor"), cx = anchor === "end" ? bx - r : anchor === "middle" ? bx : bx + r;
+    var ring = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    var C = 2 * Math.PI * r;
+    ring.innerHTML = '<circle cx="0" cy="0" r="' + r + '" fill="none" stroke="#8C8682" stroke-opacity="0.25" stroke-width="' + fs * 0.08 + '"/>'
+      + '<circle cx="0" cy="0" r="' + r + '" fill="none" stroke="#302E2E" stroke-width="' + fs * 0.08 + '" stroke-linecap="round" '
+      + 'stroke-dasharray="' + (C * 0.28).toFixed(2) + ' ' + C.toFixed(2) + '"/>';
+    ring.style.display = "none";
+    n.parentNode.insertBefore(ring, n);
+    var dur = o.dur == null ? 1.3 : o.dur;
+    return A.track(dur, function (u) {
+      if (u <= 0 || u >= 1) { ring.style.display = "none"; return; }
+      var t = u * dur, a = (t / 0.75) * 360;                                  /* a turn every 0.75 s */
+      var fade = Math.min(1, u / 0.12, (1 - u) / 0.12);
+      ring.style.display = ""; ring.style.opacity = String(fade);
+      ring.setAttribute("transform", "translate(" + cx.toFixed(2) + " " + by.toFixed(2) + ") rotate(" + (a - 90).toFixed(1) + ")");
+    });
+  };
+
   /* ---- fill: a gauge hunting up and down around its level before it sets; its number counts with it ---- */
   A.fill = function (bar, o) {
     need(bar, "fill"); o = o || {};
@@ -474,6 +500,7 @@
     var flush = function () {
       if (!run.length) return;
       if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
+      else if (runKind === "ai") steps.push(A.seq.apply(null, run.map(function (n) { return A.seq(A.think(n), A.type([n], { typos: o.typos })); })));
       else if (runKind === "key") steps.push(A.type(run, { quick: true }));
       else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n, { dur: 0.6 }); }, 0.06));
       run = []; runKind = null;
@@ -493,7 +520,7 @@
       var frames = q("rect[data-frame]");
       var kids = [].slice.call(root.querySelectorAll("[data-concept]")).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
       first = A.seq(frames.length ? A.draw(frames, { dur: 0.9 }) : null,
-                    kids.length ? A.stagger(kids, function (n) { return A.pop(n, { dur: 0.45 }); }, Math.min(0.08, 1.2 / kids.length)) : null);
+                    kids.length ? A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)) : null);   /* each row enters by its own layers */
     } else first = A.pop(root);
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
     var vals = q("text[data-value]");
