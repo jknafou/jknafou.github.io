@@ -491,7 +491,9 @@
         && !n.closest('[data-layer="frame"]') && !(n.ownerSVGElement && n.closest("svg") !== n.ownerSVGElement);
     };
     var q = function (sel) { return [].slice.call(root.querySelectorAll(sel)).filter(own); };
-    var writing = q("text:not([data-value]), path").filter(function (n) {
+    var writing = q("text:not([data-value]), path, g[data-empty]").filter(function (n) {
+      if (n.tagName.toLowerCase() === "g") return true;                          /* an empty place: it appears whole */
+      if (n.closest("[data-empty]")) return false;
       if (n.tagName.toLowerCase() === "text") return true;
       return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
     });
@@ -502,11 +504,15 @@
       if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
       else if (runKind === "ai") steps.push(A.seq.apply(null, run.map(function (n) { return A.seq(A.think(n), A.type([n], { typos: o.typos })); })));
       else if (runKind === "key") steps.push(A.type(run, { quick: true }));
+      else if (runKind === "empty") steps.push(A.stagger(run, function (n) { return A.reveal(n, { dur: 0.3 }); }, 0.08));
       else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n, { dur: 0.6 }); }, 0.06));
       run = []; runKind = null;
     };
     writing.forEach(function (n) {
-      if (n.tagName.toLowerCase() === "text") {
+      if (n.tagName.toLowerCase() === "g") {
+        if (runKind !== "empty") flush();
+        runKind = "empty"; run.push(n);
+      } else if (n.tagName.toLowerCase() === "text") {
         if (!n.textContent.trim()) return;
         var k = kind(n);
         if (k !== runKind) flush();
