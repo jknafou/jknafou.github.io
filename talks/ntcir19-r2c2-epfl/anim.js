@@ -9,6 +9,8 @@
  *   A.reveal(el, {dur, dy, dx})     fade in, rising a little (dy units; 0 for a plain fade)
  *   A.hide(el, {dur})               the reverse: fade out
  *   A.draw(el, {dur})               draw a stroked path (or every path in a group) from its start
+ *   A.write(el, {dur, lift})        written by hand: each stroked path of el drawn in turn, at a pen's
+ *                                   pace (slow start, quick middle), a short pen-lift (lift s) between
  *   A.flow(el, {dur})               a flow arrow (concepts/flow_arrow.py): shaft drawn, then head
  *   A.pulse(el, {dur})              an ink bead travelling along a flow arrow's shaft, for rest loops
  *   A.highlight(el, {dur, out})     a marker band (a <rect data-hl>) swept in from the left;
@@ -187,6 +189,21 @@
     need(el, "draw"); o = o || {};
     var P = paths(el), Ls = P.map(function (p) { return p.getTotalLength(); }), E = o.ease || A.ease.io;
     return A.track(o.dur == null ? 0.8 : o.dur, function (u) { P.forEach(function (p, i) { drawTo(p, Ls[i], E(u)); }); });
+  };
+
+  /* ---- write: the strokes of a mark drawn one after another, as a hand writes them ---- */
+  A.write = function (el, o) {
+    need(el, "write"); o = o || {};
+    var P = paths(el), Ls = P.map(function (p) { return p.getTotalLength(); });
+    var lift = o.lift == null ? 0.12 : o.lift, total = Ls.reduce(function (a, b) { return a + b; }, 0) || 1;
+    var dur = o.dur == null ? 0.55 : o.dur, ink = dur - lift * (P.length - 1);
+    var pen = function (x) { return x < 0.15 ? 0.5 * x * x / 0.15 : x < 0.75 ? 0.075 + (x - 0.15) * 1.25 : 0.825 + 0.175 * A.ease.out((x - 0.75) / 0.25); };
+    var spans = [], at = 0;
+    Ls.forEach(function (L) { var d = ink * L / total; spans.push([at, d]); at += d + lift; });
+    return A.track(dur, function (u) {
+      var t = u * dur;
+      P.forEach(function (p, i) { drawTo(p, Ls[i], u >= 1 ? 1 : pen(clamp((t - spans[i][0]) / spans[i][1]))); });
+    });
   };
 
   /* ---- flow: the flow arrow's shaft drawn, its head arriving at the end ---- */
