@@ -531,12 +531,17 @@
     });
     flush();
     var drawn = root.getAttribute("data-enter") === "drawn";
-    var first;
+    var first, calls = [];
     if (drawn) {
       var frames = q("rect[data-frame]");
       var kids = [].slice.call(root.querySelectorAll("[data-concept]")).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
+      var marks_ = kids.filter(function (n) { return n.getAttribute("data-concept") === "emblem"; });
+      calls = kids.filter(function (n) { return n.hasAttribute("data-callout"); });
+      kids = kids.filter(function (n) { return marks_.indexOf(n) < 0 && calls.indexOf(n) < 0; });
+      marks_.forEach(function (m) { A.act(m, { hold: 0 }).set(+m.getAttribute("data-t")); });   /* an emblem is its scene, posed */
       first = A.seq(frames.length ? A.draw(frames, { dur: 0.9 }) : null,
-                    kids.length ? A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)) : null);   /* each row enters by its own layers */
+                    kids.length ? A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)) : null,   /* each row enters by its own layers */
+                    marks_.length ? A.stagger(marks_, function (n) { return A.pop(n); }, 0.08) : null);
     } else first = A.pop(root);
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
     var vals = q("text[data-value]");
@@ -556,7 +561,8 @@
       })() : A.seq.apply(null, steps),
       hl.length ? A.highlight(hl) : null,
       bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
-      marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null
+      marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null,
+      calls.length ? A.seq.apply(null, calls.map(function (n) { return A.enter(n); })) : null   /* the passages worth reading, one by one */
     );
   };
 
