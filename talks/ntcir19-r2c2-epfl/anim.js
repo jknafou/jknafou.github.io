@@ -30,17 +30,24 @@
  *   A.pop(el, {dur})                appears like a balloon: scales up from its centre past its size, and settles
  *   A.type(els, {dur, typos})       typed on a keyboard: each <text> in turn, character by character with a
  *                                   caret, now and then a typo that is noticed, erased and retyped
+ *   A.flip(els, {dur})              a label on a split-flap board, as a station's departures: each character
+ *                                   rattles through letters and lands, left to right
+ *   A.count(els, {dur})             a number that grows from 0 to its value, its format kept ("2,091,427 passages")
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
  *   A.enter(el)                     ONE CONCEPT ENTERING, LAYER BY LAYER, the deck's standard entry:
  *                                   1 frame: the whole concept pops (A.pop)
- *                                   2 writing, in document order: its own <text> typed (A.type),
- *                                     its own stroked lines drawn by pen (A.draw)
+ *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
+ *                                     "type" for words someone wrote (A.type), "flip" for a label (A.flip),
+ *                                     "count" for a number (A.count; unmarked text holding a digit counts,
+ *                                     other unmarked text flips); its own stroked lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
  *                                   4 gauges settle (A.fill)
  *                                   5 hand marks written ([data-verdict], A.write)
  *                                   Nested concepts and anything under [data-layer="frame"] (a logo) come
- *                                   in with the frame and are not taken apart.
+ *                                   in with the frame and are not taken apart. A container marked
+ *                                   data-enter="drawn" (a list) instead has its rect[data-frame] drawn by hand,
+ *                                   then its nested concepts pop one after another.
  *   A.camera(svg, from, to, {dur})  the camera: frames [x, y, w, h] in slide units; a CSS
  *                                   transform on the slide's <svg> box (the compositor's job)
  *   A.seq(a, b, ...)  one after the other     A.par(a, b, ...)  together
@@ -190,7 +197,7 @@
   /* ---- draw: a stroked path appears from its start ---- */
   function paths(el) {
     return els(el).reduce(function (a, n) {
-      return a.concat(n.tagName && n.tagName.toLowerCase() === "path" ? [n] : [].slice.call(n.querySelectorAll("path")));
+      return a.concat(n.tagName && /^(path|rect|circle|line|polyline)$/i.test(n.tagName) ? [n] : [].slice.call(n.querySelectorAll("path")));
     }, []);
   }
   function drawTo(p, L, e) {
@@ -225,11 +232,63 @@
     need(el, "pop"); o = o || {};
     var L = els(el);
     L.forEach(function (n) { n.style.transformBox = "fill-box"; n.style.transformOrigin = "center"; });
+    var O = L.map(function (n) { var a = parseFloat(n.getAttribute("opacity")); return isNaN(a) ? 1 : a; });   /* a dimmed row stays dimmed */
     return A.track(o.dur == null ? 0.6 : o.dur, function (u) {
       var k = u >= 1 ? 1 : 1 - Math.cos(u * Math.PI * 2.5) * Math.exp(-4.2 * u);     /* 0 -> ~1.1 -> ~0.97 -> 1 */
       L.forEach(function (n) {
         n.style.scale = u >= 1 ? "" : Math.max(0, k).toFixed(4);
-        n.style.opacity = u >= 1 ? "" : String(clamp(u / 0.2));
+        n.style.opacity = u >= 1 ? "" : String(O[L.indexOf(n)] * clamp(u / 0.2));
+      });
+    });
+  };
+
+  /* ---- flip: a split-flap board; each character rattles through its alphabet, then lands, left to right ---- */
+  var FLAP = { lo: "abcdefghijklmnopqrstuvwxyz", up: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", d: "0123456789" };
+  function texts(el) {
+    return els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
+  }
+  A.flip = function (el, o) {
+    need(el, "flip"); o = o || {};
+    var T = texts(el), S = T.map(function (n) { return n.textContent; });
+    var per = 0.045, rattle = 0.28, tick = 0.05;
+    var dur = o.dur || Math.max.apply(null, S.map(function (x) { return rattle + x.length * per; }));
+    return A.track(dur, function (u) {
+      var t = u * dur, step = Math.floor(t / tick);
+      T.forEach(function (n, i) {
+        if (u >= 1) { n.textContent = S[i]; return; }
+        if (u <= 0) { n.textContent = ""; return; }
+        var out = "";
+        for (var k = 0; k < S[i].length; k++) {
+          var ch = S[i][k], start = k * per * 0.5, land = rattle + k * per;
+          if (t < start) break;                                      /* this flap has not turned yet */
+          var set = /[a-z]/.test(ch) ? FLAP.lo : /[A-Z]/.test(ch) ? FLAP.up : /\d/.test(ch) ? FLAP.d : null;
+          out += t >= land || !set ? ch : set[(ch.charCodeAt(0) * 7 + step * 13 + k * 5) % set.length];
+        }
+        n.textContent = out;
+      });
+    });
+  };
+
+  /* ---- count: a number grows from 0 to its value; the words around it and its format stay ---- */
+  A.count = function (el, o) {
+    need(el, "count"); o = o || {};
+    var T = texts(el), P = T.map(function (n) {
+      var s0 = n.textContent, m = s0.match(/\d[\d,]*(\.\d+)?/);
+      if (!m) return { s0: s0 };
+      return { s0: s0, pre: s0.slice(0, m.index), post: s0.slice(m.index + m[0].length), v: parseFloat(m[0].replace(/,/g, "")),
+               dec: m[1] ? m[1].length - 1 : 0, comma: m[0].indexOf(",") >= 0 };
+    });
+    var fmt = function (p, x) {
+      var s1 = x.toFixed(p.dec);
+      if (p.comma) { var parts = s1.split("."); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ","); s1 = parts.join("."); }
+      return p.pre + s1 + p.post;
+    };
+    return A.track(o.dur == null ? 1.1 : o.dur, function (u) {
+      var e = A.ease.out(u);
+      T.forEach(function (n, i) {
+        var p = P[i];
+        if (u >= 1 || p.v == null) { n.textContent = u <= 0 && p.v == null ? "" : p.s0; return; }
+        n.textContent = u <= 0 ? "" : fmt(p, p.v * e);
       });
     });
   };
@@ -330,17 +389,38 @@
       if (n.tagName.toLowerCase() === "text") return true;
       return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
     });
-    var steps = [], run = [];
-    var flush = function () { if (run.length) { steps.push(A.type(run, { typos: o.typos })); run = []; } };
+    var kind = function (n) {
+      var k = n.getAttribute("data-anim");
+      return k || (/\d/.test(n.textContent) ? "count" : "flip");
+    };
+    var steps = [], run = [], runKind = null;
+    var flush = function () {
+      if (!run.length) return;
+      if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
+      else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n); }, 0.08));
+      run = []; runKind = null;
+    };
     writing.forEach(function (n) {
-      if (n.tagName.toLowerCase() === "text") { if (n.textContent.trim()) run.push(n); }
-      else { flush(); steps.push(A.draw(n, { dur: Math.min(0.6, Math.max(0.2, n.getTotalLength() / 1400)) })); }
+      if (n.tagName.toLowerCase() === "text") {
+        if (!n.textContent.trim()) return;
+        var k = kind(n);
+        if (k !== runKind) flush();
+        runKind = k; run.push(n);
+      } else { flush(); steps.push(A.draw(n, { dur: Math.min(0.6, Math.max(0.2, n.getTotalLength() / 1400)) })); }
     });
     flush();
+    var drawn = root.getAttribute("data-enter") === "drawn";
+    var first;
+    if (drawn) {
+      var frames = q("rect[data-frame]");
+      var kids = [].slice.call(root.querySelectorAll("[data-concept]")).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
+      first = A.seq(frames.length ? A.draw(frames, { dur: 0.9 }) : null,
+                    kids.length ? A.stagger(kids, function (n) { return A.pop(n, { dur: 0.45 }); }, Math.min(0.08, 1.2 / kids.length)) : null);
+    } else first = A.pop(root);
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
     var vals = q("text[data-value]");
     return A.seq(
-      A.pop(root),
+      first,
       A.seq.apply(null, steps),
       hl.length ? A.highlight(hl) : null,
       bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
