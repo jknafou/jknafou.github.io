@@ -60,7 +60,7 @@
  *                                   A composition marked data-enter="built" (the pipeline) is built in reading
  *                                   order: each nested concept enters by its own layers (a flow arrow by A.flow),
  *                                   its own lines are drawn, its own words entered by their kind (data-anim), a
- *                                   <g data-ticks> ticked in with its count, anything else pops, a marker band
+ *                                   <g data-ticks> ticked in with its count (its [data-tick] chips popped, one each), anything else pops, a marker band
  *                                   left for A.highlight; a <g data-together> runs its parts at once, a
  *                                   <g data-ripple="s"> s apart; data-marks="last": its parts' hand marks are
  *                                   written after the whole is built, one after another.
@@ -588,9 +588,11 @@
   }
   /* a <g data-ticks>: things written in, one tick each, their number counting in step; then what they are ("calls") */
   function ticksTrack(n) {
-    var P = [].slice.call(n.querySelectorAll("path")), T = [].slice.call(n.querySelectorAll("text")), c = T[0];
+    var G = [].slice.call(n.querySelectorAll("[data-tick]"));        /* marks that say their kind (a tool's chip): each pops */
+    var P = G.length ? G : [].slice.call(n.querySelectorAll("path"));
+    var T = [].slice.call(n.querySelectorAll("text")).filter(function (t) { return !t.closest("[data-tick]"); }), c = T[0];
     var each = +(n.getAttribute("data-each") || 0.2);                 /* a tick 0.2 s; one measure (a length bar) longer */
-    return A.seq(A.par(A.stagger(P, function (p) { return A.draw(p, { dur: each }); }, each),
+    return A.seq(A.par(A.stagger(P, function (p) { return G.length ? A.pop(p, { dur: Math.max(0.3, each * 1.5) }) : A.draw(p, { dur: each }); }, each),
                        c ? A.count(c, { dur: each * P.length, ease: A.ease.lin }) : null),
                  T.length > 1 ? A.type(T.slice(1), { quick: true }) : null);
   }
