@@ -55,6 +55,10 @@
  *                                   in with the frame and are not taken apart. A container marked
  *                                   data-enter="drawn" (a list) instead has its rect[data-frame] drawn by hand,
  *                                   then its nested concepts enter, each by its own layers, one after another.
+ *                                   A composition marked data-enter="built" (the pipeline) is built in reading
+ *                                   order: each nested concept enters by its own layers (a flow arrow by A.flow),
+ *                                   its own lines are drawn, its own words keyed, anything else pops; a
+ *                                   <g data-together> runs its parts at once, a <g data-ripple="s"> s apart.
  *   A.camera(svg, from, to, {dur})  the camera: frames [x, y, w, h] in slide units; a CSS
  *                                   transform on the slide's <svg> box (the compositor's job)
  *   A.seq(a, b, ...)  one after the other     A.par(a, b, ...)  together
@@ -366,7 +370,7 @@
   A.count = function (el, o) {
     need(el, "count"); o = o || {};
     var T = texts(el), P = T.map(function (n) {                /* the first number, or the last with data-count="last" */
-      var s0 = n.textContent, all = s0.match(/\d[\d,]*(\.\d+)?/g) || [], m = null, re = /\d[\d,]*(\.\d+)?/g, x;
+      var s0 = n._full != null ? n._full : (n._full = n.textContent), all = s0.match(/\d[\d,]*(\.\d+)?/g) || [], m = null, re = /\d[\d,]*(\.\d+)?/g, x;
       while ((x = re.exec(s0))) { m = x; if (n.getAttribute("data-count") !== "last") break; }
       if (!m || !all.length) return { s0: s0 };
       return { s0: s0, pre: s0.slice(0, m.index), post: s0.slice(m.index + m[0].length), v: parseFloat(m[0].replace(/,/g, "")),
@@ -431,7 +435,7 @@
   A.type = function (el, o) {
     need(el, "type"); o = o || {};
     var T = els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
-    var texts = T.map(function (n) { return n.textContent; }), total = texts.join("").length || 1;
+    var texts = T.map(function (n) { return n._full != null ? n._full : (n._full = n.textContent); }), total   /* the words as drawn, read once */ = texts.join("").length || 1;
     var cps = Math.max(o.quick ? 48 : 22, total / (o.dur || (o.quick ? 1.2 : 3.2)));   /* a typist's pace, quicker for long text */
     var budget = o.quick ? 0 : o.typos == null ? 2 : o.typos, left = budget;
     var plans = texts.map(function (S) {
@@ -508,8 +512,8 @@
   A.fill = function (bar, o) {
     need(bar, "fill"); o = o || {};
     var full = parseFloat(bar.getAttribute("data-full")), frac = parseFloat(bar.getAttribute("data-frac"));
-    var w0 = bar.getAttribute("width"), min = parseFloat(bar.getAttribute("height")) || 0;
-    var val = o.value || null, v0 = val ? val.textContent : null, top = parseFloat(v0);
+    var w0 = bar._w0 != null ? bar._w0 : (bar._w0 = bar.getAttribute("width")), min = parseFloat(bar.getAttribute("height")) || 0;
+    var val = o.value || null, v0 = val ? (val._full != null ? val._full : (val._full = val.textContent)) : null, top = parseFloat(v0);
     return A.track(o.dur == null ? 1.5 : o.dur, function (u) {
       if (u >= 1) { bar.setAttribute("width", w0); bar.style.opacity = ""; if (val) { val.textContent = v0; val.style.opacity = ""; } return; }
       if (val) val.style.opacity = u <= 0 ? "0" : "";                         /* the number belongs to the gauge's beat */
@@ -532,13 +536,47 @@
         && !n.closest('[data-layer="frame"]') && !(n.ownerSVGElement && n.closest("svg") !== n.ownerSVGElement);
     };
     var q = function (sel) { return [].slice.call(root.querySelectorAll(sel)).filter(own); };
+    if (root.getAttribute("data-enter") === "built") {   /* a composition: its parts one after another, in reading order */
+      var one = function (c) {                            /* one part, by its own rule */
+        var t = c.tagName.toLowerCase(), k = c.getAttribute("data-concept");
+        if (k === "flow_arrow") {                         /* an arrow inside a composition: paced by its length */
+          var sh = c.querySelector('[data-part="shaft"]');
+          return A.flow(c, { dur: Math.min(0.7, 0.25 + (sh ? sh.getTotalLength() : 0) / 1000) });
+        }
+        if (k) return A.enter(c);
+        if (t === "path" && c.getAttribute("fill") === "none") return A.draw(c, { dur: Math.min(0.6, Math.max(0.2, c.getTotalLength() / 1400)) });
+        if (t === "g") {
+          var kids = [].slice.call(c.children).map(one).filter(Boolean);
+          if (c.hasAttribute("data-together")) return A.par.apply(null, kids);                       /* these run at once */
+          if (c.hasAttribute("data-ripple")) return A.stagger(kids, function (x) { return x; }, +c.getAttribute("data-ripple"));
+          return A.seq.apply(null, kids);
+        }
+        if (t === "text") return null;                    /* words are keyed by the walk, in runs */
+        return t === "defs" ? null : A.pop(c, { dur: 0.4 });
+      };
+      var walk = function (g) {                           /* in order; consecutive words keyed as one run */
+        var steps0 = [], words0 = [];
+        var say = function () { if (words0.length) steps0.push(A.type(words0, { quick: true })); words0 = []; };
+        [].slice.call(g.children).forEach(function (c) {
+          if (c.tagName.toLowerCase() === "text") { if ((c._full != null ? c._full : c.textContent).trim()) words0.push(c); return; }
+          say();
+          if (c.tagName.toLowerCase() === "g" && !c.getAttribute("data-concept") && !c.hasAttribute("data-together") && !c.hasAttribute("data-ripple"))
+            steps0.push(walk(c));
+          else steps0.push(one(c));
+        });
+        say();
+        return A.seq.apply(null, steps0.filter(Boolean));
+      };
+      return walk(root);
+    }
     var drawn = root.getAttribute("data-enter") === "drawn";
     var board = drawn ? q('text[data-anim="flip"]') : [];                       /* a list's run name turns in first */
-    var writing = q("text:not([data-value]), path, g[data-empty]").filter(function (n) {
+    var writing = q("text:not([data-value]), path, g[data-empty], g[data-ticks]").filter(function (n) {
+      if (n.tagName.toLowerCase() !== "g" && n.closest("[data-ticks]")) return false;   /* ticks and their count go together */
       if (n.hasAttribute("data-callout") || board.indexOf(n) >= 0) return false;   /* a callout's leader is drawn with its callout */
       if (n.tagName.toLowerCase() === "g") return true;                          /* an empty place: it appears whole */
       if (n.closest("[data-empty]")) return false;
-      if (n.tagName.toLowerCase() === "text") return true;
+      if (n.tagName.toLowerCase() === "text") return !n.closest("[data-verdict]");   /* a verdict's words come after its mark */
       return !n.closest("[data-verdict]") && !n.closest("[data-part]") && n.getAttribute("fill") === "none" && n.getAttribute("stroke") && n.getAttribute("stroke") !== "none";
     });
     var kind = function (n) { return n.getAttribute("data-anim") || "key"; };     /* a fixed word: keyed in quickly */
@@ -560,11 +598,19 @@
       run = []; runKind = null;
     };
     writing.forEach(function (n) {
+      if (n.hasAttribute("data-ticks")) {             /* things written in, one tick each, their number counting in step */
+        flush();
+        var P = [].slice.call(n.querySelectorAll("path")), T = [].slice.call(n.querySelectorAll("text")), c = T[0], each = 0.2;
+        steps.push(A.par(A.stagger(P, function (p) { return A.draw(p, { dur: each }); }, each),
+                         c ? A.count(c, { dur: each * P.length, ease: A.ease.lin }) : null));
+        if (T.length > 1) steps.push(A.type(T.slice(1), { quick: true }));   /* what they are, once counted ("calls") */
+        return;
+      }
       if (n.tagName.toLowerCase() === "g") {
         if (runKind !== "empty") flush();
         runKind = "empty"; run.push(n);
       } else if (n.tagName.toLowerCase() === "text") {
-        if (!n.textContent.trim()) return;
+        if (!(n._full != null ? n._full : n.textContent).trim()) return;   /* the words as drawn, not as a run left them */
         var k = kind(n);
         if (k !== runKind) flush();
         runKind = k; run.push(n);
@@ -607,7 +653,10 @@
         };
         return A.par(then, A.par.apply(null, scenes.map(function (n) { return A.act(n, { cue: cue }); })));
       })(),
-      marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null,
+      marks.length ? A.seq(A.wait(0.15), A.write(marks), (function () {
+        var said = q("[data-verdict] text");
+        return said.length ? A.type(said, { quick: true }) : null;
+      })()) : null,
       calls.length ? A.seq.apply(null, calls.map(function (n) {     /* the passages worth reading, one by one, each with what it gave */
         var c = n.getAttribute("data-concept");
         if (!c) return A.draw(n, { dur: 0.45 });                              /* the leader from its row */
