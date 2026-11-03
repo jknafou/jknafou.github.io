@@ -1,0 +1,12 @@
+{
+ "slides": [
+  {
+   "id": "01-title",
+   "title": "Knowing when an AI answer is wrong",
+   "part": 0,
+   "continues": false,
+   "notes": "Introduce yourself; the talk is about telling, from what the pipeline did, when its answer is wrong.",
+   "hash": "db07336faf79d48f"
+  }
+ ]
+}
