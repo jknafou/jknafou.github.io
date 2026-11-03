@@ -64,10 +64,12 @@
  *                                   left for A.highlight; a <g data-together> runs its parts at once, a
  *                                   <g data-ripple="s"> s apart; data-marks="last": its parts' hand marks are
  *                                   written after the whole is built, one after another.
- *   A.travel(ball, {along, dur})    goes on to this step: the ball (concepts/question_token.py) rolls along a pipe
- *                                   (`along`: a flow arrow or a list of them, in order) from its start to the
- *                                   next box and stops, straight through each box between two pipes at the same
- *                                   speed; draw the ball where it stops. Not move (re-placing)
+ *   A.travel(ball, {along, into, dur}) goes on to this step: the ball (concepts/question_token.py) rolls along
+ *                                   a pipe (`along`: a flow arrow or a list of them, in order) from its start,
+ *                                   straight through each box between two pipes at the same speed, and on past
+ *                                   the last arrowhead into the next box, as a coin into a machine's slot: hidden
+ *                                   by each box's edge, gone once it has rolled in (the boxes found where the
+ *                                   pipes meet them, or named by `into`). Not move (re-placing)
  *                                   nor pulse (a bead, for loops)
  *   A.emit(out, {along, draw})      this came out of this step: an ink bead leaves the box along its out-arrow
  *                                   (`along`, drawn behind the bead unless draw: false), and where it arrives
@@ -901,30 +903,94 @@
     return { S: S, Ls: Ls, total: legs.reduce(function (a, g) { return a + g.L; }, 0), at: at };
   }
 
-  /* ---- travel: the ball rolls along a pipe to the next box and stops ("goes on to this step").
-   * The ball is drawn where it stops (its centre data-cx / data-cy, else its box's centre); it starts at
-   * the pipe's start and rolls along every shaft of `along` to the point of the last one nearest its place.
+  /* ---- travel: the ball rolls along a pipe into the next box ("goes on to this step").
+   * It starts at the pipe's start, rolls along every shaft of `along`, straight through each box between two
+   * pipes, and at the end of the last one on past the arrowhead into the box, as a coin into a machine's
+   * slot: wherever it is inside a box it is hidden, cut by the box's outer edge, so it enters each box and
+   * leaves it through its edges and is gone once it has rolled in. The boxes are found where the pipes meet
+   * them (the smallest rect there that the pipe does not start in), or named: `into` (an element or a list).
    * Its turning body ([data-roll], or the part named <name>-roll) turns a whole number of times, so the
-   * letter is upright where it starts and where it stops. ---- */
+   * letter is upright where it starts. Where no box is found the ball stops at its drawn place (its centre
+   * data-cx / data-cy, else its box's centre), as before. ---- */
+  var maskId = 0;
+  function rectIn(r, ref) {                      /* a rect's frame in ref's user space, grown by half its outline */
+    var m = ref.getCTM().inverse().multiply(r.getCTM()), b = r.getBBox(), h = (parseFloat(r.getAttribute("stroke-width")) || 0) / 2;
+    var p = [[b.x - h, b.y - h], [b.x + b.width + h, b.y + b.height + h]].map(function (q) {
+      var pt = r.ownerSVGElement.createSVGPoint(); pt.x = q[0]; pt.y = q[1]; return pt.matrixTransform(m);
+    });
+    return { x: Math.min(p[0].x, p[1].x), y: Math.min(p[0].y, p[1].y), w: Math.abs(p[1].x - p[0].x), h: Math.abs(p[1].y - p[0].y),
+             rx: (parseFloat(r.getAttribute("rx")) || 0) * Math.abs(m.a) + h };
+  }
+  function inside(f, q) { return q.x >= f.x && q.x <= f.x + f.w && q.y >= f.y && q.y <= f.y + f.h; }
   A.travel = function (el, o) {
     need(el, "travel"); o = o || {};
-    var B = els(el)[0], P = pipe(o.along), E = o.ease || A.ease.io;
+    var B = els(el)[0], P = pipe(o.along), E = o.ease || A.ease.io, svg = B.ownerSVGElement;
+    var t0 = B.style.translate; B.style.translate = "";
     var b = B.getBBox(), cx = B.hasAttribute("data-cx") ? +B.getAttribute("data-cx") : b.x + b.width / 2,
         cy = B.hasAttribute("data-cy") ? +B.getAttribute("data-cy") : b.y + b.height / 2;
-    var last = P.S[P.S.length - 1], LL = P.Ls[P.Ls.length - 1], best = 0, bd = Infinity;
-    for (var i = 0; i <= 200; i++) {               /* where on the last shaft the ball stops */
-      var q = last.getPointAtLength(LL * i / 200), dd = (q.x - cx) * (q.x - cx) + (q.y - cy) * (q.y - cy);
-      if (dd < bd) { bd = dd; best = LL * i / 200; }
-    }
-    var stop = P.total - LL + best, end = P.at(stop), rx = cx - end.x, ry = cy - end.y;   /* what is left to its drawn place */
     var name = B.getAttribute("data-a"), roll = B.querySelector("[data-roll]") || (name ? B.querySelector('[data-a="' + name + '-roll"]') : null);
     var rad = o.r || (roll && roll.querySelector("circle") ? +roll.querySelector("circle").getAttribute("r") : b.height / 2) || 1;
+    var rects = [].slice.call(svg.querySelectorAll("rect")).filter(function (r) {
+      return !B.contains(r) && !r.hasAttribute("data-hl") && !r.closest("defs, mask, clipPath");
+    }).map(function (r) { return { r: r, f: rectIn(r, B) }; }).filter(function (c) { return c.f.w >= 2 * rad && c.f.h >= 2 * rad; });
+    var boxAt = function (q, from) {               /* the smallest box holding q that `from` (before the door) is outside of */
+      var best = null;
+      rects.forEach(function (c) { if (inside(c.f, q) && !inside(c.f, from) && (!best || c.f.w * c.f.h < best.w * best.h)) best = c.f; });
+      return best;
+    };
+    var named = o.into ? els(o.into).map(function (r) { return rectIn(r.tagName.toLowerCase() === "rect" ? r : r.querySelector("rect"), B); }) : [];
+    var holes = named.slice(), last = P.S[P.S.length - 1], LL = P.Ls[P.Ls.length - 1];
+    P.S.forEach(function (s, i) {                  /* the boxes the pipes pass through: where one shaft ends and the next starts */
+      if (!i || named.length) return;
+      var a0 = P.S[i - 1].getPointAtLength(P.Ls[i - 1]), b0 = s.getPointAtLength(0);
+      var f = boxAt({ x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 }, a0); if (f) holes.push(f);
+    });
+    var e1 = last.getPointAtLength(LL), e0 = last.getPointAtLength(Math.max(0, LL - 1));
+    var dl = Math.hypot(e1.x - e0.x, e1.y - e0.y) || 1, ux = (e1.x - e0.x) / dl, uy = (e1.y - e0.y) / dl;
+    var door = null, k;                            /* on past the head: the first step that is inside a box */
+    for (k = 1; k <= 12 * rad && !door; k++) {
+      var q = { x: e1.x + ux * k, y: e1.y + uy * k };
+      door = named.length ? (named.filter(function (f) { return inside(f, q); })[0] || null) : boxAt(q, e1);
+    }
+    var on = door ? k - 1 + rad + 2 : 0;           /* rolled in until wholly past the box's edge */
+    if (door && !named.length) holes.push(door);
+    var stop, rx = 0, ry = 0;
+    if (door) stop = P.total + on;
+    else {                                          /* no box: it stops at its drawn place, nearest point of the last shaft */
+      var bestL = 0, bd = Infinity;
+      for (var i = 0; i <= 200; i++) {
+        var qq = last.getPointAtLength(LL * i / 200), dd = (qq.x - cx) * (qq.x - cx) + (qq.y - cy) * (qq.y - cy);
+        if (dd < bd) { bd = dd; bestL = LL * i / 200; }
+      }
+      stop = P.total - LL + bestL; var end = P.at(stop); rx = cx - end.x; ry = cy - end.y;
+    }
+    var at = function (d) { return d <= P.total ? P.at(d) : { x: e1.x + ux * (d - P.total), y: e1.y + uy * (d - P.total) }; };
+    var shift = null;
+    if (holes.length) {                            /* a mask on the ball: paper everywhere but inside the boxes */
+      var defs = svg.querySelector("defs") || svg.insertBefore(document.createElementNS(NS, "defs"), svg.firstChild);
+      var mk = document.createElementNS(NS, "mask"), id = "travel-mask-" + (++maskId);
+      mk.setAttribute("id", id); mk.setAttribute("maskUnits", "userSpaceOnUse");
+      ["x", "y"].forEach(function (a) { mk.setAttribute(a, "-100000"); }); ["width", "height"].forEach(function (a) { mk.setAttribute(a, "200000"); });
+      mk.innerHTML = '<rect x="-100000" y="-100000" width="200000" height="200000" fill="#fff"/><g></g>';
+      shift = mk.lastChild;
+      holes.forEach(function (f) {
+        var r = document.createElementNS(NS, "rect");
+        [["x", f.x], ["y", f.y], ["width", f.w], ["height", f.h], ["rx", f.rx]].forEach(function (kv) { r.setAttribute(kv[0], kv[1].toFixed(2)); });
+        r.setAttribute("fill", "#000"); shift.appendChild(r);
+      });
+      defs.appendChild(mk);
+    }
+    B.style.translate = t0;
     var turns = Math.max(1, Math.round(stop / (2 * Math.PI * rad)));
     var base = roll ? (roll._rollBase != null ? roll._rollBase : (roll._rollBase = roll.getAttribute("transform") || "")) : "";
     return A.track(o.dur == null ? Math.min(2.2, 0.5 + stop / 500) : o.dur, function (u) {
-      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u), p = P.at(stop * e);
-      var x = p.x + rx * e - cx, y = p.y + ry * e - cy;
-      B.style.translate = u >= 1 || (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) ? "" : x.toFixed(3) + "px " + y.toFixed(3) + "px";
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u), p = at(stop * e);
+      var x = p.x + rx * e - cx, y = p.y + ry * e - cy, still = !door && (u >= 1 || (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3));
+      B.style.translate = still ? "" : x.toFixed(3) + "px " + y.toFixed(3) + "px";
+      if (shift) {                                 /* the boxes stay where they are while the ball moves */
+        if (still) { B.removeAttribute("mask"); shift.removeAttribute("transform"); }
+        else { B.setAttribute("mask", "url(#" + shift.parentNode.id + ")"); shift.setAttribute("transform", "translate(" + (-x).toFixed(3) + " " + (-y).toFixed(3) + ")"); }
+      }
       if (!roll) return;
       var a = 360 * turns * e, tf = (base + (u > 0 && u < 1 ? " rotate(" + a.toFixed(2) + ")" : "")).trim();
       if (tf) roll.setAttribute("transform", tf); else roll.removeAttribute("transform");
