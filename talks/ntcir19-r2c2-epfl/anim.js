@@ -10,7 +10,8 @@
  *   A.hide(el, {dur})               the reverse: fade out
  *   A.draw(el, {dur})               draw a stroked path (or every path in a group) from its start
  *   A.write(el, {dur, lift})        written by hand: each stroked path of el drawn in turn, at a pen's
- *                                   pace (slow start, quick middle), a short pen-lift (lift s) between
+ *                                   pace (slow start, quick middle), a short pen-lift (lift s) between; a
+ *                                   <text data-hand> (a teacher's "R") is one stroke, uncovered from its left
  *   A.flow(el, {dur})               a flow arrow (concepts/flow_arrow.py): shaft drawn, then head
  *   A.pulse(el, {dur})              an ink bead travelling along a flow arrow's shaft, for rest loops
  *   A.highlight(el, {dur, out})     a marker band (a <rect data-hl>) swept in from the left;
@@ -36,7 +37,8 @@
  *   A.flip(els, {beat})             a class label on a split-flap board, as a station's departures: every cell
  *                                   starts blank, all turn together through the same alphabet, flap by flap
  *                                   (half a character folding over the midline), each stopping at its own letter
- *   A.count(els, {dur})             a number that grows from 0 to its value, its format kept ("2,091,427 passages")
+ *   A.count(els, {dur})             a number that grows from 0 to its value, its format kept ("2,091,427 passages");
+ *                                   data-one / data-many: the noun after it agrees on the way ("1 pass", "2 passes")
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
  *   A.enter(el)                     ONE CONCEPT ENTERING, LAYER BY LAYER, the deck's standard entry:
@@ -57,11 +59,15 @@
  *                                   then its nested concepts enter, each by its own layers, one after another.
  *                                   A composition marked data-enter="built" (the pipeline) is built in reading
  *                                   order: each nested concept enters by its own layers (a flow arrow by A.flow),
- *                                   its own lines are drawn, its own words keyed, anything else pops; a
- *                                   <g data-together> runs its parts at once, a <g data-ripple="s"> s apart.
+ *                                   its own lines are drawn, its own words entered by their kind (data-anim), a
+ *                                   <g data-ticks> ticked in with its count, anything else pops, a marker band
+ *                                   left for A.highlight; a <g data-together> runs its parts at once, a
+ *                                   <g data-ripple="s"> s apart; data-marks="last": its parts' hand marks are
+ *                                   written after the whole is built, one after another.
  *   A.travel(ball, {along, dur})    goes on to this step: the ball (concepts/question_token.py) rolls along a pipe
  *                                   (`along`: a flow arrow or a list of them, in order) from its start to the
- *                                   next box and stops; draw the ball where it stops. Not move (re-placing)
+ *                                   next box and stops, straight through each box between two pipes at the same
+ *                                   speed; draw the ball where it stops. Not move (re-placing)
  *                                   nor pulse (a bead, for loops)
  *   A.emit(out, {along, draw})      this came out of this step: an ink bead leaves the box along its out-arrow
  *                                   (`along`, drawn behind the bead unless draw: false), and where it arrives
@@ -242,9 +248,30 @@
   };
 
   /* ---- write: the strokes of a mark drawn one after another, as a hand writes them ---- */
+  /* a letter written by hand (a <text data-hand>, the organisers' "R" or ";YES"): uncovered from its left as
+     the pen goes, its width counted as its stroke's length; a clip made once, gone at rest */
+  function handTo(t, e) {
+    if (!t._hand) {
+      var b = t.getBBox(), defs = t.ownerSVGElement.querySelector("defs") || t.ownerSVGElement.insertBefore(mk("defs", {}), t.ownerSVGElement.firstChild);
+      var id = "hand" + (++flapId), cp = mk("clipPath", { id: id }, defs), pad = b.height * 0.1;
+      t._hand = { id: id, x: b.x - pad, w: b.width + 2 * pad, r: mk("rect", { x: b.x - pad, y: b.y - pad, width: 0, height: b.height + 2 * pad }, cp) };
+    }
+    if (e >= 1) { t.removeAttribute("clip-path"); t.style.opacity = ""; return; }
+    t.setAttribute("clip-path", "url(#" + t._hand.id + ")");
+    t._hand.r.setAttribute("width", (t._hand.w * e).toFixed(2));
+    t.style.opacity = e <= 0 ? "0" : "";
+  }
   A.write = function (el, o) {
     need(el, "write"); o = o || {};
-    var P = paths(el), Ls = P.map(function (p) { return p.getTotalLength(); });
+    var P = els(el).reduce(function (a, n) {          /* its strokes in order: lines, and letters written by hand */
+      return a.concat(n.tagName.toLowerCase() === "text" && n.hasAttribute("data-hand") ? [n] : paths(n).concat(
+        n.tagName.toLowerCase() === "g" ? [].slice.call(n.querySelectorAll("text[data-hand]")) : []));
+    }, []);
+    if (P.some(function (p) { return p.tagName.toLowerCase() === "text"; }) && P.length > 1) {   /* in the order they stand */
+      P.sort(function (a, b) { return a === b ? 0 : a.compareDocumentPosition(b) & 4 ? -1 : 1; });
+    }
+    var isT = function (p) { return p.tagName.toLowerCase() === "text"; };
+    var Ls = P.map(function (p) { return isT(p) ? p.getBBox().width : p.getTotalLength(); });
     var lift = o.lift == null ? 0.12 : o.lift, total = Ls.reduce(function (a, b) { return a + b; }, 0) || 1;
     var dur = o.dur == null ? 0.55 : o.dur, ink = dur - lift * (P.length - 1);
     var pen = function (x) { return x < 0.15 ? 0.5 * x * x / 0.15 : x < 0.75 ? 0.075 + (x - 0.15) * 1.25 : 0.825 + 0.175 * A.ease.out((x - 0.75) / 0.25); };
@@ -252,7 +279,7 @@
     Ls.forEach(function (L) { var d = ink * L / total; spans.push([at, d]); at += d + lift; });
     return A.track(dur, function (u) {
       var t = u * dur;
-      P.forEach(function (p, i) { drawTo(p, Ls[i], u >= 1 ? 1 : pen(clamp((t - spans[i][0]) / spans[i][1]))); });
+      P.forEach(function (p, i) { var e = u >= 1 ? 1 : pen(clamp((t - spans[i][0]) / spans[i][1])); if (isT(p)) handTo(p, e); else drawTo(p, Ls[i], e); });
     });
   };
 
@@ -382,12 +409,15 @@
       while ((x = re.exec(s0))) { m = x; if (n.getAttribute("data-count") !== "last") break; }
       if (!m || !all.length) return { s0: s0 };
       return { s0: s0, pre: s0.slice(0, m.index), post: s0.slice(m.index + m[0].length), v: parseFloat(m[0].replace(/,/g, "")),
-               dec: m[1] ? m[1].length - 1 : 0, comma: m[0].indexOf(",") >= 0 };
+               dec: m[1] ? m[1].length - 1 : 0, comma: m[0].indexOf(",") >= 0,
+               one: n.getAttribute("data-one"), many: n.getAttribute("data-many") };
     });
     var fmt = function (p, x) {
-      var s1 = x.toFixed(p.dec);
+      var s1 = x.toFixed(p.dec), post = p.post;
       if (p.comma) { var parts = s1.split("."); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ","); s1 = parts.join("."); }
-      return p.pre + s1 + p.post;
+      var noun = s1 === "1" ? p.one : p.many;          /* the noun after the number agrees with it on the way ("1 pass", "2 passes") */
+      if (noun != null) post = post.replace(/^(\s*)\S+/, "$1" + noun);
+      return p.pre + s1 + post;
     };
     var E = o.ease || A.ease.out;
     return A.track(o.dur == null ? 1.1 : o.dur, function (u) {
@@ -536,6 +566,42 @@
     });
   };
 
+  /* a run of words of one kind (data-anim), as the layers say */
+  function wordsTrack(kind, run, o) {
+    if (kind === "type") return A.type(run, { typos: o.typos });
+    if (kind === "ai") {                               /* one ring where the text starts, then all its rows typed */
+      var th = A.think(run[0]), ty = A.type(run, { typos: o.typos }), ai = A.seq(th, ty);
+      ai.cue = function (w, after) { var c = ty.cue(w, after == null ? null : after - th.dur); return c == null ? null : th.dur + c; };
+      return ai;
+    }
+    if (kind === "ai-more") return A.type(run, { typos: o.typos });   /* the same generation, going on: no second ring */
+    if (kind === "key") return A.type(run, { quick: true });
+    if (kind === "empty") return A.stagger(run, function (n) {          /* an empty place appears whole, its number counting */
+      var t = n.querySelector('text[data-anim="count"]');
+      return A.par(A.reveal(n, { dur: 0.3 }), t ? A.count(t, { dur: 0.4 }) : null);
+    }, 0.08);
+    return A.stagger(run, function (n) {
+      if (kind === "flip") return A.flip(n);
+      var c = A.count(n, { dur: 0.6 });
+      return n.hasAttribute("data-model") ? A.seq(A.think(n), c) : c;   /* a number a model gave: it thinks first */
+    }, 0.06);
+  }
+  /* a <g data-ticks>: things written in, one tick each, their number counting in step; then what they are ("calls") */
+  function ticksTrack(n) {
+    var P = [].slice.call(n.querySelectorAll("path")), T = [].slice.call(n.querySelectorAll("text")), c = T[0];
+    var each = +(n.getAttribute("data-each") || 0.2);                 /* a tick 0.2 s; one measure (a length bar) longer */
+    return A.seq(A.par(A.stagger(P, function (p) { return A.draw(p, { dur: each }); }, each),
+                       c ? A.count(c, { dur: each * P.length, ease: A.ease.lin }) : null),
+                 T.length > 1 ? A.type(T.slice(1), { quick: true }) : null);
+  }
+  /* the hand marks ([data-verdict]), written last, one after another at a hand's pace; then their words, keyed
+     (a letter marked data-hand is part of the mark, written with it, never keyed) */
+  function marksTrack(marks) {
+    var said = marks.reduce(function (a, m) { return a.concat([].slice.call(m.querySelectorAll("text:not([data-hand])"))); }, []);
+    return A.seq(A.wait(0.15), A.seq.apply(null, marks.map(function (m, i) { return A.seq(i ? A.wait(0.12) : null, A.write(m)); })),
+                 said.length ? A.type(said, { quick: true }) : null);
+  }
+
   /* ---- enter: one concept, layer by layer (see the list at the top) ---- */
   A.enter = function (el, o) {
     need(el, "enter"); o = o || {};
@@ -546,15 +612,18 @@
     };
     var q = function (sel) { return [].slice.call(root.querySelectorAll(sel)).filter(own); };
     if (root.getAttribute("data-enter") === "built") {   /* a composition: its parts one after another, in reading order */
+      var last = root.getAttribute("data-marks") === "last";   /* its parts' hand marks wait for the whole */
       var one = function (c) {                            /* one part, by its own rule */
         var t = c.tagName.toLowerCase(), k = c.getAttribute("data-concept");
         if (k === "flow_arrow") {                         /* an arrow inside a composition: paced by its length */
           var sh = c.querySelector('[data-part="shaft"]');
           return A.flow(c, { dur: Math.min(0.7, 0.25 + (sh ? sh.getTotalLength() : 0) / 1000) });
         }
-        if (k) return A.enter(c);
+        if (k) return A.enter(c, last ? { marks: false } : null);
+        if (t === "rect" && c.hasAttribute("data-hl")) return null;   /* a marker band: swept by A.highlight at its own beat */
         if (t === "path" && c.getAttribute("fill") === "none") return A.draw(c, { dur: Math.min(0.6, Math.max(0.2, c.getTotalLength() / 1400)) });
         if (t === "g") {
+          if (c.hasAttribute("data-ticks")) return ticksTrack(c);
           var kids = [].slice.call(c.children).map(one).filter(Boolean);
           if (c.hasAttribute("data-together")) return A.par.apply(null, kids);                       /* these run at once */
           if (c.hasAttribute("data-ripple")) return A.stagger(kids, function (x) { return x; }, +c.getAttribute("data-ripple"));
@@ -563,20 +632,27 @@
         if (t === "text") return null;                    /* words are keyed by the walk, in runs */
         return t === "defs" ? null : A.pop(c, { dur: 0.4 });
       };
-      var walk = function (g) {                           /* in order; consecutive words keyed as one run */
-        var steps0 = [], words0 = [];
-        var say = function () { if (words0.length) steps0.push(A.type(words0, { quick: true })); words0 = []; };
+      var walk = function (g) {                           /* in order; consecutive words of one kind as one run */
+        var steps0 = [], words0 = [], wk = null;
+        var say = function () { if (words0.length) steps0.push(wordsTrack(wk, words0, o)); words0 = []; wk = null; };
         [].slice.call(g.children).forEach(function (c) {
-          if (c.tagName.toLowerCase() === "text") { if ((c._full != null ? c._full : c.textContent).trim()) words0.push(c); return; }
+          if (c.tagName.toLowerCase() === "text") {
+            if (!(c._full != null ? c._full : c.textContent).trim()) return;
+            var k = c.getAttribute("data-anim") || "key";
+            if (k !== wk) say();
+            wk = k; words0.push(c); return;
+          }
           say();
-          if (c.tagName.toLowerCase() === "g" && !c.getAttribute("data-concept") && !c.hasAttribute("data-together") && !c.hasAttribute("data-ripple"))
+          if (c.tagName.toLowerCase() === "g" && !c.getAttribute("data-concept") && !c.hasAttribute("data-together")
+              && !c.hasAttribute("data-ripple") && !c.hasAttribute("data-ticks"))
             steps0.push(walk(c));
           else steps0.push(one(c));
         });
         say();
         return A.seq.apply(null, steps0.filter(Boolean));
       };
-      return walk(root);
+      var built = walk(root), held = last ? [].slice.call(root.querySelectorAll("[data-verdict]")) : [];
+      return held.length ? A.seq(built, marksTrack(held)) : built;
     }
     var drawn = root.getAttribute("data-enter") === "drawn";
     var board = drawn ? q('text[data-anim="flip"]') : [];                       /* a list's run name turns in first */
@@ -592,35 +668,11 @@
     var steps = [], run = [], runKind = null;
     var flush = function () {
       if (!run.length) return;
-      if (runKind === "type") steps.push(A.type(run, { typos: o.typos }));
-      else if (runKind === "ai") {                     /* one ring where the text starts, then all its rows typed */
-        var th = A.think(run[0]), ty = A.type(run, { typos: o.typos }), ai = A.seq(th, ty);
-        ai.cue = function (w, after) { var c = ty.cue(w, after == null ? null : after - th.dur); return c == null ? null : th.dur + c; };
-        steps.push(ai);
-      }
-      else if (runKind === "ai-more") steps.push(A.type(run, { typos: o.typos }));   /* the same generation, going on: no second ring */
-      else if (runKind === "key") steps.push(A.type(run, { quick: true }));
-      else if (runKind === "empty") steps.push(A.stagger(run, function (n) {          /* an empty place appears whole, its number counting */
-        var t = n.querySelector('text[data-anim="count"]');
-        return A.par(A.reveal(n, { dur: 0.3 }), t ? A.count(t, { dur: 0.4 }) : null);
-      }, 0.08));
-      else steps.push(A.stagger(run, function (n) {
-        if (runKind === "flip") return A.flip(n);
-        var c = A.count(n, { dur: 0.6 });
-        return n.hasAttribute("data-model") ? A.seq(A.think(n), c) : c;   /* a number a model gave: it thinks first */
-      }, 0.06));
+      steps.push(wordsTrack(runKind, run, o));
       run = []; runKind = null;
     };
     writing.forEach(function (n) {
-      if (n.hasAttribute("data-ticks")) {             /* things written in, one tick each, their number counting in step */
-        flush();
-        var P = [].slice.call(n.querySelectorAll("path")), T = [].slice.call(n.querySelectorAll("text")), c = T[0];
-        var each = +(n.getAttribute("data-each") || 0.2);                 /* a tick 0.2 s; one measure (a length bar) longer */
-        steps.push(A.par(A.stagger(P, function (p) { return A.draw(p, { dur: each }); }, each),
-                         c ? A.count(c, { dur: each * P.length, ease: A.ease.lin }) : null));
-        if (T.length > 1) steps.push(A.type(T.slice(1), { quick: true }));   /* what they are, once counted ("calls") */
-        return;
-      }
+      if (n.hasAttribute("data-ticks")) { flush(); steps.push(ticksTrack(n)); return; }
       if (n.tagName.toLowerCase() === "g") {
         if (runKind !== "empty") flush();
         runKind = "empty"; run.push(n);
@@ -672,10 +724,7 @@
         };
         return A.par(then, A.par.apply(null, scenes.map(function (n) { return A.act(n, { cue: cue }); })));
       })(),
-      marks.length ? A.seq(A.wait(0.15), A.write(marks), (function () {
-        var said = q("[data-verdict] text");
-        return said.length ? A.type(said, { quick: true }) : null;
-      })()) : null,
+      marks.length && o.marks !== false ? marksTrack(marks) : null,     /* marks: false, in a composition that writes them last */
       calls.length ? A.seq.apply(null, calls.map(function (n) {     /* the passages worth reading, one by one, each with what it gave */
         var c = n.getAttribute("data-concept");
         if (!c) return A.draw(n, { dur: 0.45 });                              /* the leader from its row */
@@ -822,15 +871,31 @@
     });
   };
 
-  /* a pipe: the shafts of one flow arrow or a chain of them (or bare paths), with their lengths */
+  /* a pipe: the shafts of one flow arrow or a chain of them (or bare paths), with their lengths. Between two
+     shafts of a chain the ball goes straight through the box, from one shaft's end to the next one's start: a
+     leg of the chain like any other, counted in its length, so it rolls through at the same speed */
   function pipe(along) {
     var S = els(along).map(function (n) { return n.tagName.toLowerCase() === "path" ? n : n.querySelector('[data-part="shaft"]') || n.querySelector("path"); });
     if (!S.length || S.some(function (s) { return !s; })) throw new Error("anim: no pipe to run along (a flow arrow, or a list of them)");
-    var Ls = S.map(function (s) { return s.getTotalLength(); });
+    var Ls = S.map(function (s) { return s.getTotalLength(); }), legs = [];
+    S.forEach(function (s, i) {
+      if (i) {                                    /* through the box: straight from the last shaft's end */
+        var a = S[i - 1].getPointAtLength(Ls[i - 1]), b = s.getPointAtLength(0), l = Math.hypot(b.x - a.x, b.y - a.y);
+        if (l > 0.01) legs.push({ a: a, b: b, L: l });
+      }
+      legs.push({ s: s, L: Ls[i] });
+    });
     var at = function (d) {                       /* the point d units along the chain */
-      for (var i = 0; i < S.length; i++) { if (d <= Ls[i] || i === S.length - 1) return S[i].getPointAtLength(Math.max(0, Math.min(Ls[i], d))); d -= Ls[i]; }
+      for (var i = 0; i < legs.length; i++) {
+        var g = legs[i];
+        if (d <= g.L || i === legs.length - 1) {
+          var k = Math.max(0, Math.min(g.L, d));
+          return g.s ? g.s.getPointAtLength(k) : { x: g.a.x + (g.b.x - g.a.x) * k / g.L, y: g.a.y + (g.b.y - g.a.y) * k / g.L };
+        }
+        d -= g.L;
+      }
     };
-    return { S: S, Ls: Ls, total: Ls.reduce(function (a, b) { return a + b; }, 0), at: at };
+    return { S: S, Ls: Ls, total: legs.reduce(function (a, g) { return a + g.L; }, 0), at: at };
   }
 
   /* ---- travel: the ball rolls along a pipe to the next box and stops ("goes on to this step").
