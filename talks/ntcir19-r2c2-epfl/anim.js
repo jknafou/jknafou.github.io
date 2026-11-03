@@ -29,9 +29,12 @@
  *                                   (line[data-link], drawn ghost -> dot) following it; draw the dot where it
  *                                   ends. With no ghost, from is the offset [dx, dy] it starts at
  *   A.pop(el, {dur})                appears like a balloon: scales up from its centre past its size, and settles
- *   A.type(els, {dur, typos, quick}) typed on a keyboard: each <text> in turn, character by character with a
+ *   A.type(els, {dur, typos, quick, cps, caret}) typed on a keyboard: each <text> in turn, character by character with a
  *                                   caret, now and then a typo that is noticed, erased and retyped;
- *                                   quick: a fixed word keyed in at twice the pace, never a typo
+ *                                   quick: a fixed word keyed in at twice the pace, never a typo;
+ *                                   cps: a set pace in characters per second (a short word typed slowly enough to be seen);
+ *                                   caret: "stay" leaves the caret after the last text at rest, and the
+ *                                   track's .blink(period) is a rest loop of that caret blinking, nothing else
  *   A.think(el, {dur})              the AI thinking: a loading ring turning just before the text it will
  *                                   generate (put it right before A.type of that text)
  *   A.flip(els, {beat})             a class label on a split-flap board, as a station's departures: every cell
@@ -477,7 +480,7 @@
     need(el, "type"); o = o || {};
     var T = els(el).reduce(function (a, n) { return a.concat(n.tagName.toLowerCase() === "text" ? [n] : [].slice.call(n.querySelectorAll("text"))); }, []);
     var texts = T.map(function (n) { return n._full != null ? n._full : (n._full = n.textContent); }), total   /* the words as drawn, read once */ = texts.join("").length || 1;
-    var cps = Math.max(o.quick ? 48 : 22, total / (o.dur || (o.quick ? 1.2 : 3.2)));   /* a typist's pace, quicker for long text */
+    var cps = o.cps || Math.max(o.quick ? 48 : 22, total / (o.dur || (o.quick ? 1.2 : 3.2)));   /* a typist's pace, quicker for long text; cps: a set pace */
     var budget = o.quick ? 0 : o.typos == null ? 2 : o.typos, left = budget;
     var plans = texts.map(function (S) {
       var p = keystrokes(S, cps, Math.min(left, S.length >= 24 ? 1 : 0));
@@ -485,7 +488,7 @@
     });
     var at = [], d = 0;
     plans.forEach(function (p) { at.push(d); d += p.dur + 0.05; });
-    var caret = '<tspan fill="#8C8682">|</tspan>';
+    var caret = '<tspan data-caret="" fill="#8C8682">|</tspan>', stay = o.caret === "stay";
     var fix = T.map(function (n) {                     /* an end- or middle-anchored line is typed from where it will start */
       var a = n.getAttribute("text-anchor");
       if (a !== "end" && a !== "middle") return null;
@@ -501,6 +504,7 @@
     var tr = A.track(d, function (u) {
       var t = u * d;
       T.forEach(function (n, i) {
+        if (u >= 1 && stay && i === T.length - 1) { place(i, true); n.innerHTML = esc(texts[i]) + caret; return; }   /* the caret stays where it ended */
         if (u >= 1) { place(i, false); n.textContent = texts[i]; return; }
         place(i, true);
         var p = plans[i], lt = t - at[i];
@@ -511,6 +515,13 @@
         n.innerHTML = esc(s) + (typing ? caret : "");
       });
     });
+    tr.blink = function (period) {                   /* the caret left by caret: "stay", blinking: shown, then hidden, shown at rest */
+      var P = period || 1.06, last = T[T.length - 1];
+      return A.track(P, function (u) {
+        var c = last.querySelector("tspan[data-caret]");
+        if (c) c.style.opacity = u >= 0.5 && u < 1 ? "0" : "";
+      });
+    };
     tr.cue = function (word, after) {                /* the second `word` is fully typed (its first time after `after`), or null */
       var re = new RegExp("\\b" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g"), m;
       for (var i = 0; i < texts.length; i++) {

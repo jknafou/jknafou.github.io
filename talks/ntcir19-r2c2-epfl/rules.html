@@ -1,0 +1,154 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>End states and navigation</title><style>
+:root{--paper:#FBF8F4;--ink:#302E2E;--muted:#8C8682;--tint:#ECE6DE;--hl:#F3E3A6;--rule:#DDD5CB}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 Georgia,"Times New Roman",serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-weight:400;font-size:2.1em;margin:0 0 .2em}
+h2{font-weight:400;font-size:1.45em;margin:2.2em 0 .6em;border-bottom:1px solid var(--rule);padding-bottom:.2em}
+p.lede{color:var(--muted);font-style:italic;margin-top:0}
+.ask{background:var(--tint);border-radius:10px;padding:12px 16px;margin:18px 0}
+.ask p{margin:.3em 0}
+table{border-collapse:collapse;width:100%;margin:10px 0 6px;font-size:.92em}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--rule)}
+th{font-weight:400;font-style:italic;color:var(--muted);border-bottom:1px solid var(--ink)}
+td.k{max-width:190px}td.k code{white-space:nowrap}td:nth-child(3){min-width:110px}table{table-layout:auto}
+code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.86em;background:var(--tint);padding:0 4px;border-radius:3px}
+.tag{display:inline-block;font-size:.78em;letter-spacing:.04em;padding:1px 8px;border-radius:9px;border:1px solid var(--ink);white-space:nowrap}
+.STILL{background:var(--paper)} .FINALE{background:#E3EEE5} .IDLE{background:var(--hl)}
+.LOOP-TAIL{background:#C4D2E1} .LOOP-ALL{background:var(--tint);color:var(--muted);border-color:var(--muted)}
+.vocab{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:12px 0}
+.v{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;background:#fff8}
+.v h3{margin:0 0 .3em;font-weight:400;font-size:1em}
+.v .what{margin:.2em 0}.v .when{margin:.4em 0 0;color:#5b5754}
+.demo{font-size:1.25em;margin:.4em 0 0}
+.caret{color:var(--muted);animation:blink 1.06s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+.q{display:inline-block;animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.05)}}
+.bead{position:relative;display:inline-block;width:140px;height:14px;vertical-align:middle}
+.bead:before{content:"";position:absolute;left:0;right:8px;top:6px;height:2px;background:var(--ink)}
+.bead:after{content:"";position:absolute;right:0;top:2px;border-left:10px solid var(--ink);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.bead i{position:absolute;top:2px;width:10px;height:10px;border-radius:50%;background:var(--ink);animation:run 1.8s ease-in-out infinite}
+@keyframes run{0%{left:0;opacity:0}10%{opacity:1}55%{left:118px;opacity:1}60%,100%{left:118px;opacity:0}}
+ol.nav{padding-left:1.4em} ol.nav li{margin:.7em 0} ol.nav b.r{font-weight:700}
+ul.gen li{margin:.45em 0}
+.note{color:var(--muted);font-size:.92em}
+.wrap{overflow-x:auto}
+@media (prefers-reduced-motion:reduce){.caret,.q,.bead i{animation:none}}
+</style></head><body><main>
+<h1>End states and navigation</h1>
+<p class="lede">EPFL deck · a draft for your validation, 4 November 2026 · nothing in the deck has been changed</p>
+<div class="ask"><p><b>What you asked.</b> “(1) end of an animation for each concept [...] some of them will loop, some other will loop only the end part, some other will finish with a different animation or even stay still (2) the design of the &lt;- going back [...] we don't want the animation to take the same time when we want it to disappear.” And for the title: “the text cursor staying at the end of jknafou.”</p><p><b>In short.</b> Five end states, chosen by what the slide shows: a result rests (STILL), a ruling ends on its mark (FINALE), something waiting moves a little (IDLE), a running process replays its last beat (LOOP-TAIL), and nothing replays whole. Going back takes half a second and lands at rest; several presses make one move; forward always plays the target's entry at its designed speed.</p></div>
+<h2>1 · End states</h2>
+<div class="vocab">
+<div class="v"><h3><span class="tag STILL">STILL</span></h3><p class="what">rests on its last frame; nothing moves.</p><p class="when"><i>When:</i> The slide ends on a <b>result</b>: a number, a ranking, a list, a table, a graph, a code to scan. The default: anything not named below is STILL.</p></div>
+<div class="v"><h3><span class="tag FINALE">FINALE</span></h3><p class="what">the entry&#x27;s last beat is a closing gesture of another kind (a mark written, a winner swept, a card folded away), then STILL.</p><p class="when"><i>When:</i> Something was <b>judged or decided</b> on this slide. The gesture is the full stop and is never replayed.</p></div>
+<div class="v"><h3><span class="tag IDLE">IDLE</span></h3><p class="what">a small motion over the rest that changes no word, no value and no verdict, and never ends: a caret blinks, a “?” breathes, a bead runs an arrow.</p><p class="when"><i>When:</i> Something on the slide <b>waits</b>: a handle waits to be typed (its caret), a question is still open (its “?”), a flow keeps carrying things (its bead).</p><p class="demo">jknafou<span class="caret">|</span> &nbsp; on which planet? <span class="q">?</span> &nbsp; <span class="bead"><i></i></span></p></div>
+<div class="v"><h3><span class="tag LOOP-TAIL">LOOP-TAIL</span></h3><p class="what">only the entry&#x27;s last beat replays, from the rest back to the rest, after a pause.</p><p class="when"><i>When:</i> The slide shows a <b>process that runs again and again</b>, and its last beat is that process: the ball's roll through the pipeline.</p></div>
+<div class="v"><h3><span class="tag LOOP-ALL">LOOP-ALL</span></h3><p class="what">the whole entry replays.</p><p class="when"><i>When:</i> <b>Never on a slide of this talk</b>: an entry tells its story once and the speaker talks over its rest. Kept for the specimen page (and a pre-talk holding screen, if one is ever wanted).</p></div>
+</div>
+<p><b>Rules every end state obeys</b></p><ul class="gen">
+<li><b>One mover at rest per slide.</b> At most one IDLE or LOOP-TAIL runs on a slide's rest; everything else on it is STILL. Where several concepts could move, the one the slide is about wins (its <i>Communicates</i>).</li>
+<li><b>Role decides, not kind.</b> A concept takes the end below only where it is the slide's focus. Brought over from an earlier slide, dimmed or set aside, it is STILL.</li>
+<li><b>Rest is a frame of the loop.</b> Every IDLE and LOOP-TAIL starts and ends exactly on the rest still (make_media's seam check, ≥ 32 dB), so a still taken at any moment says the same thing. The caret's still shows it <i>on</i>.</li>
+<li><b>Slow and calm.</b> An idle's period is at least 1 s: caret 0.53 s on, 0.53 s off (a text caret's own rate); a “?” breathes in 2.4 s (scale 1 → 1.05 → 1); a bead runs an arrow at A.pulse's pace with at least 0.6 s between beads; a LOOP-TAIL waits 0.8 s at rest before it replays.</li>
+<li><b>Rest never changes information.</b> A loop moves only ink that is not data: a caret, a bead, the ball. A number never counts again, a gauge never hunts again, a mark is never rewritten at rest (the one exception, slide 20's gauge, is a gauge with no value: its “?” is the point).</li>
+</ul>
+<h2>2 · Each concept, at rest and on its way out</h2>
+<p class="note">“Exit” is how the concept disappears when its slide is left backwards (the unwind, navigation rule 4), within the 0.5 s budget; going forward it is part of the whole slide's 0.35 s fade, or of the next slide's (a) step, which dims it.</p>
+<div class="wrap"><table><tr><th>concept</th><th>first</th><th>end</th><th>what moves at rest</th><th>why</th><th>exit (←)</th></tr>
+<tr><td class="k"><code>contact_handles</code></td><td>1, 21</td><td><span class="tag IDLE">IDLE</span></td><td>the caret “|” (MUTED, as A.type draws it) stays after “jknafou” and blinks: 0.53 s on, 0.53 s off; the marks still</td><td>a handle is an invitation to type it: the caret says “this is what you type”, as the author pictured</td><td>caret stops; marks and handle fade 0.25 s</td></tr>
+<tr><td class="k"><code>question_card</code></td><td>2</td><td><span class="tag STILL">STILL</span></td><td>nothing; the card, its words or ruled lines as typed</td><td>the question is said; if it is still open, its scene&#x27;s “?” carries that (below), not the card</td><td>fades 0.25 s, scale 1 → 0.97 about its centre (a quiet undoing of the pop); its scene goes with it</td></tr>
+<tr><td class="k"><code>flow_arrow</code></td><td>2</td><td><span class="tag STILL">STILL</span><br><span class="note">· IDLE where it carries a running flow</span></td><td>where the slide&#x27;s loop is a flow (slides 2, 3, 20): an ink bead runs it (A.pulse), ≥ 0.6 s between beads; dashed arrows always STILL</td><td>an arrow is a “leads to”; it moves only where things keep going along it</td><td>retracts head first towards its tail, 0.25 s (A.flow compressed, reversed); a dashed one fades</td></tr>
+<tr><td class="k"><code>answer_card</code></td><td>2</td><td><span class="tag STILL">STILL</span><br><span class="note">or FINALE with a verdict</span></td><td>nothing; the gauge settled on its number; a tick or cross, when given, written last in the entry and then still</td><td>an answer is a result; the verdict is its full stop</td><td>mark vanishes first (0.1 s), the card and gauge fade 0.25 s; the gauge never counts down</td></tr>
+<tr><td class="k"><code>type_tag</code></td><td>3</td><td><span class="tag STILL">STILL</span></td><td>nothing; the flaps have landed on the label (the fold fades as it lands)</td><td>a class label is a fact once it has landed</td><td>fades 0.2 s; the flaps never turn backwards</td></tr>
+<tr><td class="k"><code>passage</code></td><td>3</td><td><span class="tag STILL">STILL</span></td><td>nothing; the span&#x27;s marker band stays swept</td><td>a passage is evidence: read once, then it sits</td><td>band and text fade with the sheet, 0.25 s; its scene freezes on its rest and fades with it</td></tr>
+<tr><td class="k"><code>scene</code> · question (q_*)</td><td>3</td><td><span class="tag IDLE">IDLE</span><br><span class="note">where the question is the slide&#x27;s focus and unanswered, else STILL</span></td><td>only its last-drawn “?” breathes, 2.4 s, scale 1 → 1.05 → 1 (q_han&#x27;s empty square, q_shawshank&#x27;s empty place, q_bear&#x27;s card); every figure still</td><td>a question scene ends on the open “?” (rule 7 of the scene grammar); breathing says “still open” without telling the story again</td><td>freezes on its rest, fades with its card, 0.25 s; never plays backwards</td></tr>
+<tr><td class="k"><code>scene</code> · passage (starkiller, ilum, solo, han_films… and emblems)</td><td>3</td><td><span class="tag STILL">STILL</span></td><td>nothing: figures on their last pose, the fact&#x27;s yellow band swept, a lit blade lit</td><td>a passage scene acts a fact; replaying or idling a death or a battle beside the speaker is noise</td><td>freezes, fades with its card, 0.25 s</td></tr>
+<tr><td class="k"><code>scene</code> · answer (a_*)</td><td>10</td><td><span class="tag STILL">STILL</span></td><td>nothing; the answer on the marker&#x27;s yellow</td><td>an answer is a result</td><td>freezes, fades with its card, 0.25 s</td></tr>
+<tr><td class="k"><code>corpus</code></td><td>3</td><td><span class="tag STILL">STILL</span></td><td>nothing; lit tiles stay lit, withheld tiles stay at 0.28</td><td>the corpus is ground: a state, not a process</td><td>this slide&#x27;s lit bands fade 0.2 s; tiles it withheld come back to full, 0.3 s; the count fades, never counts down</td></tr>
+<tr><td class="k"><code>nugget</code></td><td>5</td><td><span class="tag FINALE">FINALE</span></td><td>nothing after the model&#x27;s verdict: tick or cross (and the dashed outline when turned back) written last, then still</td><td>a check was run and ruled; the written verdict is the full stop</td><td>mark and dashed outline vanish first, 0.1 s; the card fades 0.25 s</td></tr>
+<tr><td class="k"><code>passage_list</code></td><td>3</td><td><span class="tag STILL">STILL</span></td><td>nothing; the ranked rows, the stop rule and the empty dashed slots</td><td>a ranking is a result</td><td>rows fade together 0.25 s; the hand-drawn frame retracts 0.25 s; callouts fade first</td></tr>
+<tr><td class="k"><code>band</code></td><td>4</td><td><span class="tag STILL">STILL</span></td><td>nothing</td><td>a background panel</td><td>fades with the canvas</td></tr>
+<tr><td class="k"><code>tool_box</code></td><td>4</td><td><span class="tag STILL">STILL</span></td><td>nothing; a lit tool keeps its band and thick outline</td><td>a step, waiting to be called; the ball is what moves</td><td>its lit band unsweeps 0.2 s; the box fades with the canvas</td></tr>
+<tr><td class="k"><code>gate</code></td><td>4</td><td><span class="tag FINALE">FINALE</span></td><td>nothing after its ruling: the tick or the dashed “turned back” hook written last, then still</td><td>the orchestrator&#x27;s ruling is the full stop of a submission</td><td>ruling vanishes 0.1 s, reading fades 0.2 s; the gate stays (it belongs to the pipeline)</td></tr>
+<tr><td class="k"><code>trace_slab</code></td><td>4</td><td><span class="tag STILL">STILL</span></td><td>nothing; its chips and its count “7 calls” settled</td><td>a record: what was written stays written</td><td>the chips this slide added fade 0.2 s; the count shows the previous value (cross-fade, never counts down)</td></tr>
+<tr><td class="k"><code>pipeline</code></td><td>4</td><td><span class="tag LOOP-TAIL">LOOP-TAIL</span><br><span class="note">on slide 4; STILL on 5-12</span></td><td>slide 4: the journey&#x27;s last beat replays (card folds into the ball, the ball rolls box to box, each box emits its stand-in, the gate puts out the answer, all fade, a new card): today 20.4 s with its 0.8 s pause. On slides 5-12 the journey is real and is played once</td><td>slide 4 shows the machine, and a machine runs again and again; from slide 5 it is one real pass that happened once</td><td>on ←: the camera returns, what this slide added fades; the pipeline itself stays (it is the canvas)</td></tr>
+<tr><td class="k"><code>question_token</code></td><td>4</td><td><span class="tag STILL">STILL</span><br><span class="note">(moves only inside slide 4&#x27;s LOOP-TAIL)</span></td><td>nothing: it has rolled into its box and is gone, or waits at the door</td><td>the ball moves only when the story moves the question</td><td>fades 0.15 s where it is; never rolls back</td></tr>
+<tr><td class="k"><code>turn</code></td><td>5</td><td><span class="tag STILL">STILL</span></td><td>nothing; its reasoning typed, its call and its result, its length bar drawn</td><td>a transcript entry is a record</td><td>fades 0.25 s; the bar retracts with it</td></tr>
+<tr><td class="k"><code>signal_row</code></td><td>5</td><td><span class="tag STILL">STILL</span></td><td>nothing; the final values (“4 calls of 30”)</td><td>a counter at rest that kept moving would read as a live count</td><td>the value cross-fades to the previous slide&#x27;s value, 0.2 s; never counts down</td></tr>
+<tr><td class="k"><code>tool_icon</code></td><td>4</td><td><span class="tag STILL">STILL</span></td><td>nothing</td><td>a chip is a label</td><td>fades with what holds it</td></tr>
+<tr><td class="k"><code>pass_lane</code></td><td>6</td><td><span class="tag STILL">STILL</span></td><td>nothing; the folded pass, its chips, its answer</td><td>a finished pass is a record</td><td>fades 0.25 s; the picture it folded comes back by the cross-fade to the previous rest</td></tr>
+<tr><td class="k"><code>answer_group</code></td><td>7</td><td><span class="tag FINALE">FINALE</span><br><span class="note">where a winner is chosen, else STILL</span></td><td>nothing after the winner&#x27;s band is swept (and the loser dimmed)</td><td>the choice is the full stop</td><td>band unsweeps 0.15 s, the losing group returns to full, the group fades 0.25 s; the cards are not flown back</td></tr>
+<tr><td class="k"><code>run_file</code></td><td>10</td><td><span class="tag FINALE">FINALE</span></td><td>nothing after the organisers&#x27; mark (tick or cross, R and N) written in the margin</td><td>the file is judged: a teacher&#x27;s mark is the last gesture</td><td>the mark vanishes 0.1 s, the sheet fades 0.25 s; lines are never un-keyed</td></tr>
+<tr><td class="k"><code>score_bar</code></td><td>13</td><td><span class="tag STILL">STILL</span></td><td>nothing; bars at their values, the gain counted</td><td>a score is a result</td><td>fades 0.25 s; bars do not shrink back</td></tr>
+<tr><td class="k"><code>confidence_strip</code></td><td>14</td><td><span class="tag STILL">STILL</span></td><td>nothing; the 64 bars in their verdict colours, the question signs on their bars</td><td>a result; the signs already acted when they appeared</td><td>on 16 and 17 (the strip turned into another run&#x27;s): cross-fade back to the previous strip, 0.3 s</td></tr>
+<tr><td class="k"><code>field_scatter</code></td><td>15</td><td><span class="tag STILL">STILL</span></td><td>nothing on the ranked rest: points, curves, the highlighted run with its ranks</td><td>a field of results</td><td>the points this slide added fade 0.25 s, its curves retract 0.25 s</td></tr>
+<tr><td class="k"><code>estimator</code></td><td>20</td><td><span class="tag IDLE">IDLE</span><br><span class="note">(flow)</span></td><td>a bead runs each signal&#x27;s arrow into the box, staggered 0.3 s, then one bead runs out; the empty gauge hunts once around the middle and returns to “?”; 4.5 s, then again</td><td>future work is a process not yet built: the flow is the proposal, the “?” the thing to be learned</td><td>fades 0.25 s</td></tr>
+<tr><td class="k"><code>qr_code</code></td><td>21</td><td><span class="tag STILL">STILL</span><br><span class="note">always</span></td><td>nothing, ever, not even an idle beside it</td><td>a phone must read it; anything moving on or next to a code draws the eye from it</td><td>fades 0.25 s</td></tr>
+</table></div>
+<p><b>Each slide, by the one-mover rule</b> (slides 1-5 built, 6-21 from PLAN.md)</p>
+<div class="wrap"><table><tr><th>slide</th><th>title</th><th>end</th><th>at rest</th></tr>
+<tr><td>1</td><td>Knowing when an AI answer is wrong</td><td><span class="tag IDLE">IDLE</span></td><td>the caret after “jknafou” blinks, 0.53 s on / 0.53 s off (a 1.06 s loop). Today: STILL</td></tr>
+<tr><td>2</td><td>An answer is worth more with its confidence</td><td><span class="tag IDLE">IDLE</span><br><span class="note">(flow)</span></td><td>one row at a time, a bead runs question → answer → outcome (today&#x27;s loop, 9.0 s)</td></tr>
+<tr><td>3</td><td>The R2C2 task</td><td><span class="tag IDLE">IDLE</span><br><span class="note">(flow)</span></td><td>beads run the two flows, to the passages then to the answer (today&#x27;s loop, 4.2 s). Han Solo&#x27;s “?” stays still: one mover per slide</td></tr>
+<tr><td>4</td><td>One pipeline serves both subtasks</td><td><span class="tag LOOP-TAIL">LOOP-TAIL</span></td><td>the ball&#x27;s roll, rest to rest (today&#x27;s loop, 20.4 s). Option: paced ×1.5 at rest (≈ 13.6 s)</td></tr>
+<tr><td>5</td><td>Han Solo, pass 1</td><td><span class="tag FINALE">FINALE</span></td><td>the gate&#x27;s tick, the answer card “Starkiller Base 98” comes out; then STILL (its verdict waits for slide 7)</td></tr>
+<tr><td>6 <span class=note>(plan)</span></td><td>Pass 2</td><td><span class="tag FINALE">FINALE</span></td><td>“Starkiller Base 82” folds into lane 2; then STILL</td></tr>
+<tr><td>7 <span class=note>(plan)</span></td><td>Passes 3 and 4: Ilum</td><td><span class="tag FINALE">FINALE</span></td><td>the gold “Ilum” written, two crosses, two ticks, the cards gather into two groups; then STILL</td></tr>
+<tr><td>8 <span class=note>(plan)</span></td><td>What a run is made of</td><td><span class="tag STILL">STILL</span></td><td>the table, the recipes&#x27; names and their brackets</td></tr>
+<tr><td>9 <span class=note>(plan)</span></td><td>BITEM-PG-1</td><td><span class="tag FINALE">FINALE</span></td><td>the grades written, then the answer marked wrong; STILL</td></tr>
+<tr><td>10 <span class=note>(plan)</span></td><td>BITEM-AC-1</td><td><span class="tag FINALE">FINALE</span></td><td>Chirrut&#x27;s filed line judged right; STILL</td></tr>
+<tr><td>11 <span class=note>(plan)</span></td><td>BITEM-PG-2</td><td><span class="tag FINALE">FINALE</span></td><td>the grades written; STILL</td></tr>
+<tr><td>12 <span class=note>(plan)</span></td><td>BITEM-AC-2 and AC-3</td><td><span class="tag STILL">STILL</span></td><td>the two last lines</td></tr>
+<tr><td>13 <span class=note>(plan)</span></td><td>Retrieval: 4th and 5th of 22</td><td><span class="tag STILL">STILL</span></td><td>bars and observations</td></tr>
+<tr><td>14 <span class=note>(plan)</span></td><td>Answers: confident when wrong</td><td><span class="tag STILL">STILL</span></td><td>the strip with its five wrong bars marked; the three errors</td></tr>
+<tr><td>15 <span class=note>(plan)</span></td><td>HMR is great, if read with accuracy</td><td><span class="tag FINALE">FINALE</span></td><td>our AC-2 point highlighted with its two ranks; STILL</td></tr>
+<tr><td>16 <span class=note>(plan)</span></td><td>Revised: longest deliberation</td><td><span class="tag STILL">STILL</span></td><td>the transformed strip</td></tr>
+<tr><td>17 <span class=note>(plan)</span></td><td>Revised: independent agreement</td><td><span class="tag STILL">STILL</span></td><td>the transformed strip</td></tr>
+<tr><td>18 <span class=note>(plan)</span></td><td>Revised runs: HMR 0.4915 → 0.6985</td><td><span class="tag STILL">STILL</span></td><td>grouped bars</td></tr>
+<tr><td>19 <span class=note>(plan)</span></td><td>In the field: 9th and 5th</td><td><span class="tag STILL">STILL</span></td><td>the two revised points with their ranks</td></tr>
+<tr><td>20 <span class=note>(plan)</span></td><td>Future work</td><td><span class="tag IDLE">IDLE</span><br><span class="note">(flow)</span></td><td>signals flow through the estimator; its gauge hunts and returns to “?” (4.5 s)</td></tr>
+<tr><td>21 <span class=note>(plan)</span></td><td>Thank you</td><td><span class="tag IDLE">IDLE</span></td><td>the caret after “jknafou”, as on slide 1; the QR codes still</td></tr>
+</table></div>
+<h2>3 · Navigation</h2>
+<p><b>Words.</b></p><ul class="gen">
+<li><i>entry</i>: the slide's own animation, (a)-(d), at its designed speed (1×).</li>
+<li><i>rest</i>: the slide's last frame with its end behaviour running.</li>
+<li><i>unwind</i>: a short way back, at most 0.5 s, from wherever the picture is to the previous slide's rest.</li>
+<li><i>burst</i>: presses each within 0.5 s of the one before. Every press is acted on at once; a press inside the window only moves the destination, which the bar shows (“→ 7 · Passes 3 and 4”).</li>
+</ul>
+<ol class="nav">
+<li><b class="r">→ at rest.</b> Slide k+1's entry plays at 1×. A stand-alone or cross-canvas slide first leaves k by a 0.35 s fade of the whole picture (today's exit); a slide that continues k starts on k's rest with no exit, its step (a) dimming what it sets aside (0.5 s). k's idle or loop stops on the spot (120 ms cross-fade, as today).</li>
+<li><b class="r">→ during an entry finishes it, and does not advance.</b> If what remains is ≤ 1.8 s it plays at 3× (≤ 0.6 s); if more, the picture cross-fades to the slide's rest in 0.3 s. The end behaviour starts. The next → advances (rule 1). <i>The one choice for you:</i> today every press advances; this rule spends the first press on finishing, as a clicker does in PowerPoint, so a press made a little early never loses a slide.</li>
+<li><b class="r">→ × N in a burst: one direct move to k+N.</b> No intermediate entry. The entry begun by the first press (under 0.5 s old) is cut. On one canvas: the camera zooms out about 8 %, travels and zooms in, 0.8 s in all, onto the target's starting frame; across canvases: a 0.35 s cross-fade to it. Then the target's entry plays at 1×. Until the CSS camera exists, every direct move is the 0.35 s cross-fade.</li>
+<li><b class="r">← at rest: a short unwind, then the previous slide at rest.</b> ≤ 0.5 s, not the reverse of the entry. On a canvas (k continues k−1): what k added goes out in reverse layer order, overlapping: hand marks 0–0.1 s, marker bands and gauges 0.1–0.25 s, cards, words and numbers fade 0.15–0.4 s, lines retract 0.15–0.4 s, while the camera returns to k−1's frame in 0.45 s (ease in-out). Stand-alone or across canvases: a 0.35 s cross-fade from k's rest to k−1's. Then k−1 is at rest and its end behaviour restarts from frame 0 (its loop from the start, the caret on). Nothing is un-typed, un-counted, un-flipped or rolled back: words and numbers fade.</li>
+<li><b class="r">← during an entry: stop and unwind from there.</b> The entry halts on its current frame, which cross-fades to k−1's rest in 0.35 s. A press back means “leave”, not “show it reversed”.</li>
+<li><b class="r">← × N in a burst: one move to k−N, at rest.</b> One 0.35 s cross-fade (on one canvas, the camera's direct move, ≤ 0.8 s) to slide k−N's rest. No entry plays, none in between.</li>
+<li><b class="r">Direction decides how you arrive.</b> Forward arrives with the entry, backward arrives at rest. So Home and T go to slide 1 at rest (0.35 s fade); End plays slide 21's entry; a part key (1-9) plays the entry of the part's first slide if it lies ahead, and lands at its rest if it lies behind. A mixed burst (→ → ←) goes by its net count; net zero keeps the current slide (an entry it cut finishes as in rule 2).</li>
+<li><b class="r">A slide already played arrives at rest.</b> Going forward again onto a slide whose entry played in this session (← then →) cross-fades to its rest in 0.35 s: the audience has seen it. New key <b>R</b>: replays the current slide's entry from its start at 1×, for “let me show that again”.</li>
+<li><b class="r">Esc.</b> Cancels a destination that has not started moving; a move already under way lands where it was going.</li>
+<li><b class="r">Reduced motion (?reduced=1 or the OS setting).</b> Cuts between rest stills, as today; no idle runs (the caret is shown on, still).</li>
+</ol>
+<p><b>Today against these rules</b>, on the five slides built (durations from build/media/media.json; deck.js plays bw at 1.5×, a jump at 1.6×, a hurried move at 3×):</p>
+<div class="wrap"><table><tr><th>keys</th><th>today</th><th>with these rules</th></tr>
+<tr><td class="k">← from 5 to 4</td><td>bw-4 reversed at 1.5×: <b>70 s</b></td><td>0.5 s, then slide 4&#x27;s roll resumes</td></tr>
+<tr><td class="k">← from 4 to 3</td><td>bw-3 at 1.5×: 31 s</td><td>0.35 s cross-fade (across canvases)</td></tr>
+<tr><td class="k">← from 3 to 2</td><td>bw-2 at 1.5×: 27 s</td><td>0.5 s: slide 3&#x27;s additions fade, the camera pans back left</td></tr>
+<tr><td class="k">→ → → → from 1 to 5</td><td>fw-1 hurried ×3 (≈ 6 s), then in-5 at 1.6× (66 s): ≈ 72 s, slide 5's entry blurred by speed</td><td>0.35 s, then slide 5&#x27;s entry at 1× (105 s), as designed</td></tr>
+<tr><td class="k">← ← ← from 5 to 2</td><td>bw-4, then jumps: ≈ 70 s + 11 s</td><td>0.35 s to slide 2 at rest, its beads running</td></tr>
+<tr><td class="k">→ pressed 3 s into slide 4&#x27;s entry</td><td>slide 4 hurried ×3, then slide 5's 105 s entry</td><td>slide 4 at rest within 0.3 s; the next → starts slide 5</td></tr>
+</table></div>
+<h2>4 · What changes in the shell</h2>
+<ol class="nav">
+<li><b class="r">deck.js: one direct move instead of hop-by-hop travel.</b> The planner keeps a destination as today, but makes one move: forward, a 0.35 s cross-fade to the target's starting frame (paper, or the previous slide's rest when it continues) then in-<i>k</i>.mp4 at 1×; backward, a cross-fade to rest-<i>k</i>.webp. The 0.5 s burst window, the “finish” state of rule 2, the seen-set and the R key live here. <i>About 1 day.</i></li>
+<li><b class="r">← becomes a CSS cross-fade; bw-*.mp4 go.</b> The unwind of tier 1 is the rest still of k−1 faded in over the current frame (still or paused video) in 350 ms: on a continued slide, where k−1's rest is a subset of k's, this already reads as “k's additions fade out”. make_media.mjs stops rendering bw-* (18.7 MB of 59 today, about a third of the media at 21 slides), and since every forward move becomes exit-fade + in-<i>k</i>, fw-* can go too (another 18.6 MB, and half the render time). offline.py's manifest follows. <i>About half a day.</i></li>
+<li><b class="r">Fast finish.</b> playbackRate 3 when the remainder is ≤ 1.8 s, else the 0.3 s cross-fade to rest-<i>k</i> (a video's playbackRate is capped at 16× and a 100 s remainder cannot be compressed into 0.6 s honestly). <i>Two hours, inside the planner.</i></li>
+<li><b class="r">The idles, through the existing loop pipeline.</b> New A.blink(el, {on: 0.53, off: 0.53}) and A.breathe(el, {dur: 2.4, to: 1.05}) in anim.js, pure in t like every track; contact_handles draws a <code>&lt;name&gt;-caret</code> (A.type's caret, shown at rest); slides 1 and 21 declare <code>loop: A.blink(q("contact-caret"))</code>, rendered as loop-1.mp4 (32 frames). <i>Half a day with the specimen page.</i> One caveat: a loop video is 1080p laid over the 2× rest still, so the whole title slide would idle as video; a sharper option is a CSS caret over the still, placed from a box slides.json carries (<i>+ half a day</i>).</li>
+<li><b class="r">Tier 2, if the cross-fade is too flat: the per-concept unwind.</b> A.unwind(el) in anim.js, A.enter's layers in reverse inside 0.45 s (the exit column above); Live.unwind(k, t) applies it to the concepts slide k added and returns the camera; make_media renders un-<i>k</i>.mp4 (≤ 15 frames, a few kB each). <i>1 to 1.5 days.</i></li>
+<li><b class="r">live.js (?live=1) mirrors it.</b> Live.play(k, −1) becomes the unwind; Live.finish(k) for rule 2. <i>Two hours.</i></li>
+<li><b class="r">The checks follow.</b> tools/walk.mjs walks ← through every slide (now 0.5 s a step instead of the reversed entries) and should also press a burst and assert one direct move; the hand-off PSNR checks lose bw-* and gain the loops' seams. <i>Two hours.</i></li>
+<li><b class="r">PLAN.md §Navigation and motion grammar.</b> Once you validate: “Back plays the move in reverse” is replaced by rules 4-6, (e) by the end-state vocabulary, and each slide's “loop / no loop” by its end state. Not edited by this draft.</li>
+</ol>
+<p class="note">Tier 1 (items 1-4, 6-7): about 2.5 days, and the media shrink by about two thirds. Tier 2 (item 5) only if the 0.35 s cross-fade feels flat on a canvas.</p>
+</main></body></html>
