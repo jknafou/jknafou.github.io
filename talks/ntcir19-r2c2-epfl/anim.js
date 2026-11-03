@@ -208,6 +208,16 @@
     }, []);
   }
   function drawTo(p, L, e) {
+    if (p.tagName.toLowerCase() === "path" && p.getAttribute("stroke-dasharray")) {   /* dashed: drawn along its points, dashes kept */
+      if (p._d0 == null) {
+        p._d0 = p.getAttribute("d"); p._pts = [];
+        for (var i = 0, k = Math.max(8, Math.ceil(L / 3)); i <= k; i++) { var q = p.getPointAtLength(L * i / k); p._pts.push(q.x.toFixed(2) + "," + q.y.toFixed(2)); }
+      }
+      if (e >= 1) { p.setAttribute("d", p._d0); p.style.opacity = ""; return; }
+      p.setAttribute("d", "M" + p._pts.slice(0, Math.max(1, Math.round(e * (p._pts.length - 1))) + 1).join("L"));
+      p.style.opacity = e <= 0 ? "0" : "";
+      return;
+    }
     if (e >= 1) { p.style.strokeDasharray = ""; p.style.strokeDashoffset = ""; p.style.opacity = ""; return; }
     p.style.strokeDasharray = L + " " + (L + 1);
     p.style.strokeDashoffset = String(L * (1 - e));
@@ -542,7 +552,10 @@
         steps.push(ai);
       }
       else if (runKind === "key") steps.push(A.type(run, { quick: true }));
-      else if (runKind === "empty") steps.push(A.stagger(run, function (n) { return A.reveal(n, { dur: 0.3 }); }, 0.08));
+      else if (runKind === "empty") steps.push(A.stagger(run, function (n) {          /* an empty place appears whole, its number counting */
+        var t = n.querySelector('text[data-anim="count"]');
+        return A.par(A.reveal(n, { dur: 0.3 }), t ? A.count(t, { dur: 0.4 }) : null);
+      }, 0.08));
       else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n, { dur: 0.6 }); }, 0.06));
       run = []; runKind = null;
     };
@@ -580,8 +593,11 @@
     var scenes = [].slice.call(root.querySelectorAll('[data-concept="scene"]')).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
     return A.seq(
       first,
-      scenes.length ? (function () {                    /* the scene acts the words out as they are written */
+      (function () {                                     /* the words, their bands and gauges; the scene acting them out alongside */
         var words = A.seq.apply(null, steps);
+        var then = A.seq(words, hl.length ? A.highlight(hl) : null,
+                         bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null);
+        if (!scenes.length) return then;
         var cue = function (w, after) {                  /* when `w` is typed, its first time after `after` */
           for (var i = 0, off = 0; i < steps.length; off += steps[i].dur, i++) {
             var c = steps[i].cue ? steps[i].cue(w, after == null ? null : after - off) : null;
@@ -589,10 +605,8 @@
           }
           return null;
         };
-        return A.par(words, A.par.apply(null, scenes.map(function (n) { return A.act(n, { cue: cue }); })));
-      })() : A.seq.apply(null, steps),
-      hl.length ? A.highlight(hl) : null,
-      bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null,
+        return A.par(then, A.par.apply(null, scenes.map(function (n) { return A.act(n, { cue: cue }); })));
+      })(),
       marks.length ? A.seq(A.wait(0.15), A.write(marks)) : null,
       calls.length ? A.seq.apply(null, calls.map(function (n) {     /* the passages worth reading, one by one, each with what it gave */
         var c = n.getAttribute("data-concept");
