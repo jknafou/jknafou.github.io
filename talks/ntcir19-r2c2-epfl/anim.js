@@ -40,7 +40,7 @@
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
  *   A.enter(el)                     ONE CONCEPT ENTERING, LAYER BY LAYER, the deck's standard entry:
- *                                   1 frame: the whole concept pops (A.pop)
+ *                                   1 frame: the whole concept pops (A.pop); one marked data-enter="bare" has no frame and skips it
  *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
  *                                     "type" for words someone wrote (A.type), "flip" for a label (A.flip),
  *                                     "ai" for generated words (A.think, then A.type), "flip" for a question
@@ -49,7 +49,7 @@
  *                                     handle), keyed in quickly without a typo (A.type quick);
  *                                     its own stroked lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
- *                                   4 gauges settle (A.fill)
+ *                                   4 gauges settle (A.fill); a model's score (rect[data-model]) first thinks (A.think)
  *                                   5 hand marks written ([data-verdict], A.write)
  *                                   Nested concepts and anything under [data-layer="frame"] (a logo) come
  *                                   in with the frame and are not taken apart. A container marked
@@ -514,6 +514,7 @@
     var full = parseFloat(bar.getAttribute("data-full")), frac = parseFloat(bar.getAttribute("data-frac"));
     var w0 = bar._w0 != null ? bar._w0 : (bar._w0 = bar.getAttribute("width")), min = parseFloat(bar.getAttribute("height")) || 0;
     var val = o.value || null, v0 = val ? (val._full != null ? val._full : (val._full = val.textContent)) : null, top = parseFloat(v0);
+    var dp = v0 ? (String(v0).split(".")[1] || "").replace(/\D.*/, "").length : 0;
     return A.track(o.dur == null ? 1.5 : o.dur, function (u) {
       if (u >= 1) { bar.setAttribute("width", w0); bar.style.opacity = ""; if (val) { val.textContent = v0; val.style.opacity = ""; } return; }
       if (val) val.style.opacity = u <= 0 ? "0" : "";                         /* the number belongs to the gauge's beat */
@@ -523,7 +524,7 @@
       f = clamp(f);
       bar.setAttribute("width", Math.max(min, full * f).toFixed(2));
       bar.style.opacity = f <= 0.005 ? "0" : "";
-      if (val && !isNaN(top)) val.textContent = String(Math.round(Math.min(100, Math.max(0, frac > 0 ? top * f / frac : 0))));
+      if (val && !isNaN(top)) val.textContent = Math.min(100, Math.max(0, frac > 0 ? top * f / frac : 0)).toFixed(dp);   /* as many decimals as it ends on */
     });
   };
 
@@ -589,18 +590,24 @@
         ai.cue = function (w, after) { var c = ty.cue(w, after == null ? null : after - th.dur); return c == null ? null : th.dur + c; };
         steps.push(ai);
       }
+      else if (runKind === "ai-more") steps.push(A.type(run, { typos: o.typos }));   /* the same generation, going on: no second ring */
       else if (runKind === "key") steps.push(A.type(run, { quick: true }));
       else if (runKind === "empty") steps.push(A.stagger(run, function (n) {          /* an empty place appears whole, its number counting */
         var t = n.querySelector('text[data-anim="count"]');
         return A.par(A.reveal(n, { dur: 0.3 }), t ? A.count(t, { dur: 0.4 }) : null);
       }, 0.08));
-      else steps.push(A.stagger(run, function (n) { return runKind === "flip" ? A.flip(n) : A.count(n, { dur: 0.6 }); }, 0.06));
+      else steps.push(A.stagger(run, function (n) {
+        if (runKind === "flip") return A.flip(n);
+        var c = A.count(n, { dur: 0.6 });
+        return n.hasAttribute("data-model") ? A.seq(A.think(n), c) : c;   /* a number a model gave: it thinks first */
+      }, 0.06));
       run = []; runKind = null;
     };
     writing.forEach(function (n) {
       if (n.hasAttribute("data-ticks")) {             /* things written in, one tick each, their number counting in step */
         flush();
-        var P = [].slice.call(n.querySelectorAll("path")), T = [].slice.call(n.querySelectorAll("text")), c = T[0], each = 0.2;
+        var P = [].slice.call(n.querySelectorAll("path")), T = [].slice.call(n.querySelectorAll("text")), c = T[0];
+        var each = +(n.getAttribute("data-each") || 0.2);                 /* a tick 0.2 s; one measure (a length bar) longer */
         steps.push(A.par(A.stagger(P, function (p) { return A.draw(p, { dur: each }); }, each),
                          c ? A.count(c, { dur: each * P.length, ease: A.ease.lin }) : null));
         if (T.length > 1) steps.push(A.type(T.slice(1), { quick: true }));   /* what they are, once counted ("calls") */
@@ -633,7 +640,7 @@
                     ? A.seq.apply(null, kids.map(function (n) { return A.enter(n); }))                       /* rows with words: one after another */
                     : A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)),   /* ruled rows: in a ripple */
                     marks_.length ? A.stagger(marks_, function (n) { return A.pop(n); }, 0.08) : null);
-    } else first = A.pop(root);
+    } else if (root.getAttribute("data-enter") !== "bare") first = A.pop(root);   /* a frameless concept (a ledger row) has no frame to pop */
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
     var vals = q("text[data-value]");
     var scenes = [].slice.call(root.querySelectorAll('[data-concept="scene"]')).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
@@ -642,7 +649,11 @@
       (function () {                                     /* the words, their bands and gauges; the scene acting them out alongside */
         var words = A.seq.apply(null, steps);
         var then = A.seq(words, hl.length ? A.highlight(hl) : null,
-                         bars.length ? A.par.apply(null, bars.map(function (b, i) { return A.fill(b, { value: vals[i] }); })) : null);
+                         bars.length ? A.par.apply(null, bars.map(function (b, i) {
+                           var f = A.fill(b, { value: vals[i] });
+                           var at = q("text[data-ring]")[i];                       /* the ring turns where the gauge will grow from */
+                           return b.hasAttribute("data-model") && vals[i] ? A.seq(A.think(at || vals[i]), f) : f;   /* a model's score: it thinks, then its gauge settles */
+                         })) : null);
         if (!scenes.length) return then;
         var cue = function (w, after) {                  /* when `w` is typed, its first time after `after` */
           for (var i = 0, off = 0; i < steps.length; off += steps[i].dur, i++) {
