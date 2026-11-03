@@ -595,7 +595,8 @@
     var P = G.length ? G : [].slice.call(n.querySelectorAll("path"));
     var T = [].slice.call(n.querySelectorAll("text")).filter(function (t) { return !t.closest("[data-tick]"); }), c = T[0];
     var each = +(n.getAttribute("data-each") || 0.2);                 /* a tick 0.2 s; one measure (a length bar) longer */
-    return A.seq(A.par(A.stagger(P, function (p) { return G.length ? A.pop(p, { dur: Math.max(0.3, each * 1.5) }) : A.draw(p, { dur: each }); }, each),
+    var lone = !G.length && P.length === 1 && c;                      /* one measure and its number: drawn at the count's own pace, in step */
+    return A.seq(A.par(A.stagger(P, function (p) { return G.length ? A.pop(p, { dur: Math.max(0.3, each * 1.5) }) : A.draw(p, { dur: each, ease: lone ? A.ease.lin : null }); }, each),
                        c ? A.count(c, { dur: each * P.length, ease: A.ease.lin }) : null),
                  T.length > 1 ? A.type(T.slice(1), { quick: true }) : null);
   }
