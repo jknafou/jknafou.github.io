@@ -59,11 +59,19 @@
  *                                   order: each nested concept enters by its own layers (a flow arrow by A.flow),
  *                                   its own lines are drawn, its own words keyed, anything else pops; a
  *                                   <g data-together> runs its parts at once, a <g data-ripple="s"> s apart.
+ *   A.travel(ball, {along, dur})    goes on to this step: the ball (concepts/question_token.py) rolls along a pipe
+ *                                   (`along`: a flow arrow or a list of them, in order) from its start to the
+ *                                   next box and stops; draw the ball where it stops. Not move (re-placing)
+ *                                   nor pulse (a bead, for loops)
+ *   A.emit(out, {along, draw})      this came out of this step: an ink bead leaves the box along its out-arrow
+ *                                   (`along`, drawn behind the bead unless draw: false), and where it arrives
+ *                                   the output enters by its own layers (A.enter). One verb for every box
  *   A.camera(svg, from, to, {dur})  the camera: frames [x, y, w, h] in slide units; a CSS
  *                                   transform on the slide's <svg> box (the compositor's job)
  *   A.seq(a, b, ...)  one after the other     A.par(a, b, ...)  together
  *   A.wait(s)         nothing, for s seconds  A.at(s, track)    track, starting s seconds in
  *   A.stagger(els, make, gap)                 the same motion on several elements, gap apart
+ *   A.pace(track, k)  track played k times faster: "passed through quickly", the same motion as a slow step
  *
  * In a seq, a track that has not started yet shows its first state only where no earlier
  * track has touched the element, so "reveal, then later hide" on one element is safe.
@@ -812,6 +820,83 @@
       dot.setAttribute("cx", p.x.toFixed(2)); dot.setAttribute("cy", p.y.toFixed(2));
       dot.setAttribute("opacity", (u <= 0 || u >= 1) ? "0" : String(Math.min(1, Math.min(u, 1 - u) * 8)));
     });
+  };
+
+  /* a pipe: the shafts of one flow arrow or a chain of them (or bare paths), with their lengths */
+  function pipe(along) {
+    var S = els(along).map(function (n) { return n.tagName.toLowerCase() === "path" ? n : n.querySelector('[data-part="shaft"]') || n.querySelector("path"); });
+    if (!S.length || S.some(function (s) { return !s; })) throw new Error("anim: no pipe to run along (a flow arrow, or a list of them)");
+    var Ls = S.map(function (s) { return s.getTotalLength(); });
+    var at = function (d) {                       /* the point d units along the chain */
+      for (var i = 0; i < S.length; i++) { if (d <= Ls[i] || i === S.length - 1) return S[i].getPointAtLength(Math.max(0, Math.min(Ls[i], d))); d -= Ls[i]; }
+    };
+    return { S: S, Ls: Ls, total: Ls.reduce(function (a, b) { return a + b; }, 0), at: at };
+  }
+
+  /* ---- travel: the ball rolls along a pipe to the next box and stops ("goes on to this step").
+   * The ball is drawn where it stops (its centre data-cx / data-cy, else its box's centre); it starts at
+   * the pipe's start and rolls along every shaft of `along` to the point of the last one nearest its place.
+   * Its turning body ([data-roll], or the part named <name>-roll) turns a whole number of times, so the
+   * letter is upright where it starts and where it stops. ---- */
+  A.travel = function (el, o) {
+    need(el, "travel"); o = o || {};
+    var B = els(el)[0], P = pipe(o.along), E = o.ease || A.ease.io;
+    var b = B.getBBox(), cx = B.hasAttribute("data-cx") ? +B.getAttribute("data-cx") : b.x + b.width / 2,
+        cy = B.hasAttribute("data-cy") ? +B.getAttribute("data-cy") : b.y + b.height / 2;
+    var last = P.S[P.S.length - 1], LL = P.Ls[P.Ls.length - 1], best = 0, bd = Infinity;
+    for (var i = 0; i <= 200; i++) {               /* where on the last shaft the ball stops */
+      var q = last.getPointAtLength(LL * i / 200), dd = (q.x - cx) * (q.x - cx) + (q.y - cy) * (q.y - cy);
+      if (dd < bd) { bd = dd; best = LL * i / 200; }
+    }
+    var stop = P.total - LL + best, end = P.at(stop), rx = cx - end.x, ry = cy - end.y;   /* what is left to its drawn place */
+    var name = B.getAttribute("data-a"), roll = B.querySelector("[data-roll]") || (name ? B.querySelector('[data-a="' + name + '-roll"]') : null);
+    var rad = o.r || (roll && roll.querySelector("circle") ? +roll.querySelector("circle").getAttribute("r") : b.height / 2) || 1;
+    var turns = Math.max(1, Math.round(stop / (2 * Math.PI * rad)));
+    var base = roll ? (roll._rollBase != null ? roll._rollBase : (roll._rollBase = roll.getAttribute("transform") || "")) : "";
+    return A.track(o.dur == null ? Math.min(2.2, 0.5 + stop / 500) : o.dur, function (u) {
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u), p = P.at(stop * e);
+      var x = p.x + rx * e - cx, y = p.y + ry * e - cy;
+      B.style.translate = u >= 1 || (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) ? "" : x.toFixed(3) + "px " + y.toFixed(3) + "px";
+      if (!roll) return;
+      var a = 360 * turns * e, tf = (base + (u > 0 && u < 1 ? " rotate(" + a.toFixed(2) + ")" : "")).trim();
+      if (tf) roll.setAttribute("transform", tf); else roll.removeAttribute("transform");
+    });
+  };
+
+  /* ---- emit: the box puts out what it made ("this came out of this step"). An ink bead leaves the box
+   * at the start of its out-arrow (`along`), the arrow drawn behind it (draw: false if it is already
+   * there), and where the bead arrives the output enters by its own layers (A.enter). One verb for every
+   * box: a tag, a turn, rows, a card, a nugget, a reply, a ruling, an answer. ---- */
+  A.emit = function (el, o) {
+    need(el, "emit"); o = o || {};
+    var enter = o.enter || A.enter(el);
+    if (!o.along) return enter;
+    var arrow = els(o.along)[0], shaft = arrow.querySelector('[data-part="shaft"]') || arrow, head = arrow.querySelector('[data-part="head"]');
+    var bead = arrow.querySelector('[data-part="emit"]');
+    if (!bead) {                                  /* made once, when the motion is defined: invisible at rest */
+      bead = document.createElementNS(NS, "circle");
+      bead.setAttribute("data-part", "emit");
+      bead.setAttribute("r", ((parseFloat(shaft.getAttribute("stroke-width")) || 3.5) * 1.9).toFixed(2));
+      bead.setAttribute("fill", shaft.getAttribute("stroke") || "#302E2E");
+      bead.setAttribute("opacity", "0");
+      shaft.parentNode.appendChild(bead);
+    }
+    var L = shaft.getTotalLength(), E = A.ease.io, drawIt = o.draw !== false;
+    var leave = A.track(o.dur == null ? Math.min(1.1, 0.35 + L / 600) : o.dur, function (u) {
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u), p = shaft.getPointAtLength(L * e);
+      if (drawIt) { drawTo(shaft, L, e); if (head) head.style.opacity = u >= 1 ? "" : "0"; }
+      bead.setAttribute("cx", p.x.toFixed(2)); bead.setAttribute("cy", p.y.toFixed(2));
+      bead.setAttribute("opacity", u <= 0 || u >= 1 ? "0" : "1");
+    });
+    return A.seq(leave, enter);
+  };
+
+  /* ---- pace: a track played k times faster ("passed through quickly"); the same motion, sped up ---- */
+  A.pace = function (tr, k) {
+    k = k || 2;
+    var out = { dur: tr.dur / k, set: function (t) { tr.set(t * k); } };
+    if (tr.cue) out.cue = function (w, after) { var c = tr.cue(w, after == null ? null : after * k); return c == null ? null : c / k; };
+    return out;
   };
 
   /* data-hl="fit": a marker sized to the words drawn right after it, measured in the browser, once */
