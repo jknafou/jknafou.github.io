@@ -101,7 +101,8 @@
   };
   /* a track from a function of u in [0, 1] */
   A.track = function (dur, fn) {
-    return { dur: dur, set: function (t) { fn(dur > 0 ? clamp(t / dur) : (t >= 0 ? 1 : 0)); } };
+    return { dur: dur, set: function (t) {        /* within a rounding error of its end is its end: a seq's offsets add up inexactly */
+      fn(dur > 0 ? (t / dur > 1 - 1e-9 ? 1 : clamp(t / dur)) : (t >= 0 ? 1 : 0)); } };
   };
   A.wait = function (s) { return A.track(s, function () {}); };
   function list(args) { return [].slice.call(args).filter(Boolean); }
