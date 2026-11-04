@@ -23,9 +23,9 @@
    "title": "The R2C2 task: answer, cite, and say how sure",
    "part": 1,
    "continues": true,
-   "notes": "R2C2 asks exactly this over a movie corpus of two million passages: for each of 64 questions, the passages that support it, at most 20, and an answer with a confidence from 0 to 100.",
-   "hash": "644b2bfe5338b8d4",
-   "vhash": "47860f23b09e7108"
+   "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
+   "hash": "3764dbf0428ca196",
+   "vhash": "9cbcd2b923bb82c6"
   },
   {
    "id": "04-one-pipeline",
@@ -33,8 +33,8 @@
    "part": 2,
    "continues": false,
    "notes": "The model above chooses each tool call, one per turn; the orchestrator below checks every claim, keeps the record and rules on the answer. Every journey later in the talk is this ball's roll.",
-   "hash": "74f84fe893526925",
-   "vhash": "c9b48e67f26a0155"
+   "hash": "8cdc74f695d9f93e",
+   "vhash": "fe9f2ca2bdaedde4"
   },
   {
    "id": "05-han-solo-pass-1",
@@ -42,8 +42,8 @@
    "part": 2,
    "continues": true,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "9a1c7dfacef90941",
-   "vhash": "98f359000ba7608c"
+   "hash": "f7e13ff9edd43915",
+   "vhash": "2d5d39b6e3127dab"
   }
  ]
 }
