@@ -1,0 +1,166 @@
+/* steps.js -- a slide's STEPS OF ATTENTION: the shared helpers that make them, and the runtime that plays them.
+ *
+ * The rule (PLAN.md, "A slide is an overview, then steps of attention"; the author, 4 November 2026): arriving
+ * on a slide, its entry brings the whole design in (the OVERVIEW, step 0); then each → is one step of attention
+ * on one part, in reading order, until every part has had one; only then does → leave the slide. A step draws
+ * attention by three means only, alone or together:
+ *   (a) opacity    A.focus(parts, {from, to, dim, dur})   the part in focus fully opaque, the others at `dim`
+ *                  A.unfocus(parts, {from, dim, dur})     back to the overview: every part opaque
+ *   (b) animation  A.rollLoop(ball, {along, wait, dur})   only the focus moves: its ball (question_token) rolls
+ *                                                         along its pipes into the last box, and pops back where it
+ *                                                         started; a step's LOOP (starts and ends on its rest)
+ *   (c) zoom       A.zoom(svg, {from, to, pad, dur})      the camera closes on a part (A.camera, onto the 16:9 frame
+ *                                                         around an element, or a frame [x, y, w, h])
+ * `from` / `to` of A.focus are the index (or indexes) in `parts` of the focus, null for the overview. Each is a
+ * pure track, as every motion of anim.js is.
+ *
+ * A slide declares its steps in its motion file, beside its entry and loop:
+ *   Deck.slide("02-...", function (A, q) {
+ *     return { entry: ..., loop: ...,                     // the overview's entry and (optional) idle
+ *              steps: [ { enter: <track, <= ~0.8 s, from the previous step's rest to this one's>,
+ *                         loop: <track, optional: this step's resting motion, starting and ending on its rest> },
+ *                       ... ] };
+ *   });
+ * Step s's rest is the overview's rest, then the enters of steps 1..s played to their ends, in order (one
+ * timeline, A.seq(entry, enter 1, ..., enter n), so any step is reached exactly from any other, both ways).
+ *
+ * Why its own file: anim.js and live.js are inside the hash of every validated slide (slides/VALIDATED.json, the
+ * author's validation; tools/build.py's vhash), so a line added there would un-validate slide 1, which has no
+ * steps. This file is in the hash of each slide that uses it (its motion file declares `steps:` or calls a helper
+ * above), and of none other. It extends anim.js's bank (A) and live.js's API (window.Live) without changing them:
+ *   Live.steps(k)              how many steps slide k has (0: none)
+ *   Live.step(k, s)            slide k at the rest of step s (s = 0: the overview, as Live.rest(k))
+ *   Live.stepEnter(k, s, t)    t s into step s's enter (from step s-1's rest)
+ *   Live.stepLoop(k, s, t)     step s's loop at t s (its rest when it has none)
+ *   Live.startLoop(k, s)       plays the idle of slide k at step s (s = 0 or none: the slide's own loop)
+ *   Live.info()                each slide also gets steps: [{enter, loop}] (durations in s)
+ * Live.rest, Live.entry and Live.loop put a slide with steps back on its overview first, so its steps never leak
+ * into its entry or its stills.
+ */
+(function (G) {
+  "use strict";
+  var A = G.Anim;
+  var lst = function (x) { return !x ? [] : x.length != null && !x.tagName ? [].slice.call(x) : [x]; };
+  var has = function (f, i) { return f == null ? false : typeof f === "number" ? f === i : [].slice.call(f).indexOf(i) >= 0; };   /* an index, or several */
+
+  /* ---- (a) opacity: the focus opaque, the rest partly transparent ---- */
+  A.focus = function (parts, o) {
+    o = o || {};
+    var P = lst(parts), dim = o.dim == null ? 0.3 : o.dim, E = o.ease || A.ease.io;
+    if (!P.length || P.some(function (p) { return !p; })) throw new Error("A.focus: a part has no element (check the data-a names)");
+    var level = function (f, i) { return f == null ? 1 : has(f, i) ? 1 : dim; };    /* null: the overview, all opaque */
+    return A.track(o.dur == null ? 0.6 : o.dur, function (u) {
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u);
+      P.forEach(function (n, i) {
+        var a = level(o.from, i), b = level(o.to, i), v = a + (b - a) * e;
+        n.style.opacity = v >= 0.9999 ? "" : v.toFixed(4);
+      });
+    });
+  };
+  A.unfocus = function (parts, o) { o = o || {}; return A.focus(parts, { from: o.from, to: null, dim: o.dim, dur: o.dur, ease: o.ease }); };
+
+  /* ---- (b) animation: the focus's ball rolls its row, and is back where it started at the loop's end ---- */
+  A.rollLoop = function (ball, o) {
+    o = o || {};
+    var tr = A.travel(ball, { along: o.along, into: o.into, dur: o.dur }), wait = o.wait == null ? 0.5 : o.wait;
+    var back = A.pop(ball, { dur: 0.4 }), hold = o.hold == null ? 0.8 : o.hold;
+    var D = tr.dur + wait + back.dur + hold;
+    return A.track(D, function (u) {
+      var t = u * D;
+      if (t < tr.dur + wait) { tr.set(Math.min(t, tr.dur)); return; }     /* rolling, then gone into the last box */
+      tr.set(0);                                                          /* back where it waits ... */
+      back.set(Math.min(t - tr.dur - wait, back.dur));                    /* ... popping in again, then resting */
+    });
+  };
+
+  /* ---- (c) zoom: the camera onto the 16:9 frame around a part (measured once, at rest, when defined) ---- */
+  A.frameOf = function (el, pad) {
+    var svg = el.ownerSVGElement || el, r = el.getBoundingClientRect(), s = svg.getBoundingClientRect();
+    var k = A.VB[2] / (s.width || 1), p = pad == null ? 0.08 : pad;
+    var x = (r.left - s.left) * k + A.VB[0], y = (r.top - s.top) * k + A.VB[1], w = r.width * k, h = r.height * k;
+    var W = Math.max(w * (1 + 2 * p), h * (1 + 2 * p) * A.VB[2] / A.VB[3]), H = W * A.VB[3] / A.VB[2];
+    return [x + w / 2 - W / 2, y + h / 2 - H / 2, W, H];
+  };
+  A.zoom = function (svg, o) {
+    o = o || {};
+    var f = function (v) { return !v ? A.VB.slice() : v.length === 4 && typeof v[0] === "number" ? v : A.frameOf(v, o.pad); };
+    return A.camera(svg, f(o.from), f(o.to), { dur: o.dur == null ? 0.8 : o.dur, ease: o.ease });
+  };
+
+  /* ---- the runtime ---- */
+  var L = G.Live, D = G.Deck;
+  if (!L || !D) return;                                   /* the specimen page: the helpers alone */
+  var ST = {}, reg = D.slide;
+  D.slide = function (id, make) {
+    reg(id, function (A_, q) {
+      var m = make(A_, q) || {};
+      var steps = (m.steps || []).filter(Boolean);
+      if (steps.length) {
+        var off = [0];
+        steps.forEach(function (s, i) {
+          if (!s.enter) throw new Error(id + ": step " + (i + 1) + " has no enter");
+          off.push(off[i] + s.enter.dur);
+        });
+        ST[id] = { steps: steps, off: off, chain: A_.seq.apply(null, steps.map(function (s) { return s.enter; })) };
+      }
+      return m;
+    });
+  };
+  var O = { rest: L.rest, entry: L.entry, loop: L.loop, info: L.info, startLoop: L.startLoop, stopLoop: L.stopLoop };
+  function sid(k) { var s = document.querySelectorAll("section.slide")[k - 1]; return s ? s.getAttribute("data-id") : null; }
+  function S(k) { void L.n; return ST[sid(k)] || null; }  /* L.n builds the slides (and so runs the makers) once */
+  function nSteps(k) { var x = S(k); return x ? x.steps.length : 0; }
+  function clampS(k, s) { return Math.max(0, Math.min(nSteps(k), s | 0)); }
+  /* every step back to its first state, its loops at their start: the overview's state, before the entry is set */
+  function reset(k) {
+    var x = S(k); if (!x) return;
+    for (var i = x.steps.length - 1; i >= 0; i--) if (x.steps[i].loop) x.steps[i].loop.set(0);
+    x.chain.set(0);
+  }
+  function step(k, s) {
+    var x = S(k); s = clampS(k, s);
+    reset(k); O.rest(k);
+    if (x) x.chain.set(x.off[s]);
+  }
+  var raf = null;
+  function stopOwn() { if (raf) cancelAnimationFrame(raf); raf = null; }
+  L.rest = function (k) { step(k, 0); };
+  L.entry = function (k, t) { reset(k); O.entry(k, t); };
+  L.loop = function (k, t) { reset(k); O.loop(k, t); };
+  L.steps = nSteps;
+  L.step = step;
+  L.stepEnter = function (k, s, t) {
+    var x = S(k); s = clampS(k, s);
+    if (!x || !s) return step(k, 0);
+    reset(k); O.rest(k);
+    x.chain.set(x.off[s - 1] + Math.max(0, Math.min(t, x.steps[s - 1].enter.dur)));
+  };
+  L.stepLoop = function (k, s, t) {
+    var x = S(k); s = clampS(k, s);
+    step(k, s);
+    var lp = x && s ? x.steps[s - 1].loop : null;
+    if (lp) lp.set(((t % lp.dur) + lp.dur) % lp.dur);
+  };
+  L.stopLoop = function () { stopOwn(); O.stopLoop(); };
+  L.startLoop = function (k, s) {
+    var x = S(k); s = s ? clampS(k, s) : 0;
+    L.stopLoop();
+    if (!s) return O.startLoop(k);
+    var lp = x.steps[s - 1].loop; if (!lp) return;
+    var t0 = performance.now();
+    (function tick(now) { lp.set((((now - t0) / 1000) % lp.dur)); raf = requestAnimationFrame(tick); })(t0);
+  };
+  L.info = function () {
+    var a = O.info();
+    a.forEach(function (e, i) {
+      var x = S(i + 1);
+      e.steps = x ? x.steps.map(function (s) { return { enter: +s.enter.dur.toFixed(3), loop: s.loop ? +s.loop.dur.toFixed(3) : 0 }; }) : [];
+    });
+    return a;
+  };
+  /* live.js has put the first slide shown at rest by its own (inner) rest: with steps, its overview again */
+  document.addEventListener("DOMContentLoaded", function () {
+    var p = new URLSearchParams(location.search), k = Math.max(1, Math.min(L.n, +(p.get("k") || 1)));
+    if (nSteps(k)) { L.stopLoop(); step(k, 0); if (p.get("capture") !== "1" && p.get("embed") !== "1") L.startLoop(k); }
+  });
+})(window);
