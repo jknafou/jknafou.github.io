@@ -6,9 +6,10 @@
  * attention by three means only, alone or together:
  *   (a) opacity    A.focus(parts, {from, to, dim, dur})   the part in focus fully opaque, the others at `dim`
  *                  A.unfocus(parts, {from, dim, dur})     back to the overview: every part opaque
- *   (b) animation  A.rollLoop(ball, {along, wait, dur})   only the focus moves: its ball (question_token) rolls
- *                                                         along its pipes into the last box, and pops back where it
- *                                                         started; a step's LOOP (starts and ends on its rest)
+ *   (b) animation  only the focus moves, in the step's LOOP (starting and ending on its rest), built from the bank's
+ *                  motions in ROUNDS: A.cycle(r1, r2, ...) plays self-contained rounds one after another (only the
+ *                  current one is set); A.hold(track, dur, t) keeps a track at its state t (default its end) for dur;
+ *                  A.fillTo(bar, {frac, shown, value, dur}) is A.fill settling on another value than the drawn one
  *   (c) zoom       A.zoom(svg, {from, to, pad, dur})      the camera closes on a part (A.camera, onto the 16:9 frame
  *                                                         around an element, or a frame [x, y, w, h])
  * `from` / `to` of A.focus are the index (or indexes) in `parts` of the focus, null for the overview. Each is a
@@ -59,18 +60,29 @@
   };
   A.unfocus = function (parts, o) { o = o || {}; return A.focus(parts, { from: o.from, to: null, dim: o.dim, dur: o.dur, ease: o.ease }); };
 
-  /* ---- (b) animation: the focus's ball rolls its row, and is back where it started at the loop's end ---- */
-  A.rollLoop = function (ball, o) {
+  /* ---- (b) animation: only the focus moves. Its loop is made of ROUNDS, each a self-contained track (it sets
+   * everything it touches at every moment), played one after another by A.cycle; A.hold keeps a track at one of its
+   * states for a while; A.fillTo is A.fill (the bank's gauge, hunting and settling) settling on another value than
+   * the one drawn, so each round can read a different confidence ---- */
+  A.cycle = function () {                                 /* rounds one after another, only the current one set */
+    var R = [].slice.call(arguments).filter(Boolean), at = [], o = 0;
+    R.forEach(function (r) { at.push(o); o += r.dur; });
+    return { dur: o, set: function (t) {
+      var i = 0; while (i < R.length - 1 && t >= at[i + 1]) i++;
+      R[i].set(Math.max(0, Math.min(R[i].dur, t - at[i])));
+    } };
+  };
+  A.hold = function (tr, dur, t) { return A.track(dur, function () { tr.set(t == null ? tr.dur : t); }); };
+  A.fillTo = function (bar, o) {
     o = o || {};
-    var tr = A.travel(ball, { along: o.along, into: o.into, dur: o.dur }), wait = o.wait == null ? 0.5 : o.wait;
-    var back = A.pop(ball, { dur: 0.4 }), hold = o.hold == null ? 0.8 : o.hold;
-    var D = tr.dur + wait + back.dur + hold;
-    return A.track(D, function (u) {
-      var t = u * D;
-      if (t < tr.dur + wait) { tr.set(Math.min(t, tr.dur)); return; }     /* rolling, then gone into the last box */
-      tr.set(0);                                                          /* back where it waits ... */
-      back.set(Math.min(t - tr.dur - wait, back.dur));                    /* ... popping in again, then resting */
-    });
+    var full = parseFloat(bar.getAttribute("data-full")), min = parseFloat(bar.getAttribute("height")) || 0, val = o.value || null;
+    var f0 = bar.getAttribute("data-frac"), w0 = bar._w0 != null ? bar._w0 : bar.getAttribute("width");
+    var v0 = val ? (val._full != null ? val._full : val.textContent) : null;
+    bar.setAttribute("data-frac", String(o.frac)); bar._w0 = Math.max(min, full * o.frac).toFixed(2);   /* A.fill reads these once */
+    if (val) val._full = o.shown != null ? String(o.shown) : String(Math.round(o.frac * 100));
+    var tr = A.fill(bar, { dur: o.dur, value: val });
+    bar.setAttribute("data-frac", f0); bar._w0 = w0; if (val) val._full = v0;           /* the drawn gauge as it was */
+    return tr;
   };
 
   /* ---- (c) zoom: the camera onto the 16:9 frame around a part (measured once, at rest, when defined) ---- */

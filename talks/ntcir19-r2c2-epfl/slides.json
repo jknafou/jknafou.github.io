@@ -14,9 +14,9 @@
    "title": "An answer is worth more with its confidence",
    "part": 1,
    "continues": false,
-   "notes": "In a company the answer alone is not enough. Its confidence decides where it goes: above a threshold it goes out on its own, below it a person reviews it first. Where the threshold sits depends on what a wrong answer costs: a support desk answers routine questions fast, a contract lookup must surface its doubt, a knowledge base must cite its source. The confidences and thresholds here are illustrative, not measured.",
-   "hash": "4a5bafaaf0a4ecce",
-   "vhash": "bd2b210e80e5237d"
+   "notes": "In a company the answer alone is not enough. Its confidence decides where it goes: above a threshold it goes out on its own, below it a person reviews it first. Where the threshold sits depends on what a wrong answer costs: a support desk answers routine questions fast, a contract lookup must surface its doubt, a knowledge base must cite its source. The confidences and thresholds here are illustrative, not measured: on each step the AI answers five times, the support desk at 92, 41, 88, 67 and 94 against 70, the contract lookup at 95, 74, 91, 58 and 82 against 90, the knowledge base at 91, 63, 85, 47 and 88 against 80; a green tick above the threshold, a red cross below, and the answer goes out or to a person.",
+   "hash": "f5e3e9f4f3bb91d7",
+   "vhash": "f0b862a38852ad0a"
   },
   {
    "id": "03-r2c2-task",
@@ -24,8 +24,8 @@
    "part": 1,
    "continues": true,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages: for each of 64 questions, the passages that support it, at most 20, and an answer with a confidence from 0 to 100.",
-   "hash": "a613f78c5179b5dc",
-   "vhash": "d313854f6a4fb40a"
+   "hash": "41fb8bc85f5b0172",
+   "vhash": "0b3cf920fdf72ab1"
   },
   {
    "id": "04-one-pipeline",
