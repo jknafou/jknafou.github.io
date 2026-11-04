@@ -510,7 +510,12 @@
     var tr = A.track(d, function (u) {
       var t = u * d;
       T.forEach(function (n, i) {
-        if (u >= 1 && stay && i === T.length - 1) { place(i, true); n.innerHTML = esc(texts[i]) + caret; return; }   /* the caret stays where it ended */
+        if (u >= 1 && stay && i === T.length - 1) {                  /* the caret stays where it ended; left as it is when
+                                                                        already there, so a blink running on it is not reset */
+          place(i, true);
+          if (!(n.querySelector("tspan[data-caret]") && n.textContent === texts[i] + "|")) n.innerHTML = esc(texts[i]) + caret;
+          return;
+        }
         if (u >= 1) { place(i, false); n.textContent = texts[i]; return; }
         place(i, true);
         var p = plans[i], lt = t - at[i];
