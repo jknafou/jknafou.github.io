@@ -173,7 +173,13 @@
     setPhase("rest");
   }
   var MEDIA = {
-    init: async function (k) { var my = NAV.gen; await setRest(k, my); startLoop(k); },
+    /* opening the deck is arriving forward: the first slide shown plays its entry (the author, 4 November 2026:
+       "I don't see the animation when starting the slideshow"); a key pressed meanwhile stops it as any other */
+    init: async function (k) {
+      var my = NAV.gen; await setRest(k, my);
+      if (REDUCED || !has("in-" + k)) { startLoop(k); return; }
+      MEDIA.forward(k, false, my, false);
+    },
     /* forward onto k: (fade to) its entry's first frame, wait out the burst, play it at 1x, rest */
     forward: async function (k, seamless, my, inBurst) {
       freeze();
