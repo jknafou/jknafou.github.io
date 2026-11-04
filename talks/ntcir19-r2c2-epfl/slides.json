@@ -22,7 +22,7 @@
    "part": 1,
    "continues": true,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages: for each of 64 questions, the passages that support it, at most 20, and an answer with a confidence from 0 to 100.",
-   "hash": "690678c9f1063d4a"
+   "hash": "91aa98c3259c7317"
   },
   {
    "id": "04-one-pipeline",
