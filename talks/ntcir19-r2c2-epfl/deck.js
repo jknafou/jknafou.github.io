@@ -3,12 +3,17 @@
  * Simplified from the research-day talk's shell (world/talk/talk.js, 27 October 2026): no world,
  * no islands; the same keys, bar, offline cache, fit, timer and cursor.
  *
- *   DEFAULT     each slide at rest is a crisp still (media/rest-<k>.webp, 2x) with its rest loop over
- *               it (loop-<k>.mp4) when it has one; arriving FORWARD plays its entry (in-<k>.mp4) at 1x,
+ *   DEFAULT     a slide WITH MEDIA (one the author has validated: media/media.json lists its rest-<k>)
+ *               is at rest a crisp still (media/rest-<k>.webp, 2x) with its rest loop over it
+ *               (loop-<k>.mp4) when it has one; arriving FORWARD plays its entry (in-<k>.mp4) at 1x,
  *               arriving BACKWARD shows its rest at once (a 0.35 s cross-fade). No video ever plays
  *               backwards, and leaving a slide never replays it.
- *   ?live=1     the same keys over the live page (live.html), which plays the motions themselves.
- *   ?reduced=1  (or the OS setting) cuts between the stills; nothing moves.
+ *               A slide WITHOUT media (not validated: no video may exist for it, tools/make_media.mjs)
+ *               is played LIVE, by the same rules, from live.html in an iframe over the stage, which
+ *               drives its own timelines. Going between the two, the arriving one is laid on top of the
+ *               leaving one and the leaving one is cleared once covered, so nothing stale stays on top.
+ *   ?live=1     every slide live.
+ *   ?reduced=1  (or the OS setting) cuts between the rests (stills, or the live page at rest); nothing moves.
  *   ?chrome=0   hides the bar.   #/k opens slide k.
  *
  * NAVIGATION (the author, 4 November 2026, on build/rules.html: "if pressing <- or -> mid animation,
@@ -100,10 +105,11 @@
     });
   }
   var restUrl = function (k) { return "media/rest-" + k + ".webp"; };
-  var has = function (name) { return !!(MED && MED.files && MED.files[name]); };
+  var has = function (name) { return !LIVE && !!(MED && MED.files && MED.files[name]); };
+  var media = function (k) { return has("rest-" + k); };        /* a validated slide: its stills and videos exist */
   var imgs = {};
   function preImg(k) {
-    if (k < 1 || k > N) return null;
+    if (k < 1 || k > N || !media(k)) return null;
     var u = restUrl(k);
     if (!imgs[u]) { var im = new Image(); im.src = u; imgs[u] = im.decode ? im.decode().catch(function () {}) : Promise.resolve(); }
     return imgs[u];
@@ -147,8 +153,8 @@
     if (restImg.decode) await restImg.decode().catch(function () {});
   }
   /* the layers over the rest: each new one is laid on top of everything shown so far */
-  var Z = 5, curMove = null;
-  function onTop(el) { el.style.zIndex = String(++Z); }
+  var Z = 5, curMove = null, topEl = null;
+  function onTop(el) { el.style.zIndex = String(++Z); topEl = el; }
   async function fadeIn(el, ms) {
     el.style.transition = "none"; el.style.opacity = "0"; el.classList.add("on"); onTop(el);
     await nextFrame();
@@ -164,21 +170,25 @@
       v.classList.remove("on"); v.style.transition = "none"; v.style.opacity = ""; v.style.zIndex = "";
     });
     [].slice.call(box.querySelectorAll(".jumpimg")).forEach(function (im) { if (im !== keep) im.remove(); });
-    if (!keep) Z = 5;
   }
+  /* the media renderer's own picture gone (a live slide now covers the stage) */
+  function hideMedia() { freeze(); stopLoop(); clearLayers(null); restImg.style.visibility = "hidden"; }
   async function arriveAtRest(k, my) {
     await setRest(k, my); if (stale(my)) return;
-    await startLoop(k); if (stale(my)) return;
-    clearLayers(null);
+    restImg.style.visibility = "";
+    startLoop(k);                     /* not waited for: it is laid over the rest still once it plays */
+    clearLayers(null); hideFrame();
     setPhase("rest");
   }
   var MEDIA = {
     /* opening the deck is arriving forward: the first slide shown plays its entry (the author, 4 November 2026:
-       "I don't see the animation when starting the slideshow"); a key pressed meanwhile stops it as any other */
+       "I don't see the animation when starting the slideshow"); a key pressed meanwhile stops it as any other.
+       It starts on the entry's first frame, laid on the empty stage at once: the rest is never shown first
+       (it flashed the finished slide before its animation) */
     init: async function (k) {
-      var my = NAV.gen; await setRest(k, my);
-      if (REDUCED || !has("in-" + k)) { startLoop(k); return; }
-      MEDIA.forward(k, false, my, false);
+      var my = NAV.gen;
+      if (REDUCED || !has("in-" + k)) { await setRest(k, my); restImg.style.visibility = ""; startLoop(k); return; }
+      MEDIA.forward(k, true, my, false);
     },
     /* forward onto k: (fade to) its entry's first frame, wait out the burst, play it at 1x, rest */
     forward: async function (k, seamless, my, inBurst) {
@@ -193,7 +203,7 @@
          whose phase is not frame 0); anything else is faded to, which is the exit */
       await fadeIn(v, seamless ? (loopEl ? 120 : 0) : FADE); if (stale(my)) return;
       if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
-      stopLoop(); clearLayers(v);
+      stopLoop(); clearLayers(v); hideFrame();
       var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); v.addEventListener("error", r, { once: true }); });
       var p = v.play(); if (p && p.catch) p.catch(function () {});
       curMove = v; NAV.played.push("in-" + k); setPhase("entry");
@@ -218,41 +228,75 @@
       await arriveAtRest(k, my);
     },
     preload: function (k) {
-      if (!REDUCED && k < N && has("in-" + (k + 1))) moveVideo("in-" + (k + 1));
+      if (!REDUCED && k < N && has("in-" + (k + 1))) moveVideo("in-" + (k + 1));   /* has() and preImg() skip live slides */
       preImg(k + 1); preImg(k - 1); preImg(1);
     }
   };
 
-  /* ---- the live renderer (?live=1): the same rules over live.html, driving its timelines ------ */
-  var frame = null, W = null, INFO = null;
+  /* ---- the live renderer: every slide without media (or all, ?live=1), the same rules over live.html,
+   * its timelines driven from here. One iframe, loaded once, holds every slide; it is shown on top while a
+   * live slide is on the stage and hidden (its loop stopped) once a media slide has covered it. ---------- */
+  var frame = null, W = null, INFO = null, frameP = null;
+  function ensureFrame(k) {
+    if (frameP) return frameP;
+    frameP = new Promise(function (res) {
+      frame = document.createElement("iframe"); frame.src = "live.html?embed=1&k=" + k; frame.title = "slides";
+      frame.style.pointerEvents = "none"; frame.tabIndex = -1;
+      frame.style.opacity = "0"; frame.style.visibility = "hidden";
+      box.appendChild(frame);
+      frame.addEventListener("load", function () {
+        W = frame.contentWindow;
+        (function wait() {
+          if (W.Live && W.document.documentElement.getAttribute("data-ready")) { INFO = W.Live.info(); res(); }
+          else setTimeout(wait, 50);
+        })();
+      });
+    });
+    return frameP;
+  }
+  function frameShown() { return !!frame && frame.style.visibility !== "hidden" && topEl === frame; }
+  function hideFrame() {
+    if (!frame || frame.style.visibility === "hidden") return;
+    if (W && W.Live) W.Live.stopLoop();
+    frame.style.transition = "none"; frame.style.opacity = "0"; frame.style.visibility = "hidden";
+  }
   function liveFade(to, ms) {
     frame.style.transition = ms ? "opacity " + ms + "ms ease" : "none"; frame.style.opacity = String(to);
     return ms ? sleep(ms) : Promise.resolve();
   }
+  /* lay the live page, already set to its first picture, over whatever is shown, in `ms` */
+  async function frameOver(ms) {
+    frame.style.transition = "none"; frame.style.opacity = "0"; frame.style.visibility = ""; onTop(frame);
+    await nextFrame();
+    await liveFade(1, ms);
+  }
+  /* go to the live picture `set` (a function setting the live page): from the live page itself by a fade
+     through paper (half out, half in), from anything else by fading the live page in over it */
+  async function liveTo(set, my, ms, seamless) {
+    if (frameShown()) {
+      if (!seamless) { await liveFade(0, ms / 2); if (stale(my)) return false; }
+      hideMedia(); set();
+      if (!seamless) { await liveFade(1, ms / 2); if (stale(my)) return false; }
+    } else {
+      set();
+      await frameOver(seamless ? (loopEl ? 120 : 0) : ms); if (stale(my)) return false;
+      hideMedia();
+    }
+    return true;
+  }
   var LIVER = {
-    init: function (k) {
-      return new Promise(function (res) {
-        restImg.style.display = "none";
-        frame = document.createElement("iframe"); frame.src = "live.html?embed=1&k=" + k; frame.title = "slides";
-        frame.style.pointerEvents = "none"; frame.tabIndex = -1;
-        box.appendChild(frame);
-        frame.addEventListener("load", function () {
-          W = frame.contentWindow;
-          (function wait() {
-            if (W.Live && W.document.documentElement.getAttribute("data-ready")) {
-              INFO = W.Live.info(); W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); res();
-            } else setTimeout(wait, 50);
-          })();
-        });
-      });
+    init: async function (k) {
+      var my = NAV.gen; await ensureFrame(k);
+      if (REDUCED || !(INFO[k - 1].entry > 0)) { await liveTo(function () { W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); }, my, 0, false); return; }
+      LIVER.forward(k, true, my, false);    /* opening is arriving forward, as with media: the live page shown at once at its entry's start, never its rest first */
     },
     forward: async function (k, seamless, my, inBurst) {
+      freeze();
+      await ensureFrame(k); if (stale(my)) return;
       var dur = INFO[k - 1].entry;
       if (REDUCED || !(dur > 0)) return LIVER.back(k, my);
       W.Live.stopLoop(); setPhase("fade");
-      if (!seamless) { await liveFade(0, FADE / 2); if (stale(my)) return; }
-      W.Live.entry(k, 0);
-      if (!seamless) { await liveFade(1, FADE / 2); if (stale(my)) return; }
+      if (!(await liveTo(function () { W.Live.entry(k, 0); }, my, FADE, seamless))) return;
       if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
       NAV.played.push("in-" + k); setPhase("entry");
       var t0 = performance.now();
@@ -266,17 +310,18 @@
       W.Live.rest(k); W.Live.startLoop(k); setPhase("rest");
     },
     back: async function (k, my) {
-      W.Live.stopLoop();
-      if (REDUCED) { W.Live.rest(k); setPhase("rest"); return; }
+      freeze();
+      await ensureFrame(k); if (stale(my)) return;
+      if (W.Live) W.Live.stopLoop();
       setPhase("fade");
-      await liveFade(0, FADE / 2); if (stale(my)) return;
-      W.Live.rest(k); W.Live.startLoop(k);
-      await liveFade(1, FADE / 2); if (stale(my)) return;
+      if (!(await liveTo(function () { W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); }, my, REDUCED ? 0 : FADE, false))) return;
       setPhase("rest");
     },
     preload: function () {}
   };
-  var R = MEDIA;
+  /* which renderer plays slide k */
+  function R(k) { return media(k) ? MEDIA : LIVER; }
+
 
   /* ---- the planner: every press acts at once ----------------------------------- */
   function goTo(k) {
@@ -290,9 +335,9 @@
     var my = ++NAV.gen; NAV.wakers.splice(0).forEach(function (w) { w(); });
     cur = k; NAV.dir = dir;
     update();
-    var run = dir > 0 ? R.forward(k, seamless, my, inBurst) : R.back(k, my);
+    var run = dir > 0 ? R(k).forward(k, seamless, my, inBurst) : R(k).back(k, my);
     run.catch(function (e) { ERR.push("move: " + (e && e.message || e)); })
-       .then(function () { if (!stale(my)) R.preload(cur); });
+       .then(function () { if (!stale(my)) MEDIA.preload(cur); });
   }
   function step(dir) { goTo(cur + dir); }
   function partStart(i) { for (var k = 1; k <= N; k++) if (SL[k - 1].part === i) return k; return null; }
@@ -461,7 +506,6 @@
   ]).then(async function (j) {
     CFG = j[0]; SL = j[1].slides; N = SL.length; MED = j[2];
     if (CFG.title) document.title = CFG.title;
-    if (LIVE || !MED) R = LIVER;
     var m = /^#\/(\d+)/.exec(location.hash);
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
     buildLogos();
@@ -471,8 +515,11 @@
       ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["H", "this help"]]
       .map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") + "</table>";
     await dropStale();
-    await R.init(cur);
-    update(); R.preload(cur);
+    var live = [];
+    for (var i = 1; i <= N; i++) if (!media(i)) live.push(i);
+    if (live.length) await ensureFrame(cur);                     /* the live page is ready before any key */
+    await R(cur).init(cur);
+    update(); MEDIA.preload(cur);
     document.documentElement.setAttribute("data-ready", "1");
   }).catch(function (e) { ERR.push("start: " + (e && e.message || e)); crumb.textContent = "could not start: " + e; });
 
@@ -482,7 +529,11 @@
   }
   window.DeckShell = {
     get state() {
-      return { k: cur, n: N, phase: NAV.phase, dest: going() ? cur : null, driving: NAV.phase !== "rest", playing: NAV.phase === "entry" ? "in-" + cur : null, played: NAV.played.slice(-20), nplayed: NAV.played.length, mode: R === LIVER ? "live" : "media", reduced: REDUCED,
+      return { k: cur, n: N, phase: NAV.phase, dest: going() ? cur : null, driving: NAV.phase !== "rest", playing: NAV.phase === "entry" ? "in-" + cur : null, played: NAV.played.slice(-20), nplayed: NAV.played.length, mode: R(cur) === LIVER ? "live" : "media", reduced: REDUCED,
+        live: (function () { var a = []; for (var i = 1; i <= N; i++) if (!media(i)) a.push(i); return a; })(),
+        entries: INFO ? INFO.map(function (e) { return e.entry; }) : null,
+        layers: { frame: frameShown(), frameVisible: !!frame && frame.style.visibility !== "hidden", rest: restImg.style.visibility !== "hidden" && !!restImg.getAttribute("src"),
+          videos: box.querySelectorAll("video.on").length, jumps: box.querySelectorAll(".jumpimg").length },
         offline: OFF.state + (OFF.ready ? " ready" : "") + " " + OFF.files + "/" + OFF.of, crumb: crumb.textContent + " | " + pos.textContent,
         timer: timerEl.textContent, full: !!document.fullscreenElement, loop: loopK, errors: ERR.slice() };
     },

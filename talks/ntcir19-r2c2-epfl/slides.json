@@ -6,7 +6,8 @@
    "part": 0,
    "continues": false,
    "notes": "Introduce yourself; the talk is about telling, from what the pipeline did, when its answer is wrong.",
-   "hash": "bff788a93f3faec2"
+   "hash": "bff788a93f3faec2",
+   "vhash": "7f7ef27b8f32aae9"
   },
   {
    "id": "02-answer-with-confidence",
@@ -14,7 +15,8 @@
    "part": 1,
    "continues": false,
    "notes": "In a company the answer alone is not enough: the confidence says whether to act on it or have a person check it.",
-   "hash": "418ea148e17a10e5"
+   "hash": "418ea148e17a10e5",
+   "vhash": "2242c1a397434746"
   },
   {
    "id": "03-r2c2-task",
@@ -22,7 +24,8 @@
    "part": 1,
    "continues": true,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages: for each of 64 questions, the passages that support it, at most 20, and an answer with a confidence from 0 to 100.",
-   "hash": "33d54697cd895da7"
+   "hash": "33d54697cd895da7",
+   "vhash": "acea0447778738cb"
   },
   {
    "id": "04-one-pipeline",
@@ -30,7 +33,8 @@
    "part": 2,
    "continues": false,
    "notes": "The model above chooses each tool call, one per turn; the orchestrator below checks every claim, keeps the record and rules on the answer. Every journey later in the talk is this ball's roll.",
-   "hash": "74f84fe893526925"
+   "hash": "74f84fe893526925",
+   "vhash": "c9b48e67f26a0155"
   },
   {
    "id": "05-han-solo-pass-1",
@@ -38,7 +42,8 @@
    "part": 2,
    "continues": true,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "9a1c7dfacef90941"
+   "hash": "9a1c7dfacef90941",
+   "vhash": "98f359000ba7608c"
   }
  ]
 }
