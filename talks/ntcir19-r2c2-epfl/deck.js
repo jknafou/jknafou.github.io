@@ -327,10 +327,11 @@
       im.style[c.indexOf("top") >= 0 ? "top" : "bottom"] = "2.6%";  /* the same margin on both axes of a 16:9 box */
       im.style[c.indexOf("right") >= 0 ? "right" : "left"] = "1.46%";
       if (L.chip) im.style.padding = "0.35% 0.5%";
-      box.appendChild(im); logoEls.push([im, L.slides || null]);
+      box.appendChild(im); logoEls.push([im, L.slides || null, L.except || []]);
     });
   }
-  function layoutLogos() { logoEls.forEach(function (x) { x[0].style.display = !x[1] || x[1].indexOf(cur) >= 0 ? "" : "none"; }); }
+  function layoutLogos() {   /* "slides": where a logo shows (default all); "except": where it does not (a slide drawing it itself) */
+    logoEls.forEach(function (x) { x[0].style.display = (!x[1] || x[1].indexOf(cur) >= 0) && x[2].indexOf(cur) < 0 ? "" : "none"; }); }
 
   /* ---- keys ------------------------------------------------------------------ */
   var NEXT = { ArrowRight: 1, PageDown: 1, " ": 1, Spacebar: 1 }, PREV = { ArrowLeft: 1, PageUp: 1, Backspace: 1 };

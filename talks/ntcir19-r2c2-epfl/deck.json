@@ -43,7 +43,8 @@
       "alt": "HES-SO",
       "corner": "bottom-left",
       "height": 0.04,
-      "chip": true
+      "chip": true,
+      "except": [1]
     }
   ],
   "media": {
