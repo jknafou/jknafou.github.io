@@ -44,6 +44,10 @@
  *                                   data-one / data-many: the noun after it agrees on the way ("1 pass", "2 passes")
  *   A.fill(bar, {dur, value})       a gauge settling: the bar (rect[data-full]) hunts up and down around its
  *                                   level before it sets; value (text[data-value]) counts with it
+ *   A.breathe(bar, {dur, value, lo, hi})  a gauge at rest, breathing (a rest loop): from its level up to hi, down to
+ *                                   lo, back to its level (fractions, default 0.95 and 0.35), each leg eased and
+ *                                   timed by the square root of its length; its
+ *                                   number follows the bar at every frame
  *   A.enter(el)                     ONE CONCEPT ENTERING, LAYER BY LAYER, the deck's standard entry:
  *                                   1 frame: the whole concept pops (A.pop); one marked data-enter="bare" has no frame and skips it
  *                                   2 writing, in document order: its own <text> by kind (data-anim, style.as_anim):
@@ -55,6 +59,8 @@
  *                                     its own stroked lines drawn by pen (A.draw)
  *                                   3 marker bands swept (A.highlight)
  *                                   4 gauges settle (A.fill); a model's score (rect[data-model]) first thinks (A.think)
+ *                                   2b a scene's disc set in the card (data-concept="emblem", question_card's or
+ *                                     passage's `emblem`) pops, posed, once its lines are drawn
  *                                   5 hand marks written ([data-verdict], A.write)
  *                                   Nested concepts and anything under [data-layer="frame"] (a logo) come
  *                                   in with the frame and are not taken apart. A container marked
@@ -580,6 +586,25 @@
     });
   };
 
+  /* ---- breathe: a gauge at rest, breathing: from its level up to hi, down to lo and back, each leg eased; its
+     number follows the bar at every frame. Starts and ends on the rest, so it is a rest loop ---- */
+  A.breathe = function (bar, o) {
+    need(bar, "breathe"); o = o || {};
+    var full = parseFloat(bar.getAttribute("data-full")), frac = parseFloat(bar.getAttribute("data-frac"));
+    var w0 = bar._w0 != null ? bar._w0 : (bar._w0 = bar.getAttribute("width")), min = parseFloat(bar.getAttribute("height")) || 0;
+    var val = o.value || null, v0 = val ? (val._full != null ? val._full : (val._full = val.textContent)) : null, top = parseFloat(v0);
+    var hi = o.hi == null ? 0.95 : o.hi, lo = o.lo == null ? 0.35 : o.lo;
+    var P = [frac, hi, lo, frac], L = [Math.abs(hi - frac), Math.abs(hi - lo), Math.abs(frac - lo)].map(Math.sqrt), S = L[0] + L[1] + L[2];   /* a short leg still takes its time */
+    return A.track(o.dur == null ? 4.24 : o.dur, function (u) {
+      if (u <= 0 || u >= 1 || !S) { bar.setAttribute("width", w0); if (val) val.textContent = v0; return; }
+      var d = u * S, i = 0;
+      while (i < 2 && d > L[i]) { d -= L[i]; i++; }
+      var f = P[i] + (P[i + 1] - P[i]) * A.ease.io(L[i] ? d / L[i] : 1);
+      bar.setAttribute("width", Math.max(min, full * f).toFixed(2));
+      if (val && !isNaN(top)) val.textContent = Math.round(frac > 0 ? top * f / frac : 0).toFixed(0);
+    });
+  };
+
   /* a run of words of one kind (data-anim), as the layers say */
   function wordsTrack(kind, run, o) {
     if (kind === "type") return A.type(run, { typos: o.typos });
@@ -718,6 +743,9 @@
                     : A.stagger(kids, function (n) { return A.enter(n); }, Math.min(0.1, 1.5 / kids.length)),   /* ruled rows: in a ripple */
                     marks_.length ? A.stagger(marks_, function (n) { return A.pop(n); }, 0.08) : null);
     } else if (root.getAttribute("data-enter") !== "bare") first = A.pop(root);   /* a frameless concept (a ledger row) has no frame to pop */
+    var ems = drawn ? [] : [].slice.call(root.querySelectorAll('[data-concept="emblem"]'))     /* a card's own scene disc */
+      .filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
+    ems.forEach(pose);
     var hl = q("rect[data-hl]"), bars = q("rect[data-full]"), marks = q("[data-verdict]");
     var vals = q("text[data-value]");
     var scenes = [].slice.call(root.querySelectorAll('[data-concept="scene"]')).filter(function (n) { return n.parentNode.closest("[data-concept]") === root; });
@@ -725,7 +753,8 @@
       first,
       (function () {                                     /* the words, their bands and gauges; the scene acting them out alongside */
         var words = A.seq.apply(null, steps);
-        var then = A.seq(words, hl.length ? A.highlight(hl) : null,
+        var then = A.seq(words, ems.length ? A.stagger(ems, function (n) { return A.pop(n, { dur: 0.45 }); }, 0.08) : null,
+                         hl.length ? A.highlight(hl) : null,
                          bars.length ? A.par.apply(null, bars.map(function (b, i) {
                            var f = A.fill(b, { value: vals[i] });
                            var at = q("text[data-ring]")[i];                       /* the ring turns where the gauge will grow from */
