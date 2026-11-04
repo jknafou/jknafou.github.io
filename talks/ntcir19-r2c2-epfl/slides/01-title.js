@@ -9,7 +9,7 @@
      calls" keyed while the five tracks pop with their chips; the block's frame drawn in; "passages" keyed while the
      window and its rails appear; the 16 calls grow their bars one step each in the trace's order while the passages
      roll left through the window, two laps, the marked one (Ilum) coming to rest in front; the arrow; the answer
-     card enters, its gauge settling at 91.
+     card enters, its gauge settling at 91. The caret, left by "jknafou" at the end of group 1, blinks all through group 2.
    Rest loop (8 blinks, 8.48 s, starting and ending on the rest still): the caret blinks; the answer's confidence
    breathes twice, up to 95, down to 35 and back to 91, its number following the bar (A.breathe); the passages
    keep rolling slowly left, one lap, so the marked one is in front again at the loop's end. */
@@ -57,11 +57,18 @@ Deck.slide("01-title", function (A, q) {
     A.flow(q("ar-p"), { dur: 0.45 }),
     A.enter(q("a")));
 
+  function idleCaret(d) {                       /* whole blinks covering d, ending with the caret shown (the rest) */
+    var n = Math.ceil(d / blink), t = [];
+    for (var i = 0; i < n; i++) t.push(handle.blink(blink));
+    return A.seq.apply(null, t);
+  }
   var k = 8, bl = [], br = [];
   for (var b = 0; b < k; b++) bl.push(handle.blink(blink));
   for (var r = 0; r < k / 4; r++) br.push(A.breathe(q("a-bar"), { value: q("a-value"), dur: 4 * blink, hi: 0.95, lo: 0.35 }));
   return {
-    entry: A.seq(group1, A.wait(0.25), group2),
+    /* the caret starts blinking as soon as "jknafou" is written, while the emblem builds: an idle begins when
+       its own group ends, not when the slide does (the author, 4 November 2026) */
+    entry: A.seq(group1, A.par(A.seq(A.wait(0.25), group2), idleCaret(0.25 + group2.dur))),
     loop: A.par(A.seq.apply(null, bl), A.seq.apply(null, br), roll(mark, mark + N, k * blink, A.ease.lin))
   };
 });
