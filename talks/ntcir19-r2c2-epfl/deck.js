@@ -383,6 +383,19 @@
       OFF.state === "run" ? "Offline: " + mb(OFF.done) + " / " + mb(OFF.total) + " MB (" + OFF.files + " / " + OFF.of + " files)" :
       OFF.state === "error" ? "Offline: stopped (" + (OFF.err || "network") + ")" : canOffline ? "Offline: not started" : "Offline needs the page served over http(s)";
   }
+  /* before anything plays: a cached file whose hash no longer matches the published one is dropped, so a republished
+     slide is never shown from the old copy (the author, 4 November 2026: "I still don't see the animation") */
+  async function dropStale() {
+    if (!canOffline) return;
+    try {
+      var man = await (await fetch("offline-manifest.json", { cache: "no-store" })).json();
+      var cache = await caches.open(CACHE), base = new URL("./", location.href).href;
+      await Promise.all(man.files.map(async function (f) {
+        var u = base + f[0], hit = await cache.match(u);
+        if (hit && hit.headers.get("X-Hash") !== f[2]) await cache.delete(u);
+      }));
+    } catch (e) {}
+  }
   async function fillCache() {
     if (!canOffline || OFF.state === "run") return;
     OFF.state = "run"; OFF.ready = false; OFF.err = null; offShow();
@@ -457,6 +470,7 @@
       ["1–9" + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return ", " + p.key.toUpperCase(); }).join(""), "a part: " + (CFG.parts || []).map(function (p, i) { return (i + 1) + " " + p.name; }).join(", ")],
       ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["H", "this help"]]
       .map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") + "</table>";
+    await dropStale();
     await R.init(cur);
     update(); R.preload(cur);
     document.documentElement.setAttribute("data-ready", "1");
