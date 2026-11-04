@@ -47,6 +47,16 @@
       "except": [1]
     }
   ],
+  "overlays": [
+    {
+      "src": "assets/corner-unit.svg",
+      "alt": "Julien Knafou: GitHub, Hugging Face, LinkedIn, jknafou",
+      "from": "01-title",
+      "part": "corner",
+      "caret": "corner-handle",
+      "except": [1]
+    }
+  ],
   "media": {
     "width": 1920,
     "height": 1080,

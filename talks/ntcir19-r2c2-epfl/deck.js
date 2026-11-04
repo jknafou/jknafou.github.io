@@ -260,6 +260,8 @@
     if (W && W.Live) W.Live.stopLoop();
     frame.style.transition = "none"; frame.style.opacity = "0"; frame.style.visibility = "hidden";
   }
+  var liveLoopAt = { k: 0, t: 0 };                 /* when the live page's loop of slide k last started (an overlay's caret follows it) */
+  function liveLoop(k) { W.Live.startLoop(k); liveLoopAt = { k: k, t: performance.now() }; }
   function liveFade(to, ms) {
     frame.style.transition = ms ? "opacity " + ms + "ms ease" : "none"; frame.style.opacity = String(to);
     return ms ? sleep(ms) : Promise.resolve();
@@ -287,7 +289,7 @@
   var LIVER = {
     init: async function (k) {
       var my = NAV.gen; await ensureFrame(k);
-      if (REDUCED || !(INFO[k - 1].entry > 0)) { await liveTo(function () { W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); }, my, 0, false); return; }
+      if (REDUCED || !(INFO[k - 1].entry > 0)) { await liveTo(function () { W.Live.rest(k); if (!REDUCED) liveLoop(k); }, my, 0, false); return; }
       LIVER.forward(k, true, my, false);    /* opening is arriving forward, as with media: the live page shown at once at its entry's start, never its rest first */
     },
     forward: async function (k, seamless, my, inBurst) {
@@ -307,14 +309,14 @@
         if (t >= dur) break;
         W.Live.entry(k, t);
       }
-      W.Live.rest(k); W.Live.startLoop(k); setPhase("rest");
+      W.Live.rest(k); liveLoop(k); setPhase("rest");
     },
     back: async function (k, my) {
       freeze();
       await ensureFrame(k); if (stale(my)) return;
       if (W.Live) W.Live.stopLoop();
       setPhase("fade");
-      if (!(await liveTo(function () { W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); }, my, REDUCED ? 0 : FADE, false))) return;
+      if (!(await liveTo(function () { W.Live.rest(k); if (!REDUCED) liveLoop(k); }, my, REDUCED ? 0 : FADE, false))) return;
       setPhase("rest");
     },
     preload: function () {}
@@ -332,8 +334,9 @@
     var from = cur, dir = k > from ? 1 : -1;
     /* a continued slide reached from its own predecessor at rest needs no exit */
     var seamless = dir > 0 && k === from + 1 && NAV.phase === "rest" && !!(SL[k - 1] || {}).continues;
+    LEAVE = { k: from, t: idleTime(from), dir: dir };
     var my = ++NAV.gen; NAV.wakers.splice(0).forEach(function (w) { w(); });
-    cur = k; NAV.dir = dir;
+    cur = k; NAV.dir = dir; NAV.phase = "fade";     /* moving from now on: the renderer sets each phase after */
     update();
     var run = dir > 0 ? R(k).forward(k, seamless, my, inBurst) : R(k).back(k, my);
     run.catch(function (e) { ERR.push("move: " + (e && e.message || e)); })
@@ -362,8 +365,8 @@
     layoutLogos();
   }
 
-  /* ---- the logos, from deck.json, over the stage ---------------------------------- */
-  var logoEls = [];
+  /* ---- the logos and overlays, from deck.json, over the stage ---------------------------- */
+  var logoEls = [], LEAVE = null;
   function buildLogos() {
     (CFG.logos || []).forEach(function (L) {
       var im = document.createElement("img"); im.className = "logo" + (L.chip ? " chip" : ""); im.src = L.src; im.alt = L.alt || "";
@@ -372,11 +375,63 @@
       im.style[c.indexOf("top") >= 0 ? "top" : "bottom"] = "2.6%";  /* the same margin on both axes of a 16:9 box */
       im.style[c.indexOf("right") >= 0 ? "right" : "left"] = "1.46%";
       if (L.chip) im.style.padding = "0.35% 0.5%";
-      box.appendChild(im); logoEls.push([im, L.slides || null, L.except || []]);
+      box.appendChild(im); logoEls.push([im, L.slides || null, L.except || [], null]);
     });
   }
-  function layoutLogos() {   /* "slides": where a logo shows (default all); "except": where it does not (a slide drawing it itself) */
-    logoEls.forEach(function (x) { x[0].style.display = (!x[1] || x[1].indexOf(cur) >= 0) && x[2].indexOf(cur) < 0 ? "" : "none"; }); }
+  /* an overlay: a part of one slide (tools/build.py cut it from that slide's svg into a full-stage svg with the
+     slide's viewBox), inlined over the stage so it lands to the pixel where that slide draws it; its caret, if any,
+     blinks by CSS with the slide's own period (data-blink), from the phase the slide's own caret was at */
+  async function buildOverlays() {
+    await Promise.all((CFG.overlays || []).map(async function (O) {
+      var d = document.createElement("div"); d.className = "overlay" + (REDUCED ? " still" : "");
+      d.setAttribute("role", "img"); d.setAttribute("aria-label", O.alt || ""); d.style.display = "none";
+      try { d.innerHTML = await (await fetch(O.src)).text(); } catch (e) { ERR.push("overlay " + O.src + ": " + e); return; }
+      var sv = d.querySelector("svg"), caret = d.querySelector("[data-caret]");
+      if (sv) { sv.removeAttribute("width"); sv.removeAttribute("height"); }
+      var period = sv && +sv.getAttribute("data-blink") || 0;
+      box.appendChild(d);
+      /* under the part, the slide's ground over its bounds: laid over the slide that draws it (fading to or from it),
+         the part covers that slide's own copy instead of doubling its antialiased edges */
+      var g = sv && sv.firstElementChild, ground = sv && sv.getAttribute("data-ground");
+      if (g && ground && g.getBBox) {
+        d.style.display = ""; var bb = g.getBBox(), pad = 3; d.style.display = "none";
+        var r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("x", bb.x - pad); r.setAttribute("y", bb.y - pad); r.setAttribute("width", bb.width + 2 * pad); r.setAttribute("height", bb.height + 2 * pad);
+        r.setAttribute("fill", ground); sv.insertBefore(r, g);
+      }
+      if (caret && period) caret.style.animationDuration = period + "s";
+      logoEls.push([d, O.slides || null, O.except || [], caret && period ? { el: caret, period: period } : null]);
+    }));
+  }
+  /* how far into its idle (rest loop) slide k is, in s, or null when it is not idling (mid-entry, a fade) */
+  function idleTime(k) {
+    if (NAV.phase !== "rest") return null;
+    if (media(k)) return loopEl && loopK === k ? loopEl.currentTime : null;
+    return liveLoopAt.k === k ? (performance.now() - liveLoopAt.t) / 1000 : null;
+  }
+  /* restart a caret's blink as if it had been blinking for t s (0: shown, as at rest) */
+  function caretAt(c, t) {
+    c.el.style.animationName = "none"; void c.el.getBoundingClientRect();
+    c.el.style.animationDelay = -(((t || 0) % c.period + c.period) % c.period).toFixed(3) + "s"; c.el.style.animationName = "";
+  }
+  /* "slides": where a logo shows (default all); "except": where it does not (a slide drawing it itself). A slide in
+     "except" hides it only once that slide covers the stage (at rest, or playing its entry): while the stage is still
+     fading to it, the mark stays, so it never fades out and back in with the slide drawing it in the same place */
+  function layoutLogos() {
+    var covered = NAV.phase === "rest" || NAV.phase === "entry";
+    logoEls.forEach(function (x) {
+      var el = x[0], was = el.style.display !== "none", want = !x[1] || x[1].indexOf(cur) >= 0;
+      var show = want && (x[2].indexOf(cur) < 0 || (!covered && was));
+      if (x[3] && show && LEAVE && LEAVE.k !== cur) {
+        /* arriving where the leaving slide drew the caret itself: go on from its phase; going back to the slide that
+           draws it: shown, as that slide's rest is, its loop restarting */
+        if (!was && x[2].indexOf(LEAVE.k) >= 0) caretAt(x[3], LEAVE.t);
+        else if (was && x[2].indexOf(cur) >= 0 && LEAVE.dir < 0 && !x[3].reset) { caretAt(x[3], 0); x[3].reset = true; }
+      }
+      if (x[3] && x[2].indexOf(cur) < 0) x[3].reset = false;
+      el.style.display = show ? "" : "none";
+    });
+  }
 
   /* ---- keys ------------------------------------------------------------------ */
   var NEXT = { ArrowRight: 1, PageDown: 1, " ": 1, Spacebar: 1 }, PREV = { ArrowLeft: 1, PageUp: 1, Backspace: 1 };
@@ -508,7 +563,7 @@
     if (CFG.title) document.title = CFG.title;
     var m = /^#\/(\d+)/.exec(location.hash);
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
-    buildLogos();
+    buildLogos(); await buildOverlays();
     numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true"); box.appendChild(numEl);
     $("help").innerHTML = "<table>" + [["→ Space PageDown", "next"], ["← PageUp", "previous"], ["Home / End", "first / last"],
       ["1–9" + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return ", " + p.key.toUpperCase(); }).join(""), "a part: " + (CFG.parts || []).map(function (p, i) { return (i + 1) + " " + p.name; }).join(", ")],
@@ -535,6 +590,7 @@
         layers: { frame: frameShown(), frameVisible: !!frame && frame.style.visibility !== "hidden", rest: restImg.style.visibility !== "hidden" && !!restImg.getAttribute("src"),
           videos: box.querySelectorAll("video.on").length, jumps: box.querySelectorAll(".jumpimg").length },
         offline: OFF.state + (OFF.ready ? " ready" : "") + " " + OFF.files + "/" + OFF.of, crumb: crumb.textContent + " | " + pos.textContent,
+        marks: logoEls.map(function (x) { return { what: x[0].tagName === "IMG" ? x[0].getAttribute("src") : "overlay", shown: x[0].style.display !== "none", except: x[2] }; }),
         timer: timerEl.textContent, full: !!document.fullscreenElement, loop: loopK, errors: ERR.slice() };
     },
     started: started, fillCache: fillCache
