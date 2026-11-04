@@ -1,23 +1,34 @@
 /* deck.js -- the linear deck: one 16:9 stage, slides in order, pictures and videos by default.
  *
  * Simplified from the research-day talk's shell (world/talk/talk.js, 27 October 2026): no world,
- * no islands; the same keys, the same destination planner on a straight line, the same bar,
- * offline cache, fit, timer and cursor.
+ * no islands; the same keys, bar, offline cache, fit, timer and cursor.
  *
- *   DEFAULT     each slide at rest is a crisp still (media/rest-<k>.webp, 2x) with its rest loop
- *               over it (loop-<k>.mp4) when it has one; → plays fw-<k>.mp4 (k's exit, k+1's entry),
- *               ← plays bw-<k>.mp4 (the same frames reversed); a jump plays in-<k>.mp4 (its entry).
+ *   DEFAULT     each slide at rest is a crisp still (media/rest-<k>.webp, 2x) with its rest loop over
+ *               it (loop-<k>.mp4) when it has one; arriving FORWARD plays its entry (in-<k>.mp4) at 1x,
+ *               arriving BACKWARD shows its rest at once (a 0.35 s cross-fade). No video ever plays
+ *               backwards, and leaving a slide never replays it.
  *   ?live=1     the same keys over the live page (live.html), which plays the motions themselves.
  *   ?reduced=1  (or the OS setting) cuts between the stills; nothing moves.
  *   ?chrome=0   hides the bar.   #/k opens slide k.
  *
- * KEYS, NEVER BLOCKED (the author, 27 October 2026: "We want to be able to press multiple times and
- * see in the navbar where we are going to jump"): every key moves a DESTINATION, starting from the
- * pending one; the stage travels towards it one hop at a time, a playing move hurries, and the bar
- * shows where it is going.
+ * NAVIGATION (the author, 4 November 2026, on build/rules.html: "if pressing <- or -> mid animation,
+ * it should just stop the animation to move to the selected slide (we can navigate by pressing
+ * multiple times to arrow keys..)"):
+ *   1. → at rest: the next slide's entry plays at its designed speed (1x), then its rest (loop/idle).
+ *      A slide that continues the last starts on its rest, with no exit; any other first fades the
+ *      picture to the entry's first frame in 0.35 s (that fade is the whole exit).
+ *   2. → or ← while an entry (or a fade) plays: it stops at once, and the stage moves to the slide
+ *      the key selects. Nothing is hurried to its end.
+ *   3. Presses each within BURST (0.5 s) of the last are one move: every press moves the destination
+ *      at once and the bar shows it ("→ 7 · title"); a press inside the window starts the target's
+ *      entry only once the keys have been quiet for BURST, so no slide in between is played (the
+ *      first press's entry, under 0.5 s old, is cut).
+ *   4. Direction decides how a slide is arrived at: forward (→, End, a part ahead) with its entry at
+ *      1x; backward (←, Home, T, a part behind) at rest, by a 0.35 s cross-fade, its loop restarting.
+ *   ?reduced=1: cuts between rest stills, in both directions.
  *   → Space PageDown   next        ← PageUp Backspace   previous      Home / End   first / last
  *   1-9                the first slide of that part (or a part's own letter, deck.json parts[].key)
- *   T                  the title (slide 1)    Esc  cancel the pending destination
+ *   T                  the title (slide 1)
  *   F full screen      S timer (minutes; S again restarts)    O offline panel    H help
  */
 (function () {
@@ -35,7 +46,25 @@
   window.addEventListener("error", function (e) { ERR.push(String(e.message || e)); });
 
   var CFG = {}, SL = [], MED = null, N = 0, cur = 1;
-  var FAST = 3, BACK = 1.5, JUMP = 1.6;
+  var FADE = 350, BURST = 500;
+
+  /* ---- one navigation at a time: every key press starts a new GENERATION; whatever an older one
+   * was doing (a fade, an entry, a wait) sees it is stale at its next step and gives up, leaving the
+   * picture where it was for the new one to fade from. ------------------------------------------ */
+  var NAV = { gen: 0, phase: "rest", dir: 0, last: 0, wakers: [], played: [] };   /* played: the entries started, for the walk */
+  function stale(my) { return my !== NAV.gen; }
+  function setPhase(p) { NAV.phase = p; update(); }
+  /* resolves when the generation `my` is superseded */
+  function superseded(my) { return new Promise(function (r) { if (stale(my)) r(); else NAV.wakers.push(r); }); }
+  /* the burst: wait until the keys have been quiet for BURST (false if a newer press came) */
+  async function quiet(my) {
+    for (;;) {
+      var left = BURST - (performance.now() - NAV.last);
+      if (stale(my)) return false;
+      if (left <= 0) return true;
+      await sleep(Math.min(left, 60));
+    }
+  }
 
   /* ---- the media renderer ---------------------------------------------------- */
   function video(src, poster) {
@@ -64,7 +93,7 @@
   }
   function seek0(v) {
     return new Promise(function (res) {
-      if (v.currentTime === 0) return res();
+      if (v.currentTime === 0 && v.readyState >= 2) return res();
       var to = setTimeout(res, 800);
       v.addEventListener("seeked", function () { clearTimeout(to); res(); }, { once: true });
       try { v.currentTime = 0; } catch (e) { clearTimeout(to); res(); }
@@ -86,8 +115,9 @@
     var v = video(u); v.className = "movevid"; box.appendChild(v);
     moves[u] = { v: v, t: performance.now() };
     var keys = Object.keys(moves);
-    if (keys.length > 8) keys.sort(function (a, b) { return moves[a].t - moves[b].t; }).slice(0, keys.length - 8).forEach(function (k) {
-      var e = moves[k].v; if (!e.paused) return; delete moves[k]; e.removeAttribute("src"); e.load(); e.remove();
+    if (keys.length > 6) keys.sort(function (a, b) { return moves[a].t - moves[b].t; }).slice(0, keys.length - 6).forEach(function (k) {
+      var e = moves[k].v; if (!e.paused || e.classList.contains("on")) return;
+      delete moves[k]; e.removeAttribute("src"); e.load(); e.remove();
     });
     return v;
   }
@@ -99,7 +129,7 @@
   }
   async function startLoop(k) {
     if (REDUCED || !has("loop-" + k)) { stopLoop(); return; }
-    if (loopK === k && loopEl) return;
+    if (loopK === k && loopEl) { try { loopEl.currentTime = 0; } catch (e) {} return; }   /* its loop from the start */
     stopLoop();
     var v = video("media/loop-" + k + ".mp4", restUrl(k)); v.loop = true; v.className = "loopvid";
     box.insertBefore(v, restImg.nextSibling);
@@ -110,58 +140,89 @@
     await firstFrame(v);
     if (loopEl === v) v.classList.add("on");
   }
-  async function setRest(k) {
+  async function setRest(k, my) {
     await preImg(k);
+    if (stale(my)) return;
     restImg.src = restUrl(k);
     if (restImg.decode) await restImg.decode().catch(function () {});
   }
-  var curMove = null;
-  /* one video from the picture now shown to rest-<to>; fade: fade it in first (a jump) */
-  async function playVideo(name, to, rate, fade) {
-    var target = preImg(to);
-    if (REDUCED || !has(name)) { stopLoop(); await setRest(to); startLoop(to); return; }
-    var v = moveVideo(name);
-    await ready(v, 6000);
-    await seek0(v);
-    v.playbackRate = rate || 1;
-    var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); });
-    if (fade) { v.style.transition = "none"; v.style.opacity = 0; v.classList.add("on"); await nextFrame();
-      v.style.transition = "opacity 200ms ease"; v.style.opacity = 1; await sleep(200); }
-    var p = v.play(); if (p && p.catch) p.catch(function () {});
-    curMove = v;
-    await firstFrame(v);
-    v.style.transition = loopEl && !fade ? "opacity 120ms ease" : "none";     /* over a rest loop: no phase jump */
-    v.style.opacity = ""; v.classList.add("on");
-    if (loopEl) setTimeout(stopLoop, 140);
-    await target; await ended;
-    curMove = null;
-    await setRest(to);
-    await startLoop(to);
-    v.style.transition = "none"; v.classList.remove("on");
-    try { v.pause(); v.currentTime = 0; v.playbackRate = 1; } catch (e) {}
+  /* the layers over the rest: each new one is laid on top of everything shown so far */
+  var Z = 5, curMove = null;
+  function onTop(el) { el.style.zIndex = String(++Z); }
+  async function fadeIn(el, ms) {
+    el.style.transition = "none"; el.style.opacity = "0"; el.classList.add("on"); onTop(el);
+    await nextFrame();
+    el.style.transition = ms ? "opacity " + ms + "ms ease" : "none"; el.style.opacity = "1";
+    if (ms) await sleep(ms);
+  }
+  function freeze() { if (curMove) { try { curMove.pause(); } catch (e) {} curMove = null; } }   /* an entry stops where it is */
+  /* drop every layer but `keep` (the stage is now the rest, or `keep` alone) */
+  function clearLayers(keep) {
+    Object.keys(moves).forEach(function (u) {
+      var v = moves[u].v; if (v === keep) return;
+      try { v.pause(); } catch (e) {}
+      v.classList.remove("on"); v.style.transition = "none"; v.style.opacity = ""; v.style.zIndex = "";
+    });
+    [].slice.call(box.querySelectorAll(".jumpimg")).forEach(function (im) { if (im !== keep) im.remove(); });
+    if (!keep) Z = 5;
+  }
+  async function arriveAtRest(k, my) {
+    await setRest(k, my); if (stale(my)) return;
+    await startLoop(k); if (stale(my)) return;
+    clearLayers(null);
+    setPhase("rest");
   }
   var MEDIA = {
-    init: async function (k) { await setRest(k); startLoop(k); },
-    move: function (a, dir, rate) { return dir > 0 ? playVideo("fw-" + a, a + 1, rate) : playVideo("bw-" + a, a, (rate || 1) * BACK); },
-    jump: async function (k) {
-      if (CFG.jump !== "fade" && has("in-" + k)) return playVideo("in-" + k, k, JUMP, true);
-      /* a fade to the target's still */
-      await preImg(k);
-      var im = document.createElement("img"); im.className = "jumpimg"; im.alt = ""; im.src = restUrl(k); im.style.opacity = 0;
-      if (im.decode) await im.decode().catch(function () {});
-      box.appendChild(im); await nextFrame();
-      im.style.opacity = 1; await sleep(REDUCED ? 0 : 240);
-      stopLoop(); await setRest(k); im.remove(); startLoop(k);
+    init: async function (k) { var my = NAV.gen; await setRest(k, my); startLoop(k); },
+    /* forward onto k: (fade to) its entry's first frame, wait out the burst, play it at 1x, rest */
+    forward: async function (k, seamless, my, inBurst) {
+      freeze();
+      if (REDUCED || !has("in-" + k)) return MEDIA.back(k, my);
+      setPhase("fade");
+      var v = moveVideo("in-" + k);
+      await ready(v, 6000); if (stale(my)) return;
+      await seek0(v); if (stale(my)) return;
+      v.playbackRate = 1;
+      /* a continued slide's first frame is the rest just left: laid on at once (120 ms over a loop,
+         whose phase is not frame 0); anything else is faded to, which is the exit */
+      await fadeIn(v, seamless ? (loopEl ? 120 : 0) : FADE); if (stale(my)) return;
+      if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
+      stopLoop(); clearLayers(v);
+      var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); v.addEventListener("error", r, { once: true }); });
+      var p = v.play(); if (p && p.catch) p.catch(function () {});
+      curMove = v; NAV.played.push("in-" + k); setPhase("entry");
+      preImg(k);
+      await Promise.race([ended, superseded(my)]);
+      if (stale(my)) return;
+      curMove = null;
+      await arriveAtRest(k, my);
     },
-    speed: function () { if (curMove && !curMove.paused && !REDUCED) try { curMove.playbackRate = Math.max(curMove.playbackRate, FAST); } catch (e) {} },
+    /* backward onto k (or a cut): its rest faded in over whatever is shown, then its loop restarts */
+    back: async function (k, my) {
+      freeze();
+      setPhase("fade");
+      await preImg(k); if (stale(my)) return;
+      if (!REDUCED) {
+        var im = document.createElement("img"); im.className = "jumpimg"; im.alt = ""; im.src = restUrl(k);
+        if (im.decode) await im.decode().catch(function () {});
+        if (stale(my)) return;
+        box.appendChild(im);
+        await fadeIn(im, FADE); if (stale(my)) return;
+      }
+      await arriveAtRest(k, my);
+    },
     preload: function (k) {
-      [k < N ? "fw-" + k : null, k > 1 ? "bw-" + (k - 1) : null].forEach(function (n) { if (n && has(n) && !REDUCED) moveVideo(n); });
+      if (!REDUCED && k < N && has("in-" + (k + 1))) moveVideo("in-" + (k + 1));
       preImg(k + 1); preImg(k - 1); preImg(1);
     }
   };
 
-  /* ---- the live renderer (?live=1): the same keys over live.html ---------------- */
-  var frame = null, W = null;
+  /* ---- the live renderer (?live=1): the same rules over live.html, driving its timelines ------ */
+  var frame = null, W = null, INFO = null;
+  function liveFade(to, ms) {
+    frame.style.transition = ms ? "opacity " + ms + "ms ease" : "none"; frame.style.opacity = String(to);
+    return ms ? sleep(ms) : Promise.resolve();
+  }
   var LIVER = {
     init: function (k) {
       return new Promise(function (res) {
@@ -171,45 +232,63 @@
         box.appendChild(frame);
         frame.addEventListener("load", function () {
           W = frame.contentWindow;
-          (function wait() { if (W.Live && W.document.documentElement.getAttribute("data-ready")) { W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); res(); } else setTimeout(wait, 50); })();
+          (function wait() {
+            if (W.Live && W.document.documentElement.getAttribute("data-ready")) {
+              INFO = W.Live.info(); W.Live.rest(k); if (!REDUCED) W.Live.startLoop(k); res();
+            } else setTimeout(wait, 50);
+          })();
         });
       });
     },
-    move: function (a, dir, rate) {
-      if (REDUCED) { W.Live.rest(dir > 0 ? a + 1 : a); return Promise.resolve(); }
-      return W.Live.play(a, dir, dir > 0 ? rate : (rate || 1) * BACK);
+    forward: async function (k, seamless, my, inBurst) {
+      var dur = INFO[k - 1].entry;
+      if (REDUCED || !(dur > 0)) return LIVER.back(k, my);
+      W.Live.stopLoop(); setPhase("fade");
+      if (!seamless) { await liveFade(0, FADE / 2); if (stale(my)) return; }
+      W.Live.entry(k, 0);
+      if (!seamless) { await liveFade(1, FADE / 2); if (stale(my)) return; }
+      if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
+      NAV.played.push("in-" + k); setPhase("entry");
+      var t0 = performance.now();
+      for (;;) {
+        await new Promise(function (r) { requestAnimationFrame(r); });
+        if (stale(my)) return;                                   /* stopped where it is */
+        var t = (performance.now() - t0) / 1000;
+        if (t >= dur) break;
+        W.Live.entry(k, t);
+      }
+      W.Live.rest(k); W.Live.startLoop(k); setPhase("rest");
     },
-    jump: function (k) { if (REDUCED) { W.Live.rest(k); return Promise.resolve(); } return W.Live.playEntry(k, JUMP); },
-    speed: function () { if (W && W.Live) W.Live.speed(FAST); },
+    back: async function (k, my) {
+      W.Live.stopLoop();
+      if (REDUCED) { W.Live.rest(k); setPhase("rest"); return; }
+      setPhase("fade");
+      await liveFade(0, FADE / 2); if (stale(my)) return;
+      W.Live.rest(k); W.Live.startLoop(k);
+      await liveFade(1, FADE / 2); if (stale(my)) return;
+      setPhase("rest");
+    },
     preload: function () {}
   };
   var R = MEDIA;
 
-  /* ---- the destination planner on a line ---------------------------------------- */
-  var T = { dest: null, driving: false };
-  async function travel() {
-    if (T.driving) return;
-    T.driving = true;
-    try {
-      for (var guard = 0; guard < 400 && T.dest != null && T.dest !== cur; guard++) {
-        var d = T.dest;
-        if (Math.abs(d - cur) === 1) { var a = Math.min(cur, d), dir = d > cur ? 1 : -1; await R.move(a, dir, 1); cur = d; }
-        else { await R.jump(d); cur = d; }
-        update();
-      }
-    } catch (e) { ERR.push("travel: " + (e && e.message || e)); }
-    finally { T.driving = false; T.dest = null; update(); R.preload(cur); }
-  }
+  /* ---- the planner: every press acts at once ----------------------------------- */
   function goTo(k) {
-    var from = T.driving && T.dest != null ? T.dest : cur;
+    var now = performance.now(), inBurst = now - NAV.last < BURST;    /* a press inside the window waits for quiet */
+    NAV.last = now;
     k = Math.max(1, Math.min(N, k));
-    if (k === from) return bump();
-    T.dest = k;
-    if (T.driving) R.speed();
+    if (k === cur) return bump();
+    var from = cur, dir = k > from ? 1 : -1;
+    /* a continued slide reached from its own predecessor at rest needs no exit */
+    var seamless = dir > 0 && k === from + 1 && NAV.phase === "rest" && !!(SL[k - 1] || {}).continues;
+    var my = ++NAV.gen; NAV.wakers.splice(0).forEach(function (w) { w(); });
+    cur = k; NAV.dir = dir;
     update();
-    if (!T.driving) travel();
+    var run = dir > 0 ? R.forward(k, seamless, my, inBurst) : R.back(k, my);
+    run.catch(function (e) { ERR.push("move: " + (e && e.message || e)); })
+       .then(function () { if (!stale(my)) R.preload(cur); });
   }
-  function step(dir) { goTo((T.driving && T.dest != null ? T.dest : cur) + dir); }
+  function step(dir) { goTo(cur + dir); }
   function partStart(i) { for (var k = 1; k <= N; k++) if (SL[k - 1].part === i) return k; return null; }
 
   /* ---- where am I: the bar ---------------------------------------------------- */
@@ -219,12 +298,14 @@
     return [(pn ? pn + " › " : "") + (s.title || ""), k + " / " + N];
   }
   var lastHash = null;
+  function going() { return NAV.phase === "fade" || NAV.phase === "hold"; }
+  var numEl = null;
   function update() {
-    var going = T.dest != null && T.dest !== cur;
-    var d = describe(going ? T.dest : cur);
-    crumb.textContent = (going ? "→ " : (CFG.title ? CFG.title + " · " : "")) + d[0];
+    var g = going(), d = describe(cur);
+    crumb.textContent = (g ? (NAV.dir < 0 ? "← " : "→ ") : (CFG.title ? CFG.title + " · " : "")) + d[0];
     pos.textContent = d[1];
-    strip.classList.toggle("going", going);
+    strip.classList.toggle("going", g);
+    if (numEl) numEl.textContent = String(cur);
     var h = "#/" + cur;
     if (h !== lastHash) { lastHash = h; try { history.replaceState(null, "", h + ""); } catch (e) {} }
     layoutLogos();
@@ -254,7 +335,6 @@
     if (PREV[k]) { e.preventDefault(); return step(-1); }
     if (k === "Home") { e.preventDefault(); return goTo(1); }
     if (k === "End") { e.preventDefault(); return goTo(N); }
-    if (k === "Escape") { if (T.driving && T.dest != null) { T.dest = null; update(); } return; }
     if (/^[1-9]$/.test(k)) { var s = partStart(+k); e.preventDefault(); return s ? goTo(s) : bump(); }
     if (low === "f") { e.preventDefault(); return toggleFull(); }
     if (low === "s") { e.preventDefault(); return startTimer(); }
@@ -365,9 +445,10 @@
     var m = /^#\/(\d+)/.exec(location.hash);
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
     buildLogos();
+    numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true"); box.appendChild(numEl);
     $("help").innerHTML = "<table>" + [["→ Space PageDown", "next"], ["← PageUp", "previous"], ["Home / End", "first / last"],
       ["1–9" + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return ", " + p.key.toUpperCase(); }).join(""), "a part: " + (CFG.parts || []).map(function (p, i) { return (i + 1) + " " + p.name; }).join(", ")],
-      ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["Esc", "cancel"], ["H", "this help"]]
+      ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["H", "this help"]]
       .map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") + "</table>";
     await R.init(cur);
     update(); R.preload(cur);
@@ -380,7 +461,7 @@
   }
   window.DeckShell = {
     get state() {
-      return { k: cur, n: N, dest: T.dest, driving: T.driving, mode: R === LIVER ? "live" : "media", reduced: REDUCED,
+      return { k: cur, n: N, phase: NAV.phase, dest: going() ? cur : null, driving: NAV.phase !== "rest", playing: NAV.phase === "entry" ? "in-" + cur : null, played: NAV.played.slice(-20), nplayed: NAV.played.length, mode: R === LIVER ? "live" : "media", reduced: REDUCED,
         offline: OFF.state + (OFF.ready ? " ready" : "") + " " + OFF.files + "/" + OFF.of, crumb: crumb.textContent + " | " + pos.textContent,
         timer: timerEl.textContent, full: !!document.fullscreenElement, loop: loopK, errors: ERR.slice() };
     },
