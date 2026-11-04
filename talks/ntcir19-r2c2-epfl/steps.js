@@ -9,7 +9,8 @@
  *   (b) animation  only the focus moves, in the step's LOOP (starting and ending on its rest), built from the bank's
  *                  motions in ROUNDS: A.cycle(r1, r2, ...) plays self-contained rounds one after another (only the
  *                  current one is set); A.hold(track, dur, t) keeps a track at its state t (default its end) for dur;
- *                  A.fillTo(bar, {frac, shown, value, dur}) is A.fill settling on another value than the drawn one
+ *                  A.fillTo(bar, {frac, shown, value, dur}) is A.fill settling on another value than the drawn one;
+ *                  A.become(token, {to, from, dur}) turns a token over into what it now carries (Q into A, a tool call)
  *   (c) zoom       A.zoom(svg, {from, to, pad, dur})      the camera closes on a part (A.camera, onto the 16:9 frame
  *                                                         around an element, or a frame [x, y, w, h])
  * `from` / `to` of A.focus are the index (or indexes) in `parts` of the focus, null for the overview. Each is a
@@ -83,6 +84,24 @@
     var tr = A.fill(bar, { dur: o.dur, value: val });
     bar.setAttribute("data-frac", f0); bar._w0 = w0; if (val) val._full = v0;           /* the drawn gauge as it was */
     return tr;
+  };
+
+  /* ---- become: the token turns over into what it now carries (concepts/question_token.py, carries=("Q", "A")):
+   * a coin turning, its width to nothing and back, the face swapped at the edge, as it leaves a box. `to` is the
+   * face it ends on, `from` the face it starts on (default: the one shown in the markup). Pure: at 0 it is `from`,
+   * at its end `to`, flat on both ---- */
+  A.become = function (token, o) {
+    o = o || {};
+    var T = lst(token)[0], flip = T && T.querySelector("[data-flip]"), F = T ? [].slice.call(T.querySelectorAll("[data-face]")) : [];
+    if (!flip || !F.length) throw new Error("A.become: the token has no faces (question_token carries=[...])");
+    var face = function (k) { var f = F.filter(function (x) { return x.getAttribute("data-face") === k; })[0]; if (!f) throw new Error("A.become: no face " + k); return f; };
+    var from = face(o.from || F.filter(function (x) { return x.style.display !== "none"; })[0].getAttribute("data-face")), to = face(o.to);
+    flip.style.transformBox = "fill-box"; flip.style.transformOrigin = "center";
+    return A.track(o.dur == null ? 0.4 : o.dur, function (u) {
+      var on = u < 0.5 ? from : to, sx = Math.abs(Math.cos(Math.PI * u));
+      F.forEach(function (f) { f.style.display = f === on ? "" : "none"; });
+      flip.style.scale = u <= 0 || u >= 1 ? "" : Math.max(0.001, sx).toFixed(4) + " 1";
+    });
   };
 
   /* ---- (c) zoom: the camera onto the 16:9 frame around a part (measured once, at rest, when defined) ---- */

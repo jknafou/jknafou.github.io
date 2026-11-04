@@ -7,11 +7,11 @@
    the overview: all three rows, nothing moving (no idle).
    STEPS, one per row in reading order: (a) the row opaque, the other two at 0.3 (A.focus); its ball pops in at its
    question card, the last row's ball fading out. (b) Its loop, five rounds (A.cycle), each the AI answering once with a
-   new confidence (the row's data-rounds, illustrative, NOTES), against its threshold (data-thr): the ball rolls into
-   the AI; the thinking ring turns at the answer's number, its gauge empty; the gauge hunts and settles on the round's
+   new confidence (the row's data-rounds, illustrative, NOTES), against its threshold (data-thr): the Q ball rolls into
+   the AI and comes out of it turned over into an A (A.become), rolling into the answer; the thinking ring turns at the answer's number, its gauge empty; the gauge hunts and settles on the round's
    confidence (A.fillTo); the verdict is written at the card's top right, a green tick at or above the threshold, a red
    cross below; the ball pops out at the gate's arrow and rolls through the gate, down the branch the verdict says,
-   into that outcome; then it pops back at its question card as the verdict fades. The last round's confidence is
+   into that outcome; then the Q ball pops back at its question card as the verdict fades. The last round's confidence is
    the one drawn, so the loop ends on the step's rest. */
 Deck.slide("02-answer-with-confidence", function (A, q) {
   var R = [0, 1, 2], rows = R.map(function (i) { return q("row" + i); });
@@ -36,13 +36,17 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
   function round(i, v, prev, thr) {
     var k = "r" + i, ball = q("b" + i), up = v >= thr, bar = q(k + "-a-bar"), val = q(k + "-a-value");
     var mark = q(k + (up ? "-ok" : "-ko")), other = q(k + (up ? "-ko" : "-ok"));
-    var t1 = A.travel(ball, { along: [q(k + "-a1")], into: [q(k + "-ai")], dur: 1.0 });
+    var t1 = A.travel(ball, { along: [q(k + "-a1")], into: [q(k + "-ai")], dur: 0.9 });
+    var tA = A.travel(ball, { along: [q(k + "-a2")], into: [q(k + "-a")], dur: 0.6 });
+    var turn = A.become(ball, { from: "Q", to: "A", dur: 0.45 });
     var t2 = A.travel(ball, { along: [q(k + "-a3"), q(k + "-" + (up ? "up" : "down"))],
                               into: [q(k + "-gate"), q(k + "-" + (up ? "sent" : "review"))], dur: 1.4 });
     var shown = A.pop(ball, { dur: 0.35 }), last = A.fillTo(bar, { frac: prev / 100, shown: prev, value: val });
     var think = A.think(val, { dur: 0.9 }), fill = A.fillTo(bar, { frac: v / 100, shown: v, value: val, dur: 1.2 });
     var body = A.seq(
-      A.par(t1, A.hold(shown, t1.dur), A.hold(last, t1.dur)),                 /* the question into the AI; the gauge as it was */
+      A.par(t1, A.hold(shown, t1.dur), A.hold(last, t1.dur), A.hold(turn, t1.dur, 0)),   /* the Q into the AI; the gauge as it was */
+      A.par(A.hold(tA, turn.dur, 0), turn, A.hold(fill, turn.dur, 0)),         /* out of the AI, turned over: an A */
+      tA,                                                                      /* the answer into its card */
       A.par(think, A.hold(fill, think.dur, 0)),                                /* the AI thinks, the gauge empty */
       fill,                                                                    /* it hunts and settles on this round's value */
       A.par(A.reveal(mark, { dur: 0.01 }), A.write(mark, { dur: 0.5 })),       /* its verdict, written at the end of the gauge */
@@ -50,7 +54,7 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
       A.par(A.hold(t2, 0.35, 0), A.pop(ball, { dur: 0.35 })),                  /* the answer pops out ... */
       t2,                                                                      /* ... and goes where the verdict says */
       A.wait(0.3),
-      A.par(A.hold(t1, 0.4, 0), A.pop(ball, { dur: 0.4 }), A.hide(mark, { dur: 0.3 })),   /* back at its card, the verdict fading */
+      A.par(A.hold(t1, 0.4, 0), A.hold(turn, 0.4, 0), A.pop(ball, { dur: 0.4 }), A.hide(mark, { dur: 0.3 })),   /* a Q again at its card, the verdict fading */
       A.wait(0.4));
     return A.par(body, A.hold(A.hide(other, { dur: 0 }), body.dur));
   }
