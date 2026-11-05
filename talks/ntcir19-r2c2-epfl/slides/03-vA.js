@@ -54,7 +54,6 @@ Deck.slide("03-r2c2-task", function (A, q) {
     A.seq(key("ac-name"), A.pace(A.enter(q("ac")), 2)),
     A.par(nugs, A.at(Math.max(prG.dur, nugs.dur), arrows))));
 
-  window.__d = { have: have.dur, ret: ret.dur, pr: prG.dur, nugs: nugs.dur, corpus: A.enter(q("corpus")).dur, qs: A.stagger(six, ruledCard, 0.12).dur, ac: A.enter(q("ac")).dur, head: key("task-head").dur, tag: A.enter(q("t0")).dur };
   var STEP = [
     { to: 0, frame: F[0] },
     { to: 1, frame: F[1], loop: replay(0) }, { to: 2, frame: F[2], loop: replay(1) }, { to: 3, frame: F[3], loop: replay(2) },
