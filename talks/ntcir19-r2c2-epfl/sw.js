@@ -4,10 +4,18 @@
  *   the media   everything else: CACHE FIRST. deck.js fills the cache from offline-manifest.json,
  *               each file stored with its hash. A <video> asks with a Range header: a cached file
  *               answers it with a 206 sliced from the whole file, which Chrome needs offline.
- * The cache names carry the folder's path, so two decks on one site never share a cache.
+ * The cache names carry the folder's path, so two decks on one site never share a cache, and a SCHEMA number:
+ * the caches of any other schema are deleted when this worker activates (and by deck.js before anything plays).
+ * A NEVER-STALE MEDIA FILE (the author, 5 November 2026: "I still don't see the validated new title page"; his browser
+ * kept the old title video, because the cached copy's hash was checked against a manifest the publish had not
+ * rewritten): deck.js asks for every still and video by a versioned URL, media/in-1.mp4?v=<its content hash>
+ * (media.json's "v", the same sha256[:12] as offline-manifest.json's), and a cached copy is answered only when the
+ * hash it was stored with (X-Hash) is that v; any other copy is dropped and the file comes from the network, by its
+ * versioned URL, which no HTTP cache holds an older answer for.
  */
 var ROOT = new URL(self.registration.scope).pathname;
-var SHELL = "deck-shell:" + ROOT, MEDIA = "deck-media:" + ROOT;
+var SCHEMA = 2, SHELL = "deck-shell-" + SCHEMA + ":" + ROOT, MEDIA = "deck-media-" + SCHEMA + ":" + ROOT;
+function ours(name) { return /^deck-(shell|media)(-\d+)?:/.test(name) && name.slice(name.indexOf(":") + 1) === ROOT; }
 var SHELL_FILES = ["./", "index.html", "deck.js", "deck.css", "deck.json", "slides.json", "live.html", "live.js", "anim.js",
   "offline-manifest.json", "media/media.json"];
 
@@ -18,7 +26,11 @@ self.addEventListener("install", function (e) {
     }));
   }).then(function () { return self.skipWaiting(); }));
 });
-self.addEventListener("activate", function (e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener("activate", function (e) {
+  e.waitUntil(caches.keys().then(function (ns) {
+    return Promise.all(ns.filter(function (n) { return ours(n) && n !== SHELL && n !== MEDIA; }).map(function (n) { return caches.delete(n); }));
+  }).then(function () { return self.clients.claim(); }));
+});
 
 function isShell(url) { return /\/$/.test(url.pathname) || /\.(html|js|css|json)$/.test(url.pathname); }
 function keyOf(url) { return url.origin + url.pathname; }
@@ -37,7 +49,10 @@ async function shellFirst(req, url) {
   }
 }
 async function mediaFirst(req, url) {
-  var hit = await (await caches.open(MEDIA)).match(keyOf(url));
+  var c = await caches.open(MEDIA), hit = await c.match(keyOf(url)), v = url.searchParams.get("v");
+  if (hit && v && hit.headers.get("X-Hash") !== v) {          /* a copy of another version: never answered while online */
+    try { var r = await fetch(req); if (r.ok || r.status === 206) { c.delete(keyOf(url)); return r; } } catch (e) {}
+  }
   if (!hit) return fetch(req);
   var range = req.headers.get("range");
   if (!range) return hit;

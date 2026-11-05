@@ -24,8 +24,8 @@
    "part": 1,
    "continues": false,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "23bae938bbcff437",
-   "vhash": "380bd3f1a34f66e3"
+   "hash": "ac331771e4cb95ef",
+   "vhash": "0638708a052a1f84"
   },
   {
    "id": "04-one-pipeline",
@@ -42,8 +42,8 @@
    "part": 2,
    "continues": true,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "f7e13ff9edd43915",
-   "vhash": "2d5d39b6e3127dab"
+   "hash": "ff3815b59bddb9bb",
+   "vhash": "b0844a8a05fdcc0e"
   }
  ]
 }

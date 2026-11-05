@@ -131,7 +131,10 @@
       try { v.currentTime = 0; } catch (e) { clearTimeout(to); res(); }
     });
   }
-  var restUrl = function (k, s) { return "media/rest-" + k + (s ? "-" + s : "") + ".webp"; };
+  /* every still and video by a versioned URL: its content hash (media.json's v), so a re-rendered file is never
+     answered from an older copy (sw.js, "a never-stale media file") */
+  var mediaUrl = function (name, ext) { var f = MED && MED.files && MED.files[name]; return "media/" + name + "." + ext + (f && f.v ? "?v=" + f.v : ""); };
+  var restUrl = function (k, s) { return mediaUrl("rest-" + k + (s ? "-" + s : ""), "webp"); };
   var loopName = function (k, s) { return s ? "stl-" + k + "-" + s : "loop-" + k; };
   var cueName = function (k, s) { return s ? "st-" + k + "-" + s : "in-" + k; };
   var has = function (name) { return !LIVE && !!(MED && MED.files && MED.files[name]); };
@@ -145,7 +148,7 @@
   }
   var moves = {};
   function moveVideo(name) {
-    var u = "media/" + name + ".mp4";
+    var u = mediaUrl(name, "mp4");
     if (moves[u]) { moves[u].t = performance.now(); return moves[u].v; }
     var v = video(u); v.className = "movevid"; box.appendChild(v);
     moves[u] = { v: v, t: performance.now() };
@@ -167,7 +170,7 @@
     if (REDUCED || !has(name)) { stopLoop(); return; }
     if (loopK === name && loopEl) { try { loopEl.currentTime = 0; } catch (e) {} return; }   /* its loop from the start */
     stopLoop();
-    var v = video("media/" + name + ".mp4", restUrl(k, s)); v.loop = true; v.className = "loopvid";
+    var v = video(mediaUrl(name, "mp4"), restUrl(k, s)); v.loop = true; v.className = "loopvid";
     box.insertBefore(v, restImg.nextSibling);
     loopEl = v; loopK = name;
     await ready(v, 3000);
@@ -565,7 +568,7 @@
   var OFF = { state: "idle", done: 0, total: 0, files: 0, of: 0, ready: false, zips: [] };
   var offEl = $("off"), offPanel = null;
   var canOffline = /^https?:/.test(location.protocol) && "serviceWorker" in navigator && "caches" in window;
-  var CACHE = "deck-media:" + new URL("./", location.href).pathname;
+  var ROOTP = new URL("./", location.href).pathname, CACHE = "deck-media-2:" + ROOTP;   /* sw.js's MEDIA (its SCHEMA, 2) */
   function mb(b) { return (b / 1048576).toFixed(0); }
   function offShow() {
     offEl.textContent = OFF.ready ? "✓" : OFF.state === "run" ? "offline " + Math.floor(100 * OFF.done / Math.max(1, OFF.total)) + " %" : OFF.state === "error" ? "offline ✗" : "";
@@ -577,20 +580,29 @@
   }
   /* before anything plays: a cached file whose hash no longer matches the published one is dropped, so a republished
      slide is never shown from the old copy (the author, 4 November 2026: "I still don't see the animation") */
+  /* the hash a cached file must carry: a still's or a video's is media.json's v (what its URL asks for), whatever an
+     older manifest says; any other file's, the manifest's */
+  function wantHash(f) { var m = /^media\/(.+)\.(mp4|webp)$/.exec(f[0]), e = m && MED && MED.files && MED.files[m[1]]; return e && e.v || f[2]; }
   async function dropStale() {
     if (!canOffline) return;
+    try {               /* the caches of an older worker's schema first: that worker may still be answering this page */
+      var names = await caches.keys();
+      await Promise.all(names.filter(function (n) { return /^deck-(shell|media)(-\d+)?:/.test(n) && n.slice(n.indexOf(":") + 1) === ROOTP &&
+        n !== CACHE && n !== "deck-shell-2:" + ROOTP; }).map(function (n) { return caches.delete(n); }));
+    } catch (e) {}
     try {
       var man = await (await fetch("offline-manifest.json", { cache: "no-store" })).json();
       var cache = await caches.open(CACHE), base = new URL("./", location.href).href;
       await Promise.all(man.files.map(async function (f) {
         var u = base + f[0], hit = await cache.match(u);
-        if (hit && hit.headers.get("X-Hash") !== f[2]) await cache.delete(u);
+        if (hit && hit.headers.get("X-Hash") !== wantHash(f)) await cache.delete(u);
       }));
     } catch (e) {}
   }
   async function fillCache() {
     if (!canOffline || OFF.state === "run") return;
     OFF.state = "run"; OFF.ready = false; OFF.err = null; offShow();
+    try { await started; } catch (e) {}                        /* media.json read first (wantHash) */
     try {
       try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
       var man = await (await fetch("offline-manifest.json", { cache: "no-store" })).json();
@@ -604,12 +616,12 @@
         for (;;) {
           var f = list[next++]; if (!f) return;
           var u = base + f[0], hit = await cache.match(u);
-          if (!(hit && hit.headers.get("X-Hash") === f[2])) {
+          if (!(hit && hit.headers.get("X-Hash") === wantHash(f))) {
             try {
-              var r = await fetch(u + "?fill=" + f[2], { cache: "no-store" });
+              var r = await fetch(u + "?fill=" + wantHash(f), { cache: "no-store" });
               if (!r.ok) throw new Error(r.status);
               var blob = await r.blob();
-              await cache.put(u, new Response(blob, { headers: { "Content-Type": r.headers.get("Content-Type") || blob.type, "X-Hash": f[2], "Content-Length": String(blob.size) } }));
+              await cache.put(u, new Response(blob, { headers: { "Content-Type": r.headers.get("Content-Type") || blob.type, "X-Hash": wantHash(f), "Content-Length": String(blob.size) } }));
             } catch (e) { failed++; OFF.err = String(e.message || e); }
           }
           OFF.done += f[1]; OFF.files++; offShow();
@@ -647,9 +659,9 @@
 
   /* ---- start ------------------------------------------------------------------ */
   var started = Promise.all([
-    fetch("deck.json").then(function (r) { return r.json(); }),
-    fetch("slides.json").then(function (r) { return r.json(); }),
-    fetch("media/media.json").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+    fetch("deck.json", { cache: "no-cache" }).then(function (r) { return r.json(); }),      /* never an HTTP-cached copy */
+    fetch("slides.json", { cache: "no-cache" }).then(function (r) { return r.json(); }),
+    fetch("media/media.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
   ]).then(async function (j) {
     CFG = j[0]; SL = j[1].slides; N = SL.length; MED = j[2];
     if (CFG.title) document.title = CFG.title;
@@ -672,7 +684,7 @@
   }).catch(function (e) { ERR.push("start: " + (e && e.message || e)); crumb.textContent = "could not start: " + e; });
 
   if (canOffline) {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(function () {});
     setTimeout(fillCache, 3000);
   }
   window.DeckShell = {

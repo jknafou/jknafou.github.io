@@ -7,7 +7,8 @@
    re-ranker, ten rows out, ten tiles lit in the corpus; J 4 turn 2, the ball to Read: the Funeral card typed
    large with its scene, Han Solo small; J 5 turn 3, the ball down to the check: the nugget, its span swept
    in the Funeral card, MiniCheck's gauge at 0.975, a tick, the reply keyed back up; J 6 turn 4, the ball
-   down to the gate: its reading counted, a tick, the answer out. No loop: it ends on a result. */
+   down to the gate: its reading counted, a tick, the answer out. Each scene, once acted, idles (its ending, anim/idles.js)
+   until its card is put away. No loop: it ends on a result. */
 Deck.slide("05-han-solo-pass-1", function (A, q) {
   var F = JSON.parse(q("frames").getAttribute("data-frames"));
   var arrows = [].slice.call(q("p").querySelectorAll('[data-concept="flow_arrow"]'));   /* slide 4's order */
@@ -18,6 +19,7 @@ Deck.slide("05-han-solo-pass-1", function (A, q) {
   function bump(k, j) {                       /* the row's value goes up: the new value counts in where the old one was */
     return A.par(A.hide(sig(k, j - 1), { dur: 0.3 }), A.reveal(sig(k, j), { dur: 0.3 }), A.count(q("sig-" + k + "-" + j + "-value"), { dur: 0.5 }));
   }
+  function idling(card, track) { return A.idling(q(card + "-scene"), track); }
   var spans = [].slice.call(q.all("fun2-span"));
   var lit = [].slice.call(q.svg.querySelectorAll('[data-a^="c5-lit"]'));
   var setAside = A.par(
@@ -65,24 +67,27 @@ Deck.slide("05-han-solo-pass-1", function (A, q) {
       go(4),
       A.dim(pipe, { to: 0.3, dur: 0.5 }),
       A.enter(q("fun")),
-      A.pace(A.enter(q("hanp")), 3),
-      A.wait(0.6),
-      cam("full"),
-      A.par(bump("calls", 1), bump("read", 1)),
-      A.wait(0.3),
-      /* J 5, turn 3: back up, then down to the nugget check */
-      go(5),
-      cam("t3"), A.pace(A.emit(q("t3")), 2.5), A.wait(0.3),
-      cam("check"),
-      go(6, 10),
-      A.reveal(q("fun2"), { dur: 0.05 }),
-      A.par(A.enter(q("n5")), A.at(1.6, A.highlight(spans, { dur: 1.0 }))),
-      A.wait(0.5),
-      go(11, 7),
-      cam("t3"),
-      A.type(q("reply"), { quick: true }),
-      A.wait(0.8),
-      cam("full"),
+      /* once acted, each scene settles into its ending idle (anim/idles.js) until its card is put away */
+      idling("fun", A.seq(
+        A.pace(A.enter(q("hanp")), 3),
+        idling("hanp", A.seq(
+          A.wait(0.6),
+          cam("full"),
+          A.par(bump("calls", 1), bump("read", 1)),
+          A.wait(0.3),
+          /* J 5, turn 3: back up, then down to the nugget check */
+          go(5),
+          cam("t3"), A.pace(A.emit(q("t3")), 2.5), A.wait(0.3),
+          cam("check"),
+          go(6, 10),
+          A.reveal(q("fun2"), { dur: 0.05 }),
+          A.par(A.enter(q("n5")), A.at(1.6, A.highlight(spans, { dur: 1.0 }))),
+          A.wait(0.5),
+          go(11, 7),
+          cam("t3"),
+          A.type(q("reply"), { quick: true }),
+          A.wait(0.8),
+          cam("full"))))),
       A.par(A.hide([q("fun"), q("fun2"), q("hanp"), q("n5")], { dur: 0.6 }), A.dim(pipe, { dur: 0.6, back: true }),
             A.pulse(arrows[15], { dur: 1.0 })),
       A.par(bump("calls", 2), bump("nug", 1)),
