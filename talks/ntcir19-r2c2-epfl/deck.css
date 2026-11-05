@@ -27,14 +27,14 @@ body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New
 #zone { position: absolute; z-index: 99990; box-sizing: border-box; border: 1.5px solid var(--ink); border-radius: 6px;
         opacity: .22; pointer-events: none; }
 html.nocursor #zone { display: none !important; }
-/* THE FOOT BAND: the paper behind the marks (HES-SO, the corner unit, the number), opaque from the stage's foot to
-   just above the marks' top (y 818 of 900; they span 822-877), easing to nothing at y 770, full width. Over every
-   slide layer, under the zones, the veil (paper on paper: a fade looks the same) and the marks; shown by deck.js only
-   where a mark is (not on the title) */
+/* THE FOOT BAND: the paper behind the marks (HES-SO, the corner unit, the number), soft (the author's band A,
+   5 November 2026): 0.85 from the stage's foot to the marks' foot (y 877 of 900; they span 822-877), easing to
+   nothing at y 770, full width. Over every slide layer, under the zones, the veil (paper on paper: a fade looks the
+   same) and the marks; shown by deck.js only where a mark is (not on the title) */
 #footband { position: absolute; left: 0; right: 0; bottom: 0; height: 14.45%; z-index: 99980; pointer-events: none;
-            background: linear-gradient(to top, var(--paper) 63%, color-mix(in srgb, var(--paper) 85%, transparent) 72.25%,
-              color-mix(in srgb, var(--paper) 50%, transparent) 81.5%, color-mix(in srgb, var(--paper) 15%, transparent) 90.75%,
-              color-mix(in srgb, var(--paper) 0%, transparent) 100%); }
+            background: linear-gradient(to top, color-mix(in srgb, var(--paper) 85%, transparent) 18%,
+              color-mix(in srgb, var(--paper) 72%, transparent) 38.5%, color-mix(in srgb, var(--paper) 42.5%, transparent) 59%,
+              color-mix(in srgb, var(--paper) 12%, transparent) 79.5%, color-mix(in srgb, var(--paper) 0%, transparent) 100%); }
 .logo { position: absolute; z-index: 100000; box-sizing: border-box; width: auto; object-fit: contain; pointer-events: none; user-select: none; }
 /* an overlay: a part of one slide, drawn by the shell over the others at the same place (deck.json "overlays") */
 .overlay { position: absolute; inset: 0; z-index: 100000; pointer-events: none; user-select: none; }
@@ -42,7 +42,8 @@ html.nocursor #zone { display: none !important; }
 .overlay [data-caret] { animation: caret-blink 1.06s step-end infinite; }      /* shown half the period, hidden half */
 .overlay.still [data-caret] { animation: none; }
 @keyframes caret-blink { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
-.logo.chip { background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px rgba(48,46,46,.18); }
+/* a "chip" logo keeps the chip's padding (deck.js), so its letters stay where the title draws them, but no plate:
+   only the letters, on the foot band (the author, 5 November 2026) */
 #strip { flex: 0 0 var(--strip); display: flex; align-items: center; gap: 14px; padding: 0 16px;
          opacity: .72; white-space: nowrap; overflow: hidden; }
 #crumb { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
