@@ -301,6 +301,28 @@
     return A.camera(svg, f(o.from), f(o.to), { dur: o.dur == null ? 0.8 : o.dur, ease: o.ease });
   };
 
+  /* ---- space: a figure drawn in 3D, projected onto the slide's plane per frame by an orthographic camera, so it
+   * stays vector (sharp at any zoom, clean on video; concepts/field_scatter_3d.py). A point is (u, v, w): u and v on
+   * the floor as it is drawn seen from straight above (u to the right, v up the page), w its height above the floor.
+   * A camera is {az, el, s, ox, oy}: az turns the floor about the vertical through the origin (radians, positive
+   * counter-clockwise seen from above), el is the elevation (pi / 2: straight above, the floor exactly as drawn;
+   * 0: level with it), s the scale, (ox, oy) where the origin lands on the slide.
+   *   A.space(cam)            a function (u, v, w) -> [x, y] on the slide
+   *   A.camLerp(c0, c1, e)    the camera a fraction e of the way from c0 to c1 (each of its five numbers linearly)
+   * ---- */
+  A.space = function (c) {
+    var ca = Math.cos(c.az), sa = Math.sin(c.az), ce = Math.cos(c.el), se = Math.sin(c.el);
+    return function (u, v, w) {
+      var a = u * ca - v * sa, b = u * sa + v * ca;          /* the floor turned; b is its depth, away from the viewer */
+      return [c.ox + c.s * a, c.oy - c.s * (b * se + (w || 0) * ce)];
+    };
+  };
+  A.camLerp = function (c0, c1, e) {
+    var o = {};
+    ["az", "el", "s", "ox", "oy"].forEach(function (k) { o[k] = c0[k] + (c1[k] - c0[k]) * e; });
+    return o;
+  };
+
   /* ---- the runtime ---- */
   var L = G.Live, D = G.Deck;
   if (!L || !D) return;                                   /* the specimen page: the helpers alone */

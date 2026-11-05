@@ -6,8 +6,8 @@
    "part": 0,
    "continues": false,
    "notes": "Introduce yourself; the talk is about telling, from what the pipeline did, when its answer is wrong.",
-   "hash": "b434c47331e8f271",
-   "vhash": "dab35f7a5c31e3ef",
+   "hash": "fc81db75e15d8397",
+   "vhash": "11d73236acfcb6bf",
    "zones": false
   },
   {
@@ -16,8 +16,8 @@
    "part": 1,
    "continues": false,
    "notes": "In a company the answer alone is not enough. Its confidence decides where it goes: above a threshold it goes out on its own, below it a person reviews it first. Where the threshold sits depends on what a wrong answer costs: a support desk answers routine questions fast, a contract lookup must surface its doubt, a knowledge base must cite its source, so its answer comes with the passage it quotes. The confidences and thresholds here are illustrative, not measured: the AI answers five times per use case, the support desk at 92, 41, 88, 67 and 94 against 70, the contract lookup at 95, 74, 91, 58 and 82 against 90, the knowledge base at 91, 63, 85, 47 and 88 against 80; a green tick above the threshold, a red cross below, and the answer goes out or to a person.",
-   "hash": "7b6d55afe6d245bb",
-   "vhash": "c2b82acec52c9b35",
+   "hash": "a0b92629e4cc63be",
+   "vhash": "d2581a9d27a272ad",
    "zones": false
   },
   {
@@ -26,8 +26,8 @@
    "part": 1,
    "continues": false,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "04da0431dddc5871",
-   "vhash": "fad4081a4cbb4205",
+   "hash": "c506ad63beb92aeb",
+   "vhash": "98a3a190588a2410",
    "zones": true
   },
   {
@@ -36,8 +36,8 @@
    "part": 2,
    "continues": false,
    "notes": "The model above chooses one tool call per turn, against the passages DB; the orchestrator below checks every claim, keeps the record and rules on the answer. Then Han Solo's first pass, box by box.",
-   "hash": "fbfd4d9506f1baf7",
-   "vhash": "ed6550cf4c9e3a78",
+   "hash": "12262bb556c20ca6",
+   "vhash": "5d5aa8b7c52def05",
    "zones": true
   },
   {
@@ -46,8 +46,8 @@
    "part": 2,
    "continues": false,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "62230a7fd6bdebb5",
-   "vhash": "033c7531231dc2eb",
+   "hash": "d1d382d406476f11",
+   "vhash": "c640f350ae64cdc8",
    "zones": false
   }
  ]

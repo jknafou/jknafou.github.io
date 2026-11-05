@@ -6,9 +6,10 @@
    the slide 2, the animations are "question" then "->" then "AI" then "->", ..."): two groups started together,
    (1) the words: the heading keyed, then the idea's two lines keyed; (2) the row, a FLOW, so every member and every
    arrow is its own layer, each waiting for the one before: the question card, the arrow, the AI, the arrow, the
-   answer with its gauge, the arrow, the gate with its threshold, then the fork, whose two branches are parallel and
-   start together (each: its arrow, its word "yes" / "no", its outcome), then the Q ball pops in at the question
-   card. Every line drawn, here and in the steps, is hidden until it has length (A.nodot), so no round cap shows as a
+   answer (its gauge entering empty, then growing to its confidence, the number counting), the arrow, the gate with
+   its threshold, then the fork, whose two branches are parallel and start together (each: its arrow, its word
+   "yes" / "no", its outcome). No Q ball on the overview (the author, 5 November 2026: "slide 2 should not show the
+   "Q" coin"); it first appears in a step's rounds. Every line drawn, here and in the steps, is hidden until it has length (A.nodot), so no round cap shows as a
    dot where it starts.
    OVERVIEW IDLE ("2"): the answer's gauge breathes (A.breathe: up to 95, down to 35 across the threshold, back to 94,
    its number following), then 1.4 s still; it begins when the answer card has entered (an idle starts when its own
@@ -46,26 +47,29 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
   /* the answer's leaf: its layers, then still until the breathing's phase meets the entry's end, then breathing */
   function settled(tr, id) {
     return { dur: tr.dur, set: function (t) {
-      if (t <= tr.dur) { tr.set(t); id.set(0); return; }
+      if (t <= tr.dur) { id.set(0); tr.set(t); return; }      /* the leaf's own state wins over the idle's start */
       tr.set(tr.dur);
       var D = id.dur, lead = (END.t - tr.dur) % D, since = t - tr.dur;
       id.set(since < lead ? 0 : ((((t - END.t) % D) + D) % D));
     } };
   }
+  /* the answer enters with its gauge empty, then the gauge grows to its confidence, the number counting with it */
+  var aIn = enter("a"), grow = A.gaugeTo(bar, { from: 0, to: GEN[0] / 100, value: val, dur: 1.2 });
+  var answerIn = A.seq(A.par(aIn, A.hold(grow, aIn.dur, 0)), grow);
   var tree = { name: "slide", group: [
+    { name: "no ball on the overview", track: A.hide(ball, { dur: 0 }) },
     { name: "words", layers: [key(q("head")), key([q(k + "-name-g"), q(k + "-note-g")])] },
     { name: "row", layers: [
       { name: "question", track: enter("q") },
       { name: "arrow to the AI", track: flow("a1") },
       { name: "AI", track: enter("ai") },
       { name: "arrow to the answer", track: flow("a2") },
-      { name: "answer", track: settled(enter("a"), loop) },
+      { name: "answer", track: settled(answerIn, loop) },
       { name: "arrow to the gate", track: flow("a3") },
       { name: "gate", track: enter("gate") },
       { name: "fork", group: [
         { name: "yes branch", layers: [flow("up"), key(q(k + "-yes")), A.enter(q(k + "-sent"))] },
-        { name: "no branch", layers: [flow("down"), key(q(k + "-no")), A.enter(q(k + "-review"))] }] },
-      { name: "ball", track: A.pop(ball, { dur: 0.45 }) }] }] };
+        { name: "no branch", layers: [flow("down"), key(q(k + "-no")), A.enter(q(k + "-review"))] }] }] }] };
   var entry = A.groups(tree);
   END.t = entry.dur;
 
