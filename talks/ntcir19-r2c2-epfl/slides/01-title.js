@@ -1,11 +1,11 @@
-/* Slide 1: the title. Two groups, never interleaved (PLAN.md, "A slide animates by groups"):
+/* Slide 1: the title. Two groups started together, each running to its end (the author validated it, 5 November 2026) (PLAN.md, "A slide animates by groups"):
    GROUP 1, the header and the foot, one plane, all started together, each running continuously to its end:
      - the title keyed in (presented text: quick, no typo), the rule drawn by pen, "Dr. Julien Knafou" keyed;
      - the HES-SO mark: its chip pops, then its letters appear one after another, H e s . s o, at the pace
        "jknafou" is typed (9 a second);
      - the corner unit: the portrait pops, its ring is drawn by pen from the top, the three marks pop one after
        another, then "jknafou" is typed at a deliberate pace, the caret staying after it.
-   GROUP 2, the pipeline emblem, once group 1 has ended: the question card enters by its layers; the arrow; "tool
+   GROUP 2, the pipeline emblem, started with group 1: the question card enters by its layers; the arrow; "tool
      calls" keyed while the five tracks pop with their chips; the block's frame drawn in; "passages" keyed while the
      window and its rails appear; the 16 calls grow their bars one step each in the trace's order while the passages
      roll left through the window, two laps, the marked one (Ilum) coming to rest in front; the arrow; the answer
@@ -68,7 +68,7 @@ Deck.slide("01-title", function (A, q) {
   return {
     /* the caret starts blinking as soon as "jknafou" is written, while the emblem builds: an idle begins when
        its own group ends, not when the slide does (the author, 4 November 2026) */
-    entry: A.seq(group1, A.par(A.seq(A.wait(0.25), group2), idleCaret(0.25 + group2.dur))),
+    entry: A.par(group1, A.seq(A.wait(unit.dur), idleCaret(Math.max(0, group2.dur - unit.dur) + 0.01)), group2),
     loop: A.par(A.seq.apply(null, bl), A.seq.apply(null, br), roll(mark, mark + N, k * blink, A.ease.lin))
   };
 });
