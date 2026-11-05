@@ -24,8 +24,8 @@
    "part": 1,
    "continues": false,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "ac331771e4cb95ef",
-   "vhash": "0638708a052a1f84"
+   "hash": "3182421396a78ca0",
+   "vhash": "917c1eb09562959f"
   },
   {
    "id": "04-one-pipeline",
