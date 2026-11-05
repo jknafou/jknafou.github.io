@@ -1,14 +1,16 @@
 /* Slide 3: its motions, from the animation bank (anim/anim.js) and the steps' helpers (anim/steps.js). Variant A of
    the review of 5 November 2026, "quiet overview, detail on demand" (the author: "For the slide 3, I like the
    variant A.").
-   ENTRY (short and light): (1) the camera set at once on the task canvas's right half (the slide no longer continues
-   slide 2: it starts from paper); then THREE GROUPS STARTED TOGETHER, each running to its end: (2) the title keyed
-   while the divider is drawn down; (3) what we have: its heading keyed, then the corpus (named, its tiles in, its
-   count growing) and the questions (named, then the six cards in a ripple: each its type tag turned in and counted
-   while its card pops RULED, its rows' rules drawn: no words, no scene) together; (4) what we must return: its
-   heading keyed, then PR (named, its 20 ruled rows in), AC (named, its card in, its gauge settling) and the nuggets
-   (named, the three ruled N cards popping, then each arrow flowing to the row it cites, once the rows are there)
-   together. No question is typed and no scene plays in the entry; it ends on the overview, nothing moving.
+   ENTRY (short and light), a tree of groups in layers (A.groups; the tree is in the .py's header): (1) the camera
+   set at once on the task canvas's right half (the slide no longer continues slide 2: it starts from paper); then
+   THREE GROUPS STARTED TOGETHER: (2) the title keyed while the divider is drawn down; (3) what we have: its heading
+   keyed, then the corpus (named, then its tiles in, its count growing) and the questions (named, then the six cards
+   all together: each its type tag turned in and counted while its card pops RULED, then its rows' rules drawn: no
+   words, no scene) together; (4) what we must return: its heading keyed, then PR (named, then its 20 ruled rows
+   in), AC (named, then its card in, its gauge settling) and the nuggets (named, then the three ruled N cards popping
+   together) together, then the three arrows flowing together, each to the row it cites (the links of the right
+   side, its last layer). No question is typed and no scene plays in the entry; it ends on the overview, nothing
+   moving.
    STEPS, ten, over the parts P = [corpus, the six types, PR, AC, the nuggets]: 1 the camera closes on the corpus,
    the rest at 0.3 (A.zoom, A.focus); 2-7 each type in turn: the camera pans to its card (the six frames are one
    size: it only moves) while the focus moves to it, then its rules are lifted and its real question keyed, its
@@ -23,12 +25,15 @@ Deck.slide("03-r2c2-task", function (A, q) {
 
   /* the entry's ruled card: its tag turned in while the card pops, then its rows' rules drawn */
   function ruledCard(i) {
-    return A.par(A.pace(A.enter(q("t" + i)), 2), A.seq(A.pop(q("q" + i), { dur: 0.45 }), A.draw(q("q" + i + "-ph"), { dur: 0.35 })));
+    return { name: "card " + (i + 1), group: [
+      { name: "tag " + (i + 1), track: A.pace(A.enter(q("t" + i)), 2) },
+      { name: "ruled " + (i + 1), layers: [A.pop(q("q" + i), { dur: 0.45 }), A.draw(q("q" + i + "-ph"), { dur: 0.35 })] }] };
   }
-  /* a step's card filled: its rules lifted, its question keyed, its scene acting with the words */
+  /* a step's card filled, in layers: its rules lifted, then its question keyed, its scene acting with the words */
   function fill(i) {
     var sc = q("q" + i + "-scene"), ty = A.type(q("q" + i + "-text"), { quick: true }), act = A.act(sc, { cue: ty.cue });
-    return A.seq(A.reverse(A.draw(q("q" + i + "-ph"), { dur: 0.3 })), A.pace(A.par(ty, A.reveal(sc, { dur: 0.25 }), act), 1.4));
+    return { name: "fill " + (i + 1), layers: [A.reverse(A.draw(q("q" + i + "-ph"), { dur: 0.3 })),
+                                               A.pace(A.par(ty, A.reveal(sc, { dur: 0.25 }), act), 1.4)] };
   }
   /* the card's scene, once its step has acted it: its ending idle (anim/idles.js, PLAN.md scene rule 9), never the
      act again; re-entering the step acts it once more */
@@ -44,15 +49,14 @@ Deck.slide("03-r2c2-task", function (A, q) {
     return A.cycle(A.wait(0.6), A.fill(q("ac-bar"), { value: q("ac-value"), dur: 2.6 }), A.wait(1.2));
   }
 
-  var have = A.seq(key("have"), A.par(
-    A.seq(key("corpus-name"), A.enter(q("corpus"))),
-    A.seq(key("qs-name"), A.stagger(six, ruledCard, 0.12))));
-  var prG = A.seq(key("pr-name"), A.pace(A.enter(q("pr")), 2.5));
-  var nugs = A.seq(key("n-name"), A.stagger([0, 1, 2], function (j) { return A.enter(q("n" + j)); }, 0.12));
-  var arrows = A.stagger([0, 1, 2], function (j) { return A.flow(q("cite" + j), { dur: 0.45 }); }, 0.1);
-  var ret = A.seq(key("return"), A.par(prG,
-    A.seq(key("ac-name"), A.pace(A.enter(q("ac")), 2)),
-    A.par(nugs, A.at(Math.max(prG.dur, nugs.dur), arrows))));
+  var have = { name: "what we have", layers: [key("have"), [
+    { name: "corpus", layers: [key("corpus-name"), A.enter(q("corpus"))] },
+    { name: "questions", layers: [key("qs-name"), { name: "six cards", group: six.map(ruledCard) }] }]] };
+  var ret = { name: "what we must return", layers: [key("return"), [
+    { name: "PR", layers: [key("pr-name"), A.pace(A.enter(q("pr")), 2.5)] },
+    { name: "AC", layers: [key("ac-name"), A.pace(A.enter(q("ac")), 2)] },
+    { name: "nuggets", layers: [key("n-name"), { name: "three nuggets", group: [0, 1, 2].map(function (j) { return A.enter(q("n" + j)); }) }] }],
+    { name: "cites", group: [0, 1, 2].map(function (j) { return A.flow(q("cite" + j), { dur: 0.45 }); }) }] };
 
   var STEP = [
     { to: 0, frame: F[0] },
@@ -63,13 +67,13 @@ Deck.slide("03-r2c2-task", function (A, q) {
   var steps = STEP.map(function (st, s) {
     var from = s ? STEP[s - 1] : null, f0 = from ? from.frame : HOME;
     var move = f0 === st.frame ? null : A.zoom(q.svg, { from: f0, to: st.frame, dur: 0.7 });
-    var look = A.par(move, A.focus(P, { from: from ? from.to : null, to: st.to, dim: 0.3, dur: move ? 0.7 : 0.45 }));
-    return { enter: s >= 1 && s <= 6 ? A.seq(look, fill(s - 1)) : look, loop: st.loop || null };
+    var look = { name: "look", group: [move, A.focus(P, { from: from ? from.to : null, to: st.to, dim: 0.3, dur: move ? 0.7 : 0.45 })] };
+    return { enter: A.groups({ name: "3." + (s + 1), layers: [look, s >= 1 && s <= 6 ? fill(s - 1) : null] }), loop: st.loop || null };
   });
   return {
-    entry: A.seq(
-      A.camera(q.svg, HOME, HOME, { dur: 0 }),
-      A.par(A.par(key("task-head"), A.draw(q("divide"), { dur: 0.8 })), have, ret)),
+    entry: A.groups({ name: "slide", layers: [
+      { name: "camera", track: A.camera(q.svg, HOME, HOME, { dur: 0 }) },
+      [{ name: "title", group: [key("task-head"), A.draw(q("divide"), { dur: 0.8 })] }, have, ret]] }),
     steps: steps,
     /* the overview's regions, each the step on it (PLAN.md §Navigation, zones): a click plays that step from what is shown */
     zones: { 1: "corpus-blk", 2: "c0", 3: "c1", 4: "c2", 5: "c3", 6: "c4", 7: "c5", 8: "pr-blk", 9: "ac-blk", 10: "n-blk" }

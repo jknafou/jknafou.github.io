@@ -1,10 +1,12 @@
 /* Slide 4: its motions, from the animation bank (anim/anim.js), the steps' helpers and A.groups (anim/steps.js) and
    the scenes' endings (anim/idles.js).
-   ENTRY, by nested groups (A.groups; the tree is in the .py's header): the journey's parts set aside at once; then the
-   title and the pipeline start together; inside the pipeline its five members start together (the entrance, the
-   passages DB, the model, the orchestrator, the answer), each made of members started together in their turn, each
-   group's links drawn as its own last layer once its members have ended; the links between the five last. It ends
-   on the OVERVIEW: everything opaque, nothing moving.
+   ENTRY, a tree of groups in layers (A.groups; the tree is in the .py's header): the journey's parts set aside at
+   once; then the title and the pipeline start together; the pipeline's first layer is its five members started
+   together (the entrance, the passages DB, the model, the orchestrator, the answer), each a group whose first layer
+   is its boxes started together and whose last layer is its own links; the pipeline's last layer is the links
+   between the five, all started together. It ends on the OVERVIEW: everything opaque, nothing moving. Each step's
+   enter is a tree too: layers: its state → look (the camera ‖ the focus ‖ what is put away) → its act (on 4.6 two
+   groups started together: the read call ‖ the two passages growing out of the DB).
    STEPS, twelve, Han Solo's first pass (JOURNEY.md J 1-6), each in the normalized order: the rest dimmed (A.focus)
    while the camera pans onto the step's frame (A.zoom, one frame size: no zoom out), what the step before put out
    put away; then the ball, what it carries, rolls along the drawn link (A.travel, A.become); the box puts out what
@@ -19,26 +21,27 @@ Deck.slide("04-one-pipeline", function (A, q) {
   /* ---- the overview's entry: groups ---- */
   var JOURNEY = ["han", "tag", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
   var aside = A.hide(JOURNEY.map(q), { dur: 0 });
-  var tree = [
-    key("head"),                                                         /* the header */
-    { group: [                                                           /* the pipeline */
-      { group: [A.enter(q("q-card")), A.enter(q("qtype"))], then: fl("l-q") },        /* the entrance */
-      [key("db-name"), A.enter(q("db"))],                                               /* the passages DB */
-      { group: [A.enter(q("model")), A.enter(q("tr")),                                  /* the model */
-                tools.map(function (k) { return A.enter(q("t-" + k)); })],
-        then: tools.map(function (k) { return A.par(fl("call-" + k), fl("res-" + k)); }) },
-      { group: [A.enter(q("orch")), A.enter(q("check")), A.enter(q("gate")), A.enter(q("rec"))],   /* the orchestrator */
-        then: [fl("l-ck"), fl("l-rg")] },
-      A.enter(q("ans"))                                                                 /* the answer */
-    ], then: [                                                           /* the links between them */
-      fl("l-type"),
-      A.seq(A.par.apply(null, ["stub-search", "stub-read", "stub-extract", "bus"].map(function (k) { return A.draw(q(k), { dur: 0.45 }); })),
-            A.pop(q("bus-dots"), { dur: 0.3 }), A.par(fl("l-every"), key("say-every"))),
-      A.seq(A.par(fl("l-rc"), fl("l-cr")), key("say-kept")),
-      A.seq(A.par(fl("l-sg"), fl("l-gs")), key("say-back")),
-      fl("l-ans")
-    ] }
-  ];
+  var tree = { name: "slide", layers: [
+    { name: "aside", track: aside },
+    [{ name: "header", track: key("head") },
+     { name: "pipeline", layers: [
+       [{ name: "entrance", layers: [{ name: "entrance boxes", group: [A.enter(q("q-card")), A.enter(q("qtype"))] }, fl("l-q")] },
+        { name: "passages DB", group: [key("db-name"), A.enter(q("db"))] },
+        { name: "model", layers: [
+          { name: "model boxes", group: [A.enter(q("model")), A.enter(q("tr")),
+            { name: "five tools", group: tools.map(function (k) { return A.enter(q("t-" + k)); }) }] },
+          { name: "calls and results", group: tools.map(function (k) { return { name: "call " + k, group: [fl("call-" + k), fl("res-" + k)] }; }) }] },
+        { name: "orchestrator", layers: [
+          { name: "orchestrator boxes", group: [A.enter(q("orch")), A.enter(q("check")), A.enter(q("gate")), A.enter(q("rec"))] },
+          { name: "orchestrator links", group: [fl("l-ck"), fl("l-rg")] }] },
+        { name: "answer", track: A.enter(q("ans")) }],
+       { name: "pipeline links", group: [
+         fl("l-type"),
+         { name: "bus", layers: [["stub-search", "stub-read", "stub-extract", "bus"].map(function (k) { return A.draw(q(k), { dur: 0.45 }); }),
+                                 A.pop(q("bus-dots"), { dur: 0.3 }), [fl("l-every"), key("say-every")]] },
+         { name: "record and check", layers: [[fl("l-rc"), fl("l-cr")], key("say-kept")] },
+         { name: "submit and gate", layers: [[fl("l-sg"), fl("l-gs")], key("say-back")] },
+         fl("l-ans")] }] }]] };
 
   /* ---- the steps ---- */
   /* step 4's hits in the passages DB: each tile swept yellow, its title keyed and its tile scene acting, in rank
@@ -120,10 +123,10 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return A.seq(go("gb-search"), go("res-search"), A.reveal(q("turn2"), { dur: 0.01 }), emitTurn(2)); } },
     { look: ["tr", "call-read", "t-read", "stub-read", "bus", "bus-dots", "db-blk"].concat(DBP),
       frame: "read", shown: ["dbx", "turn2"], away: ["turn2"], face: "search",   /* 6, J 4: Read */
-      act: function () { return A.par(                                           /* two groups, started together */
-        A.seq(leave("search", "read", "call-read"), go("g-read"), go("gb-read")),   /* the call: transcript, Read, the DB */
-        A.seq(A.reveal([q("fun"), q("hanp")], { dur: 0.01 }),                     /* the DB: its two passages grow out */
-              A.par(grow("fun"), grow("hanp"), A.pace(A.enter(q("fun")), 2.5), A.pace(A.enter(q("hanp")), 2.5)))); },
+      act: function () { return [                                                  /* two groups, started together */
+        { name: "read call", layers: [leave("search", "read", "call-read"), go("g-read"), go("gb-read")] },   /* transcript, Read, the DB */
+        { name: "two passages", layers: [A.reveal([q("fun"), q("hanp")], { dur: 0.01 }),                   /* the DB: they grow out */
+              [grow("fun"), grow("hanp"), A.pace(A.enter(q("fun")), 2.5), A.pace(A.enter(q("hanp")), 2.5)]] }]; },
       loop: A.par(idle("fun"), idle("hanp")) },
     { look: ["t-read", "res-read", "tr"], frame: "turn", shown: ["dbx", "fun", "hanp"], away: ["fun", "hanp"], face: "read",   /* 7, J 5: turn 3 */
       act: function () { return A.seq(go("res-read"), A.reveal(q("turn3"), { dur: 0.01 }), emitTurn(3)); } },
@@ -150,13 +153,16 @@ Deck.slide("04-one-pipeline", function (A, q) {
   var steps = STEPS.map(function (st, s) {
     var from = s ? STEPS[s - 1] : null, f0 = from ? F[from.end || from.frame] : HOME, f1 = F[st.frame];
     var move = f0 === f1 ? null : A.zoom(q.svg, { from: f0, to: f1, dur: 0.7 });
-    var look = A.par(move, A.focus(P, { from: from ? ix(from.look) : null, to: ix(st.look), dim: 0.3, dur: move ? 0.7 : 0.45 }),
-                     putAway(st.away || []));
-    return { enter: A.seq(state(st.shown, st.face), look, st.act()), loop: st.loop || null };
+    var look = { name: "look", group: [move, A.focus(P, { from: from ? ix(from.look) : null, to: ix(st.look), dim: 0.3, dur: move ? 0.7 : 0.45 }),
+                                       putAway(st.away || [])] };
+    var act = st.act();
+    return { enter: A.groups({ name: "4." + (s + 1), layers: [{ name: "state", track: state(st.shown, st.face) }, look,
+                                                              Array.isArray(act) ? { name: "act", group: act } : { name: "act", track: act }] }),
+             loop: st.loop || null };
   });
 
   return {
-    entry: A.seq(aside, A.groups(tree)),
+    entry: A.groups(tree),
     steps: steps,
     /* each box of the overview, the first step that visits it (PLAN.md §Navigation, zones) */
     zones: { 1: "q-card", 2: "qtype", 3: "tr", 4: "t-search", 6: "t-read", 8: "check", 11: "gate", 12: "ans" }

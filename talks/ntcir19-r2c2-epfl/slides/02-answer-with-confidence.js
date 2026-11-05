@@ -1,17 +1,19 @@
 /* Slide 2: its motions, from the animation bank (anim/anim.js) and the steps' helpers (anim/steps.js).
-   ENTRY: the heading and the row together; the row played to its end (its name keyed, its line keyed, the question
-   card, each arrow after both its ends, the AI, the answer with its gauge, the gate with its threshold, the
-   branches, "yes" and "no", the outcomes), then the Q ball pops in at the question card. Every line drawn, here and
+   ENTRY, a tree of groups in layers (A.groups; the tree is in the .py's header): the heading and the row together;
+   in the row, its label (name keyed, then its line) and its flow together; the flow's layers: every box at once
+   (the question card, the AI, the answer with its gauge, the gate with its threshold, the two outcomes), then every
+   link at once (the three arrows, and the branches followed by "yes" and "no"), then the Q ball pops in at the
+   question card. Every line drawn, here and
    in the steps, is hidden until it has length (A.nodot), so no round cap shows as a dot where it starts.
    The OVERVIEW ("2") is still: no loop (5 November 2026, the numbering made one rule: the overview "N", step k "N.k").
    STEPS: 1 the support desk (its enter the Q ball popping again at its card; its loop its five rounds), 2 into the
-   contract and regulation lookup, 3 into the internal knowledge base. Steps 2 and 3's enters: the name, its
-   line and the outgoing outcome's words erased and keyed anew (A.reverse of A.type, then the stacked words of the
-   next use case), the threshold re-counted from the old bar to the new one (A.recount), the question card's ruled
-   lines undrawn and drawn again, the gauge moving to the new
-   use case's drawn confidence (A.gaugeTo); the rest of the pipeline stays in place. Step 3 also brings the citation
-   in: the passage pops in under the answer, the dashed "cites" link is drawn by pen from the answer down to it,
-   "cites" keyed, and the marker's yellow sweeps across its marked line (the quoted span).
+   contract and regulation lookup, 3 into the internal knowledge base. Steps 2 and 3's enters are one layer, every
+   part re-made at once: the name, its line and the outgoing outcome's words erased and keyed anew (A.reverse of
+   A.type, then the stacked words of the next use case), the threshold re-counted from the old bar to the new one
+   (A.recount), the question card's ruled lines undrawn and drawn again, the gauge moving to the new use case's
+   drawn confidence (A.gaugeTo); the rest of the pipeline stays in place. Step 3's layer also holds the citation, its
+   own layers: the passage pops in under the answer, then the dashed "cites" link is drawn by pen from the answer
+   down to it, then "cites" keyed while the marker's yellow sweeps across its marked line (the quoted span).
    Each step's loop: that use case's five rounds (A.cycle), each the AI answering once with a new confidence
    (data-rounds, illustrative, NOTES) against its threshold (data-thr): the Q ball rolls into the AI and comes out
    turned over into an A (A.become), rolling into the answer; the thinking ring turns, the gauge empty; the gauge
@@ -31,22 +33,17 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
   /* every line the entry draws without a round cap's dot at its start (A.nodot) */
   var enter = function (nm) { var el = q(k + "-" + nm); return A.nodot(A.enter(el), el); };
   var flow = function (nm) { var el = q(k + "-" + nm); return A.nodot(A.flow(el, { dur: 0.45 }), el); };
+  /* the row: its label (name, then its line) and its flow together; the flow's boxes all together, then its links
+     (every arrow after both of its ends; the branches, then their "yes" and "no"), then the Q ball at its card */
   function row() {
-    return A.seq(
-      A.type(q(k + "-name"), { quick: true }),
-      A.type(q(k + "-note"), { quick: true }),
-      enter("q"),
-      flow("a1"),
-      enter("ai"),
-      flow("a2"),
-      enter("a"),
-      flow("a3"),
-      enter("gate"),
-      A.par(flow("up"), flow("down")),
-      A.type([q(k + "-yes"), q(k + "-no")], { quick: true }),
-      A.par(A.enter(q(k + "-sent")), A.enter(q(k + "-review"))),
-      A.pop(ball, { dur: 0.45 })
-    );
+    return { name: "row", group: [
+      { name: "label", layers: [A.type(q(k + "-name"), { quick: true }), A.type(q(k + "-note"), { quick: true })] },
+      { name: "flow", layers: [
+        { name: "boxes", group: [enter("q"), enter("ai"), enter("a"), enter("gate"),
+                                 A.enter(q(k + "-sent")), A.enter(q(k + "-review"))] },
+        { name: "links", group: [flow("a1"), flow("a2"), flow("a3"),
+                                 { name: "branches", layers: [[flow("up"), flow("down")], A.type([q(k + "-yes"), q(k + "-no")], { quick: true })] }] },
+        { name: "ball", track: A.pop(ball, { dur: 0.45 }) }] }] };
   }
   /* one round: the AI answers with confidence v against thr, after a round that ended on `prev`; `cite`: the
      answer comes with its citation (the band cleared as it arrives, the link pulsing and the band swept as it settles) */
@@ -90,30 +87,28 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
   }
   /* the citation brought in: the passage pops in under the answer, the link drawn by pen down to it, its span swept */
   function citation() {
-    return A.par(
-      A.reveal(q(k + "-citation"), { dur: 0.01 }),
-      A.at(0.1, A.pop(q(k + "-p"), { dur: 0.35 })),
-      A.at(0.3, A.flow(link, { dur: 0.4 })),
-      A.at(0.45, A.type(q(k + "-cites"), { quick: true })),
-      A.at(0.55, A.highlight(span, { dur: 0.4 })));
+    return { name: "citation", layers: [
+      [A.reveal(q(k + "-citation"), { dur: 0.01 }), A.pop(q(k + "-p"), { dur: 0.35 })],
+      A.flow(link, { dur: 0.4 }),
+      [A.type(q(k + "-cites"), { quick: true }), A.highlight(span, { dur: 0.4 })]] };
   }
-  function into(e) {     /* from use case e - 1 to use case e */
+  function into(e) {     /* from use case e - 1 to use case e: one layer, every part re-made at once */
     var d = e - 1;
-    return A.par(
-      rekey(q(k + "-name" + sfx(d)), q(k + "-name" + sfx(e))),
-      rekey(q(k + "-note" + sfx(d)), q(k + "-note" + sfx(e))),
-      rekey(q(k + "-sent-text" + sfx(d)), q(k + "-sent-text" + sfx(e))),
-      A.recount(q(k + "-gate-title"), { from: THR[d], to: THR[e], dur: 0.7 }),
-      A.seq(A.reverse(A.nodot(A.draw(lines, { dur: 0.28 }), lines)),
-            A.stagger(lines, function (l) { return A.nodot(A.draw(l, { dur: 0.36 }), l); }, 0.08)),
-      A.gaugeTo(q(k + "-a-bar"), { from: CONF[d] / 100, to: CONF[e] / 100, value: q(k + "-a-value"), dur: 0.7 }),
-      e === CITE ? citation() : null);
+    return A.groups({ name: "into " + (e + 1), group: [
+      { name: "name", track: rekey(q(k + "-name" + sfx(d)), q(k + "-name" + sfx(e))) },
+      { name: "line", track: rekey(q(k + "-note" + sfx(d)), q(k + "-note" + sfx(e))) },
+      { name: "outcome", track: rekey(q(k + "-sent-text" + sfx(d)), q(k + "-sent-text" + sfx(e))) },
+      { name: "threshold", track: A.recount(q(k + "-gate-title"), { from: THR[d], to: THR[e], dur: 0.7 }) },
+      { name: "question", track: A.seq(A.reverse(A.nodot(A.draw(lines, { dur: 0.28 }), lines)),
+            A.stagger(lines, function (l) { return A.nodot(A.draw(l, { dur: 0.36 }), l); }, 0.08)) },
+      { name: "gauge", track: A.gaugeTo(q(k + "-a-bar"), { from: CONF[d] / 100, to: CONF[e] / 100, value: q(k + "-a-value"), dur: 0.7 }) },
+      e === CITE ? citation() : null] });
   }
   /* the overview is the whole row, still (PLAN.md §Navigation: the overview is "2", step k is "2.k", on every slide
      alike); its first use case is a step like the others: 2.1 the support desk (its enter the Q ball popping again
      at its card, its loop the five rounds), 2.2 the contract lookup, 2.3 the knowledge base */
   return {
-    entry: A.par(A.type(q("head"), { quick: true }), row()),
-    steps: [{ enter: A.pop(ball, { dur: 0.35 }), loop: rounds(0) }, { enter: into(1), loop: rounds(1) }, { enter: into(2), loop: rounds(2) }]
+    entry: A.groups({ name: "slide", group: [{ name: "heading", track: A.type(q("head"), { quick: true }) }, row()] }),
+    steps: [{ enter: A.groups({ name: "ball", track: A.pop(ball, { dur: 0.35 }) }), loop: rounds(0) }, { enter: into(1), loop: rounds(1) }, { enter: into(2), loop: rounds(2) }]
   };
 });

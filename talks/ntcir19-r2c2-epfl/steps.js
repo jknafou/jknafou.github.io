@@ -19,7 +19,8 @@
  * A.nodot(track, el) (lines drawn without a round cap's dot at their start), below.
  *
  * An entry made of nested groups (PLAN.md, "A slide animates by groups") is declared with A.groups(tree), below: a
- * list's members start together, {group, then} closes a group with its links, {track, idle} settles a leaf into its idle.
+ * group is a sequence of layers ({layers: [...]}), each layer waiting for the one before it; a list is one layer, its
+ * members starting together; {group, then} closes a group with its links; {track, idle} settles a leaf into its idle.
  * A slide declares its steps in its motion file, beside its entry and loop:
  *   Deck.slide("02-...", function (A, q) {
  *     return { entry: ..., loop: ...,                     // the overview's entry and (optional) idle
@@ -39,7 +40,9 @@
  *   Live.stepEnter(k, s, t)    t s into step s's enter (from step s-1's rest)
  *   Live.stepLoop(k, s, t)     step s's loop at t s (its rest when it has none)
  *   Live.startLoop(k, s)       plays the idle of slide k at step s (s = 0 or none: the slide's own loop)
- *   Live.info()                each slide also gets steps: [{enter, loop}] (durations in s) and zones: [{step, name}]
+ *   Live.info()                each slide also gets steps: [{enter, loop}] (durations in s) and zones: [{step, name}],
+ *                              groups (its entry's A.groups schedule) and stepGroups (each step enter's), or null
+ *   Live.groups(k, s, dt)      that schedule measured on the timeline, with the breaches of the groups rule
  *   Live.zoneRects(k, s)       where slide k's zones are drawn now (with s: at step s's rest), in viewport fractions
  *   Live.glide(k, s, {mode})   a move within slide k from what is shown: step s's enter, or back to its rest (below)
  * A slide may also declare `zones: {step: data-a name}` (slide 3: each region of its overview, the step on it).
@@ -154,30 +157,128 @@
     });
   };
 
-  /* ---- groups: a slide's entry as a TREE of groups (PLAN.md, "A slide animates by groups"; the author, 5 November
-   * 2026: "the animation start all the groups at the same time, when starting a group which contains group, each
-   * group should start at the same time in that same group and so on"). A node is
-   *   a track                      a leaf: one concept's layers, or one run of them, played to its own end
-   *   [n1, n2, ...]                a group: its members all start at the same moment, each runs to its own end
-   *   {group: [n1, ...], then: n}  a group whose own last layer (`then`: the links between its members, every
-   *                                arrow after both of its ends) starts once all its members have ended
-   *   {track: t, idle: i}          a leaf that settles into its idle the moment it ends (an idle starts when its
-   *                                own group ends): `i` round and round from then on, while the others play; the
-   *                                leaf's length is its track's, so its idle never lengthens the entry
-   * A.groups(tree) is one pure track, as every motion of the bank is. ---- */
-  A.groups = function (node) {
-    if (!node) return null;
-    if (Array.isArray(node)) return A.par.apply(null, node.map(A.groups));
-    if (node.group) return A.seq(A.groups(node.group), A.groups(node.then));
-    if (node.track && node.idle) {
-      var tr = node.track, id = node.idle;
-      return { dur: tr.dur, set: function (t) {
-        if (t <= tr.dur) { tr.set(t); id.set(0); return; }
-        tr.set(tr.dur); id.set(id.dur > 0 ? (t - tr.dur) % id.dur : 0);
-      } };
+  /* ---- groups: a slide's entry (and a step's enter) as a TREE of groups in LAYERS (PLAN.md, "A slide animates by
+   * groups"; the author, 5 November 2026: "first assign nested groups for each slide, then normally, for a given layer
+   * all the nested groups should start their animation simultaneously, only layer should wait for one to finish,
+   * e.g. answer waits that the model finish, the model that the query finish"). A GROUP is a sequence of LAYERS; a
+   * layer starts the moment the layer before it in the same group has ended (its last member ended); every member of
+   * a layer starts at that same instant, and a member that is itself a group starts its own first layer then, and so
+   * on down to the leaves. A node is
+   *   a track                        a LEAF: one concept's layers, or one run of them, played to its own end
+   *   [n1, n2, ...]                  ONE LAYER: its members all start at the same moment, each runs to its own end
+   *   {layers: [L1, L2, ...]}        a group of layers, each Li a node (usually a list): L2 starts when L1 has ended...
+   *   {group: L, then: n}            the same as {layers: [L, n]}: a group whose last layer (`then`: the links between
+   *                                  its members, every arrow after both of its ends) starts once its members have
+   *                                  ended; a link between two groups belongs to the smallest group holding both
+   *   {track: t, idle: i}            a leaf that settles into its idle the moment it ends (an idle starts when its own
+   *                                  group ends): `i` round and round from then on, while the others play; the leaf's
+   *                                  length is its track's, so its idle never lengthens the entry, and at the tree's
+   *                                  end every idle is set back to its start (its rest), the state the loop starts from
+   * Any object node may carry `name` (the schedule's label; unnamed nodes are labelled by their path, "0.2.1").
+   * A.groups(tree) is one pure track, as every motion of the bank is, and carries its SCHEDULE: .nodes, one row per
+   * node, {path, name, kind ("leaf" | "layer" | "layers"), parent, layer (its index in its parent's layers), start,
+   * end} in s from the track's start, computed from the durations; and .measure(dt), the same schedule MEASURED from
+   * the timeline (the track played at dt steps, each leaf's start read from the time it is first given), with the
+   * rule checked on it: .breaches lists every layer whose members do not share a start and every layer that does not
+   * start at the end of the one before (tools/test_groups.mjs runs it on every slide and step: Live.groups). ---- */
+  A.groups = function (tree) {
+    var rows = [], leaves = [], idles = [], clock = { T: 0, on: false };
+    function build(node, path, parent, layer) {
+      if (!node) return null;
+      var row = { path: path, name: node.name || path, kind: null, parent: parent, layer: layer, start: 0, end: 0, kids: [] };
+      rows.push(row);
+      if (parent) parent.kids.push(row);
+      var tr;
+      if (Array.isArray(node)) {
+        row.kind = "layer";
+        var ms = node.filter(Boolean).map(function (n, i) { return build(n, path + "." + i, row, 0); }).filter(Boolean);
+        tr = A.par.apply(null, ms);
+      } else if (node.layers || node.group) {
+        row.kind = "layers";
+        var L = (node.layers || [node.group, node.then]).filter(Boolean);
+        tr = A.seq.apply(null, L.map(function (n, i) { return build(n, path + "." + i, row, i); }).filter(Boolean));
+      } else if (node.track || typeof node.set === "function") {
+        row.kind = "leaf";
+        var t0 = node.track || node, id = node.track ? node.idle : null;
+        var core = !id ? t0 : { dur: t0.dur, set: function (t) {
+          if (t <= t0.dur) { t0.set(t); id.set(0); return; }
+          t0.set(t0.dur); id.set(id.dur > 0 ? (t - t0.dur) % id.dur : 0);
+        } };
+        if (id) idles.push(id);
+        var probe = { row: row, seen: null };
+        leaves.push(probe);
+        tr = { dur: core.dur, set: function (t) {
+          if (clock.on && probe.seen == null && t >= 0) probe.seen = clock.T - t;   /* the leaf's start, on the timeline */
+          core.set(t);
+        } };
+      } else {
+        throw new Error("A.groups: a node is a track, a list, {layers}, {group, then} or {track, idle} (at " + path + ")");
+      }
+      row.dur = tr.dur;
+      return tr;
     }
-    if (typeof node.set === "function") return node;
-    throw new Error("A.groups: a node is a track, a list, {group, then} or {track, idle}");
+    var root = build(tree, "0", null, 0);
+    if (!root) return null;
+    /* the schedule from the durations: a layer's members at its start, a group's layers one after another */
+    (function place(r, s) {
+      r.start = s;
+      if (r.kind === "leaf") { r.end = s + r.dur; return; }
+      var at = s, cur = 0, end = s;
+      r.kids.forEach(function (k) {
+        if (r.kind === "layers" && k.layer !== cur) { cur = k.layer; at = end; }
+        place(k, r.kind === "layer" ? s : at);
+        end = Math.max(end, k.end);
+      });
+      r.end = r.kids.length ? end : s;
+    })(rows[0], 0);
+    var D = root.dur;
+    var out = { dur: D, set: function (t) {
+      root.set(t);
+      if (t >= D) idles.forEach(function (i) { i.set(0); });            /* at rest: every idle at its start */
+    } };
+    var pub = function (r) { return { path: r.path, name: r.name, kind: r.kind, parent: r.parent ? r.parent.path : null,
+      layer: r.layer, start: +r.start.toFixed(4), end: +r.end.toFixed(4) }; };
+    out.nodes = rows.map(pub);
+    out.measure = function (dt) {
+      dt = dt || 1 / 30;
+      leaves.forEach(function (p) { p.seen = null; });
+      clock.on = true;
+      try { for (var T = 0; ; T += dt) { clock.T = Math.min(T, D); out.set(clock.T); if (T >= D) break; } }
+      finally { clock.on = false; }
+      var M = {};
+      leaves.forEach(function (p) { M[p.row.path] = p.seen == null ? null : [p.seen, p.seen + p.row.dur]; });
+      (function span(r) {                       /* a group's measured span: from its first leaf's start to its last end */
+        if (r.kind === "leaf") return M[r.path];
+        var a = Infinity, b = -Infinity;
+        r.kids.forEach(function (k) { var m = span(k); if (m) { a = Math.min(a, m[0]); b = Math.max(b, m[1]); } });
+        return (M[r.path] = a === Infinity ? null : [a, b]);
+      })(rows[0]);
+      var eps = 1e-6, breaches = [];
+      rows.forEach(function (r) {
+        var m = M[r.path];
+        if (!m) { breaches.push(r.name + ": never started"); return; }
+        if (r.kind === "layer") r.kids.forEach(function (k) {
+          var mk = M[k.path];
+          if (mk && Math.abs(mk[0] - m[0]) > eps) breaches.push(k.name + " starts at " + mk[0].toFixed(3) + ", its layer (" + r.name + ") at " + m[0].toFixed(3));
+        });
+        if (r.kind === "layers") {
+          var by = [];
+          r.kids.forEach(function (k) { (by[k.layer] = by[k.layer] || []).push(k); });
+          var prevEnd = m[0];
+          by.forEach(function (ks, i) {
+            ks.forEach(function (k) {
+              var mk = M[k.path];
+              if (mk && Math.abs(mk[0] - prevEnd) > eps)
+                breaches.push(r.name + ": layer " + i + " (" + k.name + ") starts at " + mk[0].toFixed(3) + (i ? ", the layer before it ends at " : ", its group at ") + prevEnd.toFixed(3));
+            });
+            prevEnd = Math.max.apply(null, ks.map(function (k) { return M[k.path] ? M[k.path][1] : prevEnd; }));
+          });
+        }
+      });
+      return { dur: D, breaches: breaches, nodes: rows.map(function (r) {
+        var o = pub(r), m = M[r.path]; o.measured = m ? [+m[0].toFixed(4), +m[1].toFixed(4)] : null; return o; }) };
+    };
+    return out;
   };
 
   /* ---- (c) zoom: the camera onto the 16:9 frame around a part (measured once, at rest, when defined) ---- */
@@ -197,11 +298,14 @@
   /* ---- the runtime ---- */
   var L = G.Live, D = G.Deck;
   if (!L || !D) return;                                   /* the specimen page: the helpers alone */
-  var ST = {}, reg = D.slide;
+  var ST = {}, GR = {}, reg = D.slide;
   D.slide = function (id, make) {
     reg(id, function (A_, q) {
       var m = make(A_, q) || {};
       var steps = (m.steps || []).filter(Boolean);
+      /* the group trees (A.groups) of its entry and of each step's enter, for Live.info and Live.groups */
+      GR[id] = { entry: m.entry && m.entry.measure ? m.entry : null,
+                 steps: steps.map(function (s) { return s.enter && s.enter.measure ? s.enter : null; }) };
       if (steps.length) {
         var off = [0];
         steps.forEach(function (s, i) {
@@ -281,8 +385,23 @@
       var x = S(i + 1);
       e.steps = x ? x.steps.map(function (s) { return { enter: +s.enter.dur.toFixed(3), loop: s.loop ? +s.loop.dur.toFixed(3) : 0 }; }) : [];
       e.zones = x && x.zones ? x.zones.map(function (z) { return { step: z.step, name: z.name }; }) : null;
+      var g = GR[e.id];                                    /* the group schedule, computed from the durations */
+      e.groups = g && g.entry ? g.entry.nodes : null;
+      e.stepGroups = g ? g.steps.map(function (t) { return t ? t.nodes : null; }) : [];
     });
     return a;
+  };
+  /* the group schedule of slide k's entry (s = 0 or none) or of step s's enter, MEASURED on its timeline (A.groups's
+     .measure: each leaf's start read as the track is played at dt steps) with the rule's breaches; null when that
+     motion is not a group tree. The slide is put back on its rest (or step s's) afterwards */
+  L.groups = function (k, s, dt) {
+    void L.n;
+    var g = GR[sid(k)], tr = !g ? null : s ? g.steps[s - 1] : g.entry;
+    if (!tr) return null;
+    if (s) { L.stepEnter(k, s, 0); } else { L.entry(k, 0); }
+    var r = tr.measure(dt);
+    step(k, s || 0);
+    return r;
   };
   /* the zones of slide k where they are now drawn (the camera included): [{step, r: [x, y, w, h]}] in fractions of
      this page's viewport, which the shell lays over the stage; with s, slide k is first set at step s's rest */
