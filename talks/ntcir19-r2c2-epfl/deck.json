@@ -44,6 +44,7 @@
       "corner": "bottom-left",
       "height": 0.04,
       "chip": true,
+      "own": "[data-a^=\"hes-l\"]",
       "except": [1]
     }
   ],

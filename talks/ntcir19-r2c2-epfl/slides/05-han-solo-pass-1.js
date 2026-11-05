@@ -33,7 +33,13 @@ Deck.slide("05-han-solo-pass-1", function (A, q) {
        .py's header) */
     entry: A.groups({ name: "journey", layers: [
       { name: "set aside", track: setAside },
-      { name: "heading", layers: [A.hide(q("head"), { dur: 0.4 }), A.type(q("h5"), { quick: true }), A.wait(0.3)] },
+      /* its own first frame (5 November 2026): slide 4 has steps, so this slide is reached from paper; its picture,
+         Figure 1, is built here rather than found at rest */
+      { name: "picture", group: [
+        { name: "heading", layers: [A.hide(q("head"), { dur: 0 }), A.type(q("h5"), { quick: true })] },
+        { name: "corpus", layers: [A.enter(q("c5")), A.dim(q("c5"), { dur: 0.4 })] },
+        { name: "pipeline", track: A.pace(A.enter(q("p")), 2) }] },
+      { name: "pause", track: A.wait(0.3) },
       /* J 1: Han Solo's question typed at the mouth, folding into its ball */
       { name: "J 1", layers: [
         cam("mouth"),

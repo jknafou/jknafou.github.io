@@ -238,7 +238,7 @@
     ms = Math.round((ms || 0) * Math.abs(v - now));                /* from where it is: a press mid-fade goes on, not over */
     veil.style.transition = ms ? "opacity " + ms + "ms linear" : "none"; veil.style.opacity = String(v);
     veilUp = v > 0;
-    /* what the stage shows under the marks (UNDER): lifted, the slide now set; once at paper, none (the marks' plates) */
+    /* what the stage shows under the marks (UNDER): lifted, the slide now set; once at paper, none (the foot band) */
     if (v === 0 && under !== cur) { under = cur; layoutLogos(); }
     var done = ms ? sleep(ms) : Promise.resolve();
     return v < 1 ? done : done.then(function () {
@@ -556,6 +556,7 @@
       im.style[c.indexOf("top") >= 0 ? "top" : "bottom"] = "2.6%";  /* the same margin on both axes of a 16:9 box */
       im.style[c.indexOf("right") >= 0 ? "right" : "left"] = "1.46%";
       if (L.chip) im.style.padding = "0.35% 0.5%";
+      im.style.display = "none";                                  /* until the first layout: never on the title before its entry */
       box.appendChild(im); logoEls.push([im, L.slides || null, L.except || [], null]);
     });
   }
@@ -571,17 +572,8 @@
       if (sv) { sv.removeAttribute("width"); sv.removeAttribute("height"); }
       var period = sv && +sv.getAttribute("data-blink") || 0;
       box.appendChild(d);
-      /* under the part, the slide's ground over its bounds: laid over the slide that draws it (fading to or from it),
-         the part covers that slide's own copy instead of doubling its antialiased edges */
-      var g = sv && sv.firstElementChild, ground = sv && sv.getAttribute("data-ground");
-      if (g && ground && g.getBBox) {
-        d.style.display = ""; var bb = g.getBBox(), pad = 3; d.style.display = "none";
-        var r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        r.setAttribute("x", bb.x - pad); r.setAttribute("y", bb.y - pad); r.setAttribute("width", bb.width + 2 * pad); r.setAttribute("height", bb.height + 2 * pad);
-        r.setAttribute("fill", ground); r.style.display = "none"; sv.insertBefore(r, g);
-      }
       if (caret && period) caret.style.animationDuration = period + "s";
-      logoEls.push([d, O.slides || null, O.except || [], caret && period ? { el: caret, period: period } : null, r || null]);
+      logoEls.push([d, O.slides || null, O.except || [], caret && period ? { el: caret, period: period } : null]);
     }));
   }
   /* how far into its idle (rest loop) slide k is, in s, or null when it is not idling (mid-entry, a fade) */
@@ -595,31 +587,38 @@
     c.el.style.animationName = "none"; void c.el.getBoundingClientRect();
     c.el.style.animationDelay = -(((t || 0) % c.period + c.period) % c.period).toFixed(3) + "s"; c.el.style.animationName = "";
   }
-  /* "slides": where a logo shows (default all); "except": where it does not (a slide drawing it itself). A slide in
-     "except" hides it only once that slide covers the stage (at rest, or playing its entry): while the stage is still
-     fading to it, the mark stays, so it never fades out and back in with the slide drawing it in the same place */
+  /* "slides": where a logo shows (default all); "except": the slides that draw it themselves, in their entry. THE SHELL'S
+     MARK IS THE ONLY COPY ONCE THE ENTRY HAS DRAWN IT (the author, 5 November 2026: no plate behind the marks, ever):
+     on such a slide it is hidden only while that slide's entry is shown from its start (forward onto its overview,
+     until its rest), and the slide's own copy draws it, letter by letter; at the entry's end, in the same frame, the
+     mark is shown and the slide's own copy hidden (live: live.html's #own-marks switched on; media: its rest and loop
+     are recorded without it, tools/make_media.mjs). Leaving, coming back (at rest) or any other slide: the mark alone,
+     its caret blinking on; nothing hands over, nothing doubles */
   function layoutLogos() {
-    /* covered: the slide's own picture is shown (at rest, playing its entry, or unveiled under the marks) */
-    var covered = NAV.phase === "rest" || NAV.phase === "entry" || under === cur;
+    var drawing = NAV.dir >= 0 && curS === 0 && NAV.phase !== "rest", own = false;
     logoEls.forEach(function (x) {
       var el = x[0], was = el.style.display !== "none", want = !x[1] || x[1].indexOf(cur) >= 0;
-      var show = want && (x[2].indexOf(cur) < 0 || (!covered && was));
-      if (x[3] && show && LEAVE && LEAVE.k !== cur) {
-        /* arriving where the leaving slide drew the caret itself: go on from its phase; going back to the slide that
-           draws it: shown, as that slide's rest is, its loop restarting */
-        if (!was && x[2].indexOf(LEAVE.k) >= 0) caretAt(x[3], LEAVE.t);
-        else if (was && x[2].indexOf(cur) >= 0 && LEAVE.dir < 0 && !x[3].reset) { caretAt(x[3], 0); x[3].reset = true; }
+      var mine = x[2].indexOf(cur) >= 0, show = want && !(mine && drawing);
+      /* a slide playing from video recorded before this (media.json without it in "bare": its rest still draws the
+         marks): the mark hidden once that picture covers the stage, as it was; tools/make_media.mjs re-records it */
+      if (mine && media(cur) && !(MED && (MED.bare || []).indexOf(cur) >= 0))
+        show = want && was && !(NAV.phase === "rest" || NAV.phase === "entry" || under === cur);
+      if (x[3] && show && !was) {
+        /* the hand-over at the end of the slide's own entry: shown, as its rest's caret is; arriving from a slide
+           that drew it: on from that slide's phase */
+        if (mine) caretAt(x[3], 0);
+        else if (LEAVE && LEAVE.k !== cur && x[2].indexOf(LEAVE.k) >= 0) caretAt(x[3], LEAVE.t);
       }
-      if (x[3] && x[2].indexOf(cur) < 0) x[3].reset = false;
       el.style.display = show ? "" : "none";
-      /* an overlay's ground (data-ground) only while the slide drawing that part is the picture beneath it (leaving the
-         title, until the paper): it hides the title's copy so the ink is never doubled; over any other slide, none,
-         so only the part's own marks sit on the foot band (the author, 5 November 2026) */
-      if (x[4]) x[4].style.display = show && under !== null && x[2].indexOf(under) >= 0 ? "" : "none";
+      if (show && x[2].length) own = true;
     });
-    /* the foot band (deck.css #footband): under the marks, shown exactly when one of them is (so never on the title,
-       which draws its own foot) */
-    if (bandEl) bandEl.style.display = logoEls.some(function (x) { return x[0].style.display !== "none"; }) ? "" : "none";
+    /* the live page's own copies of the marks off while the marks are on (build.py's #own-marks, scoped to the slides
+       that draw them) */
+    var om = W && W.document && W.document.getElementById("own-marks");
+    if (om) om.media = own ? "all" : "not all";
+    /* the foot band (deck.css #footband): under the marks, shown with them, but never over a slide drawing them
+       itself (the title) while its picture is the one on the stage (UNDER: unveiled, not yet left for the paper) */
+    if (bandEl) bandEl.style.display = logoEls.some(function (x) { return x[0].style.display !== "none" && x[2].indexOf(under) < 0; }) ? "" : "none";
   }
 
   /* ---- keys ------------------------------------------------------------------ */
