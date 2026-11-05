@@ -36,8 +36,8 @@
    "part": 2,
    "continues": false,
    "notes": "The model above chooses one tool call per turn, against the passages DB; the orchestrator below checks every claim, keeps the record and rules on the answer. Then Han Solo's first pass, box by box.",
-   "hash": "4f15d2b617da3db8",
-   "vhash": "42a1c8401246cb60",
+   "hash": "3c770cf313651115",
+   "vhash": "381aa86d8b0a8814",
    "zones": true
   },
   {

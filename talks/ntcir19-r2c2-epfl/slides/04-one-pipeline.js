@@ -70,6 +70,17 @@ Deck.slide("04-one-pipeline", function (A, q) {
       [].forEach.call(ball.querySelectorAll("[data-face]"), function (f) { f.style.display = f.getAttribute("data-face") === face ? "" : "none"; });
     } };
   }
+  /* the question card folds into its ball: shrinking onto the ball's place at the card's foot, fading as it lands */
+  function fold() {
+    var g = q("han-at"), a = g.getAttribute("data-at").split(",").map(Number), cx = 209.6, cy = 180;
+    var bx = +ball.getAttribute("data-cx"), by = +ball.getAttribute("data-cy"), E = A.ease.io;
+    return A.track(0.55, function (u) {
+      var e = E(u), k = a[2] * (1 - 0.94 * e);
+      var px = a[0] + a[2] * cx + (bx - a[0] - a[2] * cx) * e, py = a[1] + a[2] * cy + (by - a[1] - a[2] * cy) * e;
+      g.setAttribute("transform", "translate(" + (px - k * cx).toFixed(2) + "," + (py - k * cy).toFixed(2) + ") scale(" + k.toFixed(5) + ")");
+      g.style.opacity = u <= 0 ? "" : u >= 1 ? "0" : (1 - e * e).toFixed(3);
+    });
+  }
   var putAway = function (names) { return names.length ? A.hide(names.map(q), { dur: 0.35 }) : null; };
   var idle = function (card) { return A.ending(q(card + "-scene"), { acted: true }); };
   var emitTurn = function (i) { return A.pace(A.emit(q("turn" + i)), 2.2); };
@@ -78,9 +89,9 @@ Deck.slide("04-one-pipeline", function (A, q) {
     { look: ["q-card"], frame: "question", shown: [], face: "Q",              /* 1, J 1: the question */
       act: function () { return A.seq(A.reveal(q("han"), { dur: 0.01 }), A.enter(q("han"))); }, loop: idle("han") },
     { look: ["q-card", "l-q", "qtype"], frame: "question", shown: ["han"], face: "Q",   /* 2, J 2: its type */
-      act: function () { return A.seq(A.par(A.hide(q("han"), { dur: 0.45 }), A.at(0.3, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.4 })))),
+      act: function () { return A.seq(A.par(fold(), A.at(0.35, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.35 })))),
                                        go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), A.enter(q("tag"))); } },
-    { look: ["qtype", "l-type", "tr"], frame: "turn", shown: ["tag"], face: "Q",   /* 3, J 3: turn 1 */
+    { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag"], face: "Q",   /* 3, J 3: turn 1 */
       act: function () { return A.seq(go("l-type"), A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },
     { look: ["tr", "call-search", "t-search", "stub-search", "bus", "bus-dots", "db-blk", "l-every", "say-every", "rec"],
       frame: "search", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "Q",   /* 4, J 3: Search */
@@ -88,7 +99,7 @@ Deck.slide("04-one-pipeline", function (A, q) {
                                        go("gb-search"), A.reveal(q("rows"), { dur: 0.01 }),
                                        A.pace(A.emit(q("rows"), { along: q("l-every"), draw: false }), 3.5)); } },
     { look: ["t-search", "res-search", "tr"], frame: "turn", shown: ["rows"], away: ["rows"], face: "search",   /* 5, J 4: turn 2 */
-      act: function () { return A.seq(go("res-search"), A.reveal(q("turn2"), { dur: 0.01 }), emitTurn(2)); } },
+      act: function () { return A.seq(A.highlight(lit, { dur: 0.35, out: true }), go("res-search"), A.reveal(q("turn2"), { dur: 0.01 }), emitTurn(2)); } },
     { look: ["tr", "call-read", "t-read", "stub-read", "bus", "bus-dots", "db-blk"],
       frame: "read", shown: ["turn2"], away: ["turn2"], face: "search",   /* 6, J 4: Read */
       act: function () { return A.seq(leave("search", "read", "call-read"), go("g-read"), go("gb-read"),
