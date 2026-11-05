@@ -238,7 +238,11 @@
     ms = Math.round((ms || 0) * Math.abs(v - now));                /* from where it is: a press mid-fade goes on, not over */
     veil.style.transition = ms ? "opacity " + ms + "ms linear" : "none"; veil.style.opacity = String(v);
     veilUp = v > 0;
-    return ms ? sleep(ms) : Promise.resolve();
+    /* what the stage shows under the marks (UNDER): lifted, the slide now set; once at paper, none (the marks' plates) */
+    if (v === 0 && under !== cur) { under = cur; layoutLogos(); }
+    var done = ms ? sleep(ms) : Promise.resolve();
+    return v < 1 ? done : done.then(function () {
+      if (veilUp && +getComputedStyle(veil).opacity >= 0.999 && under !== null) { under = null; layoutLogos(); } });
   }
   /* the current frame, exactly as shown, frozen and faded to paper; false if a newer press came meanwhile */
   async function leave(my) {
@@ -479,6 +483,7 @@
     update();
     /* leaving the slide (or the veil still up from a press just before): the fade to paper first, then the target */
     var leaving = (k !== from && !seamless) || veilUp;
+    if (!leaving && under !== k) { under = k; layoutLogos(); }   /* no fade to paper: the target is shown at once */
     /* within the slide: a zone's step played from what is shown, or the way back to the overview, by a glide */
     var glide = !leaving && k === from ? (how.play && !seamless ? "enter" : dir < 0 && s === 0 ? "rest" : null) : null;
     var arrive = function () {
@@ -541,7 +546,8 @@
   }
 
   /* ---- the logos and overlays, from deck.json, over the stage ---------------------------- */
-  var logoEls = [], LEAVE = null, bandEl = null;
+  /* UNDER: the slide whose picture the stage shows beneath the veil (null: the paper); set by goTo and veilTo */
+  var logoEls = [], LEAVE = null, bandEl = null, under = null;
   function buildLogos() {
     (CFG.logos || []).forEach(function (L) {
       var im = document.createElement("img"); im.className = "logo" + (L.chip ? " chip" : ""); im.src = L.src; im.alt = L.alt || "";
@@ -572,10 +578,10 @@
         d.style.display = ""; var bb = g.getBBox(), pad = 3; d.style.display = "none";
         var r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         r.setAttribute("x", bb.x - pad); r.setAttribute("y", bb.y - pad); r.setAttribute("width", bb.width + 2 * pad); r.setAttribute("height", bb.height + 2 * pad);
-        r.setAttribute("fill", ground); sv.insertBefore(r, g);
+        r.setAttribute("fill", ground); r.style.display = "none"; sv.insertBefore(r, g);
       }
       if (caret && period) caret.style.animationDuration = period + "s";
-      logoEls.push([d, O.slides || null, O.except || [], caret && period ? { el: caret, period: period } : null]);
+      logoEls.push([d, O.slides || null, O.except || [], caret && period ? { el: caret, period: period } : null, r || null]);
     }));
   }
   /* how far into its idle (rest loop) slide k is, in s, or null when it is not idling (mid-entry, a fade) */
@@ -593,7 +599,8 @@
      "except" hides it only once that slide covers the stage (at rest, or playing its entry): while the stage is still
      fading to it, the mark stays, so it never fades out and back in with the slide drawing it in the same place */
   function layoutLogos() {
-    var covered = NAV.phase === "rest" || NAV.phase === "entry";
+    /* covered: the slide's own picture is shown (at rest, playing its entry, or unveiled under the marks) */
+    var covered = NAV.phase === "rest" || NAV.phase === "entry" || under === cur;
     logoEls.forEach(function (x) {
       var el = x[0], was = el.style.display !== "none", want = !x[1] || x[1].indexOf(cur) >= 0;
       var show = want && (x[2].indexOf(cur) < 0 || (!covered && was));
@@ -605,6 +612,10 @@
       }
       if (x[3] && x[2].indexOf(cur) < 0) x[3].reset = false;
       el.style.display = show ? "" : "none";
+      /* an overlay's ground (data-ground) only while the slide drawing that part is the picture beneath it (leaving the
+         title, until the paper): it hides the title's copy so the ink is never doubled; over any other slide, none,
+         so only the part's own marks sit on the foot band (the author, 5 November 2026) */
+      if (x[4]) x[4].style.display = show && under !== null && x[2].indexOf(under) >= 0 ? "" : "none";
     });
     /* the foot band (deck.css #footband): under the marks, shown exactly when one of them is (so never on the title,
        which draws its own foot) */
@@ -795,7 +806,7 @@
     CFG = j[0]; SL = j[1].slides; N = SL.length; MED = j[2];
     if (CFG.title) document.title = CFG.title;
     var m = /^#\/(\d+)(?:\.(\d+))?/.exec(location.hash);
-    cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
+    cur = Math.max(1, Math.min(N, m ? +m[1] : 1)); under = cur;
     buildLogos(); await buildOverlays();
     /* the foot band: paper fading upward behind the marks, over the slides and under the veil (deck.css #footband) */
     bandEl = document.createElement("div"); bandEl.id = "footband"; bandEl.setAttribute("aria-hidden", "true"); bandEl.style.display = "none"; box.appendChild(bandEl);

@@ -173,7 +173,9 @@
    *                                  both. A link between two members that come ONE AFTER THE OTHER is a group of its
    *                                  own, a layer between them: query → arrow → model → arrow → answer (the author:
    *                                  "the arrows are independent groups that needs to be animated between the
-   *                                  sequence of question/model/answer")
+   *                                  sequence of question/model/answer"). ALONG A FLOW the members and their arrows
+   *                                  are sequential layers; only parallel branches share a layer (slide 2's row:
+   *                                  question → arrow → AI → arrow → answer → arrow → gate → [yes branch ‖ no branch])
    *   {track: t, idle: i}            a leaf that settles into its idle the moment it ends (an idle starts when its own
    *                                  group ends): `i` round and round from then on, while the others play; the leaf's
    *                                  length is its track's, so its idle never lengthens the entry, and at the tree's

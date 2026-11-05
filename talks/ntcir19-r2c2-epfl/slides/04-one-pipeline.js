@@ -1,12 +1,16 @@
 /* Slide 4: its motions, from the animation bank (anim/anim.js), the steps' helpers and A.groups (anim/steps.js) and
    the scenes' endings (anim/idles.js).
    ENTRY, a tree of groups in layers (A.groups; the tree is in the .py's header): the journey's parts set aside at
-   once; then the title and the pipeline start together; the pipeline's first layer is its five members started
-   together (the entrance, the passages DB, the model, the orchestrator, the answer), each a group whose first layer
-   is its boxes started together and whose last layer is its own links; the pipeline's last layer is the links
-   between the five, all started together. It ends on the OVERVIEW: everything opaque, nothing moving. Each step's
-   enter is a tree too: layers: its state → look (the camera ‖ the focus ‖ what is put away) → its act (on 4.6 two
-   groups started together: the read call ‖ the two passages growing out of the DB).
+   once; then the title and the pipeline start together. The pipeline is a FLOW, read in order, every member and
+   every arrow its own layer waiting for the one before (the author, 5 November 2026: "nested group animation must
+   take into account the sequentiality"): the question card, l-q, the question type, l-type, the model (its band and
+   the transcript, the five calls down, the five tools, the five results up), then the tools' two ways in parallel
+   (to the passages DB: the stubs, the bus, its dots, the DB; to the orchestrator: the record and submit calls down,
+   its band with the check and the gate, the replies up and their words, l-ck, the record, l-rg, l-ans, the answer),
+   then "every passage", the link that joins the two ways. It ends on the OVERVIEW: everything opaque, nothing
+   moving. Each step's enter is a tree too: layers: its state → look (the camera ‖ the focus ‖ what is put away) → its
+   act, the ball's run along the flow (on 4.6 two groups started together, as the author asked: the read call ‖ the
+   two passages growing out of the DB).
    STEPS, twelve, Han Solo's first pass (JOURNEY.md J 1-6), each in the normalized order: the rest dimmed (A.focus)
    while the camera pans onto the step's frame (A.zoom, one frame size: no zoom out), what the step before put out
    put away; then the ball, what it carries, rolls along the drawn link (A.travel, A.become); the box puts out what
@@ -21,27 +25,40 @@ Deck.slide("04-one-pipeline", function (A, q) {
   /* ---- the overview's entry: groups ---- */
   var JOURNEY = ["han", "tag", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
   var aside = A.hide(JOURNEY.map(q), { dur: 0 });
+  var each = function (f) { return tools.map(f); };
+  /* the pipeline is a FLOW, read in order: every member and every arrow its own layer, each waiting for the one before;
+     only parallel branches share a layer (the author, 5 November 2026: "nested group animation must take into account
+     the sequentiality") */
   var tree = { name: "slide", layers: [
     { name: "aside", track: aside },
     [{ name: "header", track: key("head") },
      { name: "pipeline", layers: [
-       [{ name: "entrance", layers: [{ name: "entrance boxes", group: [A.enter(q("q-card")), A.enter(q("qtype"))] }, fl("l-q")] },
-        { name: "passages DB", group: [key("db-name"), A.enter(q("db"))] },
-        { name: "model", layers: [
-          { name: "model boxes", group: [A.enter(q("model")), A.enter(q("tr")),
-            { name: "five tools", group: tools.map(function (k) { return A.enter(q("t-" + k)); }) }] },
-          { name: "calls and results", group: tools.map(function (k) { return { name: "call " + k, group: [fl("call-" + k), fl("res-" + k)] }; }) }] },
-        { name: "orchestrator", layers: [
-          { name: "orchestrator boxes", group: [A.enter(q("orch")), A.enter(q("check")), A.enter(q("gate")), A.enter(q("rec"))] },
-          { name: "orchestrator links", group: [fl("l-ck"), fl("l-rg")] }] },
-        { name: "answer", track: A.enter(q("ans")) }],
-       { name: "pipeline links", group: [
-         fl("l-type"),
-         { name: "bus", layers: [["stub-search", "stub-read", "stub-extract", "bus"].map(function (k) { return A.draw(q(k), { dur: 0.45 }); }),
-                                 A.pop(q("bus-dots"), { dur: 0.3 }), [fl("l-every"), key("say-every")]] },
-         { name: "record and check", layers: [[fl("l-rc"), fl("l-cr")], key("say-kept")] },
-         { name: "submit and gate", layers: [[fl("l-sg"), fl("l-gs")], key("say-back")] },
-         fl("l-ans")] }] }]] };
+       { name: "question card", track: A.enter(q("q-card")) },
+       { name: "l-q", track: fl("l-q") },
+       { name: "question type", track: A.enter(q("qtype")) },
+       { name: "l-type", track: fl("l-type") },
+       { name: "model", layers: [
+         { name: "band and transcript", group: [A.enter(q("model")), A.enter(q("tr"))] },
+         { name: "five calls", group: each(function (k) { return fl("call-" + k); }) },
+         { name: "five tools", group: each(function (k) { return A.enter(q("t-" + k)); }) },
+         { name: "five results", group: each(function (k) { return fl("res-" + k); }) }] },
+       { name: "the tools' two ways", group: [
+         { name: "to the passages DB", layers: [
+           { name: "stubs", group: ["stub-search", "stub-read", "stub-extract"].map(function (k) { return A.draw(q(k), { dur: 0.45 }); }) },
+           { name: "bus", track: A.draw(q("bus"), { dur: 0.45 }) },
+           { name: "bus dots", track: A.pop(q("bus-dots"), { dur: 0.3 }) },
+           { name: "passages DB", group: [key("db-name"), A.enter(q("db"))] }] },
+         { name: "to the orchestrator", layers: [
+           { name: "record and submit calls", group: [fl("l-rc"), fl("l-sg")] },
+           { name: "band, check, gate", group: [A.enter(q("orch")), A.enter(q("check")), A.enter(q("gate"))] },
+           { name: "replies", group: [fl("l-cr"), fl("l-gs")] },
+           { name: "their words", group: [key("say-kept"), key("say-back")] },
+           { name: "l-ck", track: fl("l-ck") },
+           { name: "record", track: A.enter(q("rec")) },
+           { name: "l-rg", track: fl("l-rg") },
+           { name: "l-ans", track: fl("l-ans") },
+           { name: "answer", track: A.enter(q("ans")) }] }] },
+       { name: "every passage", group: [fl("l-every"), key("say-every")] }] }]] };
 
   /* ---- the steps ---- */
   /* step 4's hits in the passages DB: each tile swept yellow, its title keyed and its tile scene acting, in rank

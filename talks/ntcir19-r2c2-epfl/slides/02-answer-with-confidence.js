@@ -1,19 +1,24 @@
-/* Slide 2: its motions, from the animation bank (anim/anim.js) and the steps' helpers (anim/steps.js).
-   ENTRY, a tree of groups in layers (A.groups; the tree is in the .py's header): the heading and the row together;
-   in the row, its label (name keyed, then its line) and its flow together; the flow's layers: every box at once
-   (the question card, the AI, the answer with its gauge, the gate with its threshold, the two outcomes), then every
-   link at once (the three arrows, and the branches followed by "yes" and "no"), then the Q ball pops in at the
-   question card. Every line drawn, here and
-   in the steps, is hidden until it has length (A.nodot), so no round cap shows as a dot where it starts.
-   The OVERVIEW ("2") is still: no loop (5 November 2026, the numbering made one rule: the overview "N", step k "N.k").
-   STEPS: 1 the support desk (its enter the Q ball popping again at its card; its loop its five rounds), 2 into the
-   contract and regulation lookup, 3 into the internal knowledge base. Steps 2 and 3's enters are one layer, every
-   part re-made at once: the name, its line and the outgoing outcome's words erased and keyed anew (A.reverse of
-   A.type, then the stacked words of the next use case), the threshold re-counted from the old bar to the new one
-   (A.recount), the question card's ruled lines undrawn and drawn again, the gauge moving to the new use case's
-   drawn confidence (A.gaugeTo); the rest of the pipeline stays in place. Step 3's layer also holds the citation, its
-   own layers: the passage pops in under the answer, then the dashed "cites" link is drawn by pen from the answer
-   down to it, then "cites" keyed while the marker's yellow sweeps across its marked line (the quoted span).
+/* Slide 2: its motions, from the animation bank (anim/anim.js) and the steps' helpers and A.groups (anim/steps.js).
+   The overview ("2") is the general idea (variant T, the author, 5 November 2026: "the VT is great"): the one row,
+   generic (a ruled question, the AI, an answer at 94, the gate "≥ 70", "used as is" up, "a person reviews it" down),
+   the idea in the row's two text slots.
+   ENTRY, a tree of groups in layers (A.groups; the tree is in the .py's header; the author: "in a flat pipeline like
+   the slide 2, the animations are "question" then "->" then "AI" then "->", ..."): two groups started together,
+   (1) the words: the heading keyed, then the idea's two lines keyed; (2) the row, a FLOW, so every member and every
+   arrow is its own layer, each waiting for the one before: the question card, the arrow, the AI, the arrow, the
+   answer with its gauge, the arrow, the gate with its threshold, then the fork, whose two branches are parallel and
+   start together (each: its arrow, its word "yes" / "no", its outcome), then the Q ball pops in at the question
+   card. Every line drawn, here and in the steps, is hidden until it has length (A.nodot), so no round cap shows as a
+   dot where it starts.
+   OVERVIEW IDLE ("2"): the answer's gauge breathes (A.breathe: up to 95, down to 35 across the threshold, back to 94,
+   its number following), then 1.4 s still; it begins when the answer card has entered (an idle starts when its own
+   group ends), still at first, so that its beat lands exactly at the entry's end and the slide's loop continues it.
+   STEPS: 2.1 the support desk, 2.2 the contract and regulation lookup, 2.3 the internal knowledge base. Each enter is
+   one layer, every part re-made at once: the name and its line (the idea's, then the use case before's) un-keyed and
+   the use case's keyed in their place, the outgoing outcome's words re-keyed, the threshold re-counted (A.recount),
+   the question card's ruled lines undrawn and drawn again, the gauge moved to the use case's drawn confidence
+   (A.gaugeTo); 2.3's layer also holds the citation, a flow in layers: the dashed "cites" link drawn down from the
+   answer, "cites" keyed, the passage popping in, the marker's yellow swept across its marked line (the quoted span).
    Each step's loop: that use case's five rounds (A.cycle), each the AI answering once with a new confidence
    (data-rounds, illustrative, NOTES) against its threshold (data-thr): the Q ball rolls into the AI and comes out
    turned over into an A (A.become), rolling into the answer; the thinking ring turns, the gauge empty; the gauge
@@ -25,30 +30,48 @@
 Deck.slide("02-answer-with-confidence", function (A, q) {
   var g = q("row0"), k = "r0", ball = q("b0"), CITE = +g.getAttribute("data-cite");
   var THR = g.getAttribute("data-thr").split(",").map(Number), CONF = g.getAttribute("data-conf").split(",").map(Number);
+  var GEN = g.getAttribute("data-g").split(",").map(Number);
   var ROUNDS = g.getAttribute("data-rounds").split("|").map(function (s) { return s.split(",").map(Number); });
-  var sfx = function (e) { return e ? String(e) : ""; };
   var lines = [0, 1, 2].map(function (i) { return q(k + "-q-line" + i); });
-  var link = q(k + "-cite"), span = q(k + "-p-span");
+  var link = q(k + "-cite"), span = q(k + "-p-span"), bar = q(k + "-a-bar"), val = q(k + "-a-value");
 
   /* every line the entry draws without a round cap's dot at its start (A.nodot) */
   var enter = function (nm) { var el = q(k + "-" + nm); return A.nodot(A.enter(el), el); };
   var flow = function (nm) { var el = q(k + "-" + nm); return A.nodot(A.flow(el, { dur: 0.45 }), el); };
-  /* the row: its label (name, then its line) and its flow together; the flow's boxes all together, then its links
-     (every arrow after both of its ends; the branches, then their "yes" and "no"), then the Q ball at its card */
-  function row() {
-    return { name: "row", group: [
-      { name: "label", layers: [A.type(q(k + "-name"), { quick: true }), A.type(q(k + "-note"), { quick: true })] },
-      { name: "flow", layers: [
-        { name: "boxes", group: [enter("q"), enter("ai"), enter("a"), enter("gate"),
-                                 A.enter(q(k + "-sent")), A.enter(q(k + "-review"))] },
-        { name: "links", group: [flow("a1"), flow("a2"), flow("a3"),
-                                 { name: "branches", layers: [[flow("up"), flow("down")], A.type([q(k + "-yes"), q(k + "-no")], { quick: true })] }] },
-        { name: "ball", track: A.pop(ball, { dur: 0.45 }) }] }] };
+  var key = function (el) { return A.type(el, { quick: true }); };
+
+  /* ---- the overview ---- */
+  var loop = A.seq(A.breathe(bar, { value: val }), A.wait(1.4));
+  var END = { t: 0 };
+  /* the answer's leaf: its layers, then still until the breathing's phase meets the entry's end, then breathing */
+  function settled(tr, id) {
+    return { dur: tr.dur, set: function (t) {
+      if (t <= tr.dur) { tr.set(t); id.set(0); return; }
+      tr.set(tr.dur);
+      var D = id.dur, lead = (END.t - tr.dur) % D, since = t - tr.dur;
+      id.set(since < lead ? 0 : ((((t - END.t) % D) + D) % D));
+    } };
   }
-  /* one round: the AI answers with confidence v against thr, after a round that ended on `prev`; `cite`: the
-     answer comes with its citation (the band cleared as it arrives, the link pulsing and the band swept as it settles) */
+  var tree = { name: "slide", group: [
+    { name: "words", layers: [key(q("head")), key([q(k + "-name-g"), q(k + "-note-g")])] },
+    { name: "row", layers: [
+      { name: "question", track: enter("q") },
+      { name: "arrow to the AI", track: flow("a1") },
+      { name: "AI", track: enter("ai") },
+      { name: "arrow to the answer", track: flow("a2") },
+      { name: "answer", track: settled(enter("a"), loop) },
+      { name: "arrow to the gate", track: flow("a3") },
+      { name: "gate", track: enter("gate") },
+      { name: "fork", group: [
+        { name: "yes branch", layers: [flow("up"), key(q(k + "-yes")), A.enter(q(k + "-sent"))] },
+        { name: "no branch", layers: [flow("down"), key(q(k + "-no")), A.enter(q(k + "-review"))] }] },
+      { name: "ball", track: A.pop(ball, { dur: 0.45 }) }] }] };
+  var entry = A.groups(tree);
+  END.t = entry.dur;
+
+  /* ---- the steps ---- */
   function round(v, prev, thr, cite) {
-    var up = v >= thr, bar = q(k + "-a-bar"), val = q(k + "-a-value");
+    var up = v >= thr;
     var mark = q(k + (up ? "-ok" : "-ko")), other = q(k + (up ? "-ko" : "-ok"));
     var t1 = A.travel(ball, { along: [q(k + "-a1")], into: [q(k + "-ai")], dur: 0.9 });
     var tA = A.travel(ball, { along: [q(k + "-a2")], into: [q(k + "-a")], dur: 0.6 });
@@ -58,20 +81,19 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
     var shown = A.pop(ball, { dur: 0.35 }), last = A.fillTo(bar, { frac: prev / 100, shown: prev, value: val });
     var think = A.think(val, { dur: 0.9 }), fill = A.fillTo(bar, { frac: v / 100, shown: v, value: val, dur: 1.2 });
     var body = A.seq(
-      A.par(t1, A.hold(shown, t1.dur), A.hold(last, t1.dur), A.hold(turn, t1.dur, 0)),   /* the Q into the AI; the gauge as it was */
-      A.par(A.hold(tA, turn.dur, 0), turn, A.hold(fill, turn.dur, 0)),         /* out of the AI, turned over: an A */
-      tA,                                                                      /* the answer into its card */
-      A.par(think, A.hold(fill, think.dur, 0),                                 /* the AI thinks, the gauge empty ... */
-            cite ? A.highlight(span, { out: true, dur: 0.3 }) : null),         /* ... and the last answer's quote cleared */
-      fill,                                                                    /* it hunts and settles on this round's value */
-      A.par(A.reveal(mark, { dur: 0.01 }), A.write(mark, { dur: 0.5 }),       /* its verdict, written at the end of the gauge */
-            cite ? A.pulse(link, { dur: 0.5 }) : null,                         /* the answer's link to its passage ... */
-            cite ? A.at(0.2, A.highlight(span, { dur: 0.45 })) : null),        /* ... and the span it quotes, swept again */
+      A.par(t1, A.hold(shown, t1.dur), A.hold(last, t1.dur), A.hold(turn, t1.dur, 0)),
+      A.par(A.hold(tA, turn.dur, 0), turn, A.hold(fill, turn.dur, 0)),
+      tA,
+      A.par(think, A.hold(fill, think.dur, 0), cite ? A.highlight(span, { out: true, dur: 0.3 }) : null),
+      fill,
+      A.par(A.reveal(mark, { dur: 0.01 }), A.write(mark, { dur: 0.5 }),
+            cite ? A.pulse(link, { dur: 0.5 }) : null,
+            cite ? A.at(0.2, A.highlight(span, { dur: 0.45 })) : null),
       A.wait(0.25),
-      A.par(A.hold(t2, 0.35, 0), A.pop(ball, { dur: 0.35 })),                  /* the answer pops out ... */
-      t2,                                                                      /* ... and goes where the verdict says */
+      A.par(A.hold(t2, 0.35, 0), A.pop(ball, { dur: 0.35 })),
+      t2,
       A.wait(0.3),
-      A.par(A.hold(t1, 0.4, 0), A.hold(turn, 0.4, 0), A.pop(ball, { dur: 0.4 }), A.hide(mark, { dur: 0.3 })),   /* a Q again at its card, the verdict fading */
+      A.par(A.hold(t1, 0.4, 0), A.hold(turn, 0.4, 0), A.pop(ball, { dur: 0.4 }), A.hide(mark, { dur: 0.3 })),
       A.wait(0.4));
     return A.par(body, A.hold(A.hide(other, { dur: 0 }), body.dur));
   }
@@ -79,36 +101,37 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
     var V = ROUNDS[e];
     return A.cycle.apply(null, V.map(function (v, j) { return round(v, V[(j + V.length - 1) % V.length], THR[e], e === CITE); }));
   }
-  /* re-keyed: the words erased (their typing played backwards), the next use case's keyed in their place */
   var OUT = 0.25, IN = 0.4;
-  function rekey(a, b) {
-    var la = (a._full != null ? a._full : a.textContent).length, lb = (b._full != null ? b._full : b.textContent).length;
-    return A.seq(A.reverse(A.type(a, { quick: true, cps: la / OUT })), A.type(b, { quick: true, cps: lb / IN }));
+  var len = function (el) { return (el._full != null ? el._full : el.textContent).length; };
+  function rekey(a, b) {      /* a's words un-keyed (none: an empty slot), b's keyed in their place */
+    var kin = A.type(b, { quick: true, cps: len(b) / IN });
+    return a ? A.seq(A.reverse(A.type(a, { quick: true, cps: len(a) / OUT })), kin) : A.seq(A.wait(OUT), kin);
   }
-  /* the citation brought in: the passage pops in under the answer, the link drawn by pen down to it, its span swept */
+  /* the citation, a flow down from the answer, in reading order: the "cites" link drawn, its word keyed, the passage
+     popping in under it, then its quoted span swept */
   function citation() {
     return { name: "citation", layers: [
-      [A.reveal(q(k + "-citation"), { dur: 0.01 }), A.pop(q(k + "-p"), { dur: 0.35 })],
-      A.flow(link, { dur: 0.4 }),
-      [A.type(q(k + "-cites"), { quick: true }), A.highlight(span, { dur: 0.4 })]] };
+      [A.reveal(q(k + "-citation"), { dur: 0.01 }), A.flow(link, { dur: 0.4 })],
+      A.type(q(k + "-cites"), { quick: true }),
+      A.pop(q(k + "-p"), { dur: 0.35 }),
+      A.highlight(span, { dur: 0.4 })] };
   }
-  function into(e) {     /* from use case e - 1 to use case e: one layer, every part re-made at once */
+  var word = function (w, e) { return e < 0 ? (w === "sent-text" ? q(k + "-sent-text") : q(k + "-" + w + "-g")) : q(k + "-" + w + "-u" + e); };
+  function into(e) {     /* from use case e - 1 (-1: the general overview) to use case e: one layer, all re-made at once */
     var d = e - 1;
-    return A.groups({ name: "into " + (e + 1), group: [
-      { name: "name", track: rekey(q(k + "-name" + sfx(d)), q(k + "-name" + sfx(e))) },
-      { name: "line", track: rekey(q(k + "-note" + sfx(d)), q(k + "-note" + sfx(e))) },
-      { name: "outcome", track: rekey(q(k + "-sent-text" + sfx(d)), q(k + "-sent-text" + sfx(e))) },
-      { name: "threshold", track: A.recount(q(k + "-gate-title"), { from: THR[d], to: THR[e], dur: 0.7 }) },
+    return A.groups({ name: "2." + (e + 1), group: [
+      { name: "name", track: rekey(word("name", d), word("name", e)) },
+      { name: "line", track: rekey(word("note", d), word("note", e)) },
+      { name: "outcome", track: rekey(word("sent-text", d), word("sent-text", e)) },
+      { name: "threshold", track: A.recount(q(k + "-gate-title"), { from: d < 0 ? GEN[1] : THR[d], to: THR[e], dur: 0.7 }) },
       { name: "question", track: A.seq(A.reverse(A.nodot(A.draw(lines, { dur: 0.28 }), lines)),
             A.stagger(lines, function (l) { return A.nodot(A.draw(l, { dur: 0.36 }), l); }, 0.08)) },
-      { name: "gauge", track: A.gaugeTo(q(k + "-a-bar"), { from: CONF[d] / 100, to: CONF[e] / 100, value: q(k + "-a-value"), dur: 0.7 }) },
+      { name: "gauge", track: A.gaugeTo(bar, { from: (d < 0 ? GEN[0] : CONF[d]) / 100, to: CONF[e] / 100, value: val, dur: 0.7 }) },
       e === CITE ? citation() : null] });
   }
-  /* the overview is the whole row, still (PLAN.md §Navigation: the overview is "2", step k is "2.k", on every slide
-     alike); its first use case is a step like the others: 2.1 the support desk (its enter the Q ball popping again
-     at its card, its loop the five rounds), 2.2 the contract lookup, 2.3 the knowledge base */
   return {
-    entry: A.groups({ name: "slide", group: [{ name: "heading", track: A.type(q("head"), { quick: true }) }, row()] }),
-    steps: [{ enter: A.groups({ name: "ball", track: A.pop(ball, { dur: 0.35 }) }), loop: rounds(0) }, { enter: into(1), loop: rounds(1) }, { enter: into(2), loop: rounds(2) }]
+    entry: entry,
+    loop: loop,
+    steps: [{ enter: into(0), loop: rounds(0) }, { enter: into(1), loop: rounds(1) }, { enter: into(2), loop: rounds(2) }]
   };
 });
