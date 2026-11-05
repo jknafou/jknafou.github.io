@@ -179,6 +179,12 @@
         });
         ST[id] = { steps: steps, off: off, chain: A_.seq.apply(null, steps.map(function (s) { return s.enter; })) };
       }
+      /* a slide with steps is left by the shell's fade to paper, so the slide after it is never CONTINUED (PLAN.md
+         §Navigation): live.js reads data-continues once this maker has returned, and the slides are made in order,
+         so the slide before's steps are known here */
+      var prev = q.root.previousElementSibling;
+      while (prev && !(prev.matches && prev.matches("section.slide"))) prev = prev.previousElementSibling;
+      if (prev && ST[prev.getAttribute("data-id")] && q.root.getAttribute("data-continues") === "1") q.root.setAttribute("data-continues", "0");
       return m;
     });
   };

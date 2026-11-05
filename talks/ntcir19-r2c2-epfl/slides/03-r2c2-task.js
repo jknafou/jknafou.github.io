@@ -1,6 +1,6 @@
 /* Slide 3: its motions, from the animation bank (anim/anim.js) and the steps' helpers (anim/steps.js).
-   ENTRY, in groups never interleaved: (1) slide 2's rows set aside, the camera pans right onto the task canvas's
-   other half; (2) the heading keyed; (3) what we have: its heading keyed, the corpus named and entering (its tiles
+   ENTRY, in groups never interleaved: (1) the camera set at once on the task canvas's right half (the slide no
+   longer continues slide 2: it starts from paper); (2) the heading keyed; (3) what we have: its heading keyed, the corpus named and entering (its tiles
    pop, its size counts up), the questions named, then the six questions one after another, each its type tag turned
    in and counted, then its card typed with its scene acting, all at 3x (A.pace); (4) the divider drawn down;
    (5) what we must return: its heading keyed, the list named and entering (its rows in, "at most 20"), the answer
@@ -47,8 +47,7 @@ Deck.slide("03-r2c2-task", function (A, q) {
   });
   return {
     entry: A.seq(
-      A.dim(q("s2"), { dur: 0.5 }),
-      A.camera(q.svg, [0, 0, 1600, 900], HOME, { dur: 1.4 }),
+      A.camera(q.svg, HOME, HOME, { dur: 0 }),
       A.type(q("task-head"), { quick: true }),
       A.wait(0.2),
       A.type(q("have"), { quick: true }),

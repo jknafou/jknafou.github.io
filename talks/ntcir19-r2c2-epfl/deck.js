@@ -20,16 +20,23 @@
  * it should just stop the animation to move to the selected slide (we can navigate by pressing
  * multiple times to arrow keys..)"):
  *   1. → at rest: the next slide's entry plays at its designed speed (1x), then its rest (loop/idle).
- *      A slide that continues the last starts on its rest, with no exit; any other first fades the
- *      picture to the entry's first frame in 0.35 s (that fade is the whole exit).
+ *      A slide that continues the last (one without steps) starts on its rest, with no exit.
+ *   LEAVING A SLIDE (the author, 5 November 2026: "the disappearance should be reworked and standardized"): → from
+ *      its last step, ← from its overview, or any jump to another slide is ONE move. The stage's current frame,
+ *      exactly as shown (an entry or a loop frozen where it is), fades out to the empty paper in 0.35 s under the
+ *      VEIL (a paper-coloured layer over every slide layer, under the marks: the HES-SO mark, the corner unit and
+ *      the slide number never move); under the paper the target is set, and the veil is lifted at once: forward
+ *      on the entry's own first frame, which then plays; backward on the target's rest (from the next slide, its
+ *      last step's). Nothing else is ever shown on the way: no overview, no other step, no cross-fade of two
+ *      pictures. A press during that fade sends the veil on from where it is.
  *   2. → or ← while an entry (or a fade) plays: it stops at once, and the stage moves to the slide
- *      the key selects. Nothing is hurried to its end.
+ *      the key selects. Nothing is hurried to its end (another slide: by the fade to paper, above).
  *   3. Presses each within BURST (0.5 s) of the last are one move: every press moves the destination
  *      at once and the bar shows it ("→ 7 · title"); a press inside the window starts the target's
  *      entry only once the keys have been quiet for BURST, so no slide in between is played (the
  *      first press's entry, under 0.5 s old, is cut).
  *   4. Direction decides how a slide is arrived at: forward (→, End, a part ahead) with its entry at
- *      1x; backward (←, Home, T, a part behind) at rest, by a 0.35 s cross-fade, its loop restarting.
+ *      1x; backward (←, Home, T, a part behind) at rest, after the fade to paper, its loop restarting.
  *   ?reduced=1: cuts between rest stills, in both directions.
  *
  * STEPS OF ATTENTION (the author, 4 November 2026: "I want to present the slides as a whole when changing slide so
@@ -38,10 +45,11 @@
  * of POSITIONS (slide k, step s): (1, 0), (2, 0), (2, 1) ... (2, n), (3, 0) ...
  *   → goes to the next position: after the entry (or a step) to the next step, playing its enter (<= ~0.8 s, from the
  *     step before's rest, laid on at once when that rest is what is shown, else faded to in 0.35 s), then its loop;
- *     after the last step to the next slide, by the rules above. A slide continuing one that has steps is reached by
- *     the 0.35 s fade: its entry starts on that slide's overview, not on its last step.
- *   ← goes back one position, AT REST: the previous step's rest (step 0: the overview's), or from a slide's overview
- *     the previous slide's last step, by the 0.35 s fade, its loop restarting. Nothing is played backwards.
+ *     after the last step to the next slide, by the rules above: the fade to paper. A slide after one with steps is
+ *     never continued (anim/steps.js clears its CONTINUES), so it starts on its own first frame.
+ *   ← goes back one position, AT REST: the previous step's rest (step 0: the overview's), by a 0.35 s fade through
+ *     paper within the slide; from a slide's overview the previous slide's last step, after the fade to paper. Its
+ *     loop restarts. Nothing is played backwards.
  *   a press during a step's enter stops it where it is and moves at once, as during an entry.
  *   a BURST of k presses moves k positions, across steps and slides alike; once the keys are quiet the target's own
  *     motion plays (its entry, or its step's enter, faded to from what is shown). The first press's motion starts at
@@ -193,6 +201,26 @@
     });
     [].slice.call(box.querySelectorAll(".jumpimg")).forEach(function (im) { if (im !== keep) im.remove(); });
   }
+  /* ---- the VEIL: leaving a slide, the stage fades out to the empty paper under it (the marks stay over it) ---- */
+  var veil = null, veilUp = false;
+  function veilTo(v, ms) {
+    if (!veil) { veil = document.createElement("div"); veil.id = "veil"; veil.setAttribute("aria-hidden", "true");
+      veil.style.cssText = "position:absolute;inset:0;z-index:99999;background:var(--paper);opacity:0;pointer-events:none"; box.appendChild(veil); }
+    var now = +getComputedStyle(veil).opacity || 0;
+    ms = Math.round((ms || 0) * Math.abs(v - now));                /* from where it is: a press mid-fade goes on, not over */
+    veil.style.transition = ms ? "opacity " + ms + "ms linear" : "none"; veil.style.opacity = String(v);
+    veilUp = v > 0;
+    return ms ? sleep(ms) : Promise.resolve();
+  }
+  /* the current frame, exactly as shown, frozen and faded to paper; false if a newer press came meanwhile */
+  async function leave(my) {
+    freeze();
+    if (loopEl) { try { loopEl.pause(); } catch (e) {} }
+    if (W && W.Live) W.Live.stopLoop();
+    if (REDUCED) { await veilTo(1, 0); return !stale(my); }
+    await veilTo(1, FADE);
+    return !stale(my);
+  }
   /* the media renderer's own picture gone (a live slide now covers the stage) */
   function hideMedia() { freeze(); stopLoop(); clearLayers(null); restImg.style.visibility = "hidden"; }
   async function arriveAtRest(k, s, my) {
@@ -214,10 +242,10 @@
     },
     /* forward onto (k, s): (fade to) its motion's first frame (the entry, or step s's enter), wait out the burst,
        play it at 1x, rest */
-    forward: async function (k, s, seamless, my, inBurst) {
+    forward: async function (k, s, seamless, my, inBurst, paper) {
       freeze();
       var name = cueName(k, s);
-      if (REDUCED || !has(name)) return MEDIA.back(k, s, my);
+      if (REDUCED || !has(name)) return MEDIA.back(k, s, my, paper);
       setPhase("fade");
       var v = moveVideo(name);
       await ready(v, 6000); if (stale(my)) return;
@@ -225,7 +253,10 @@
       v.playbackRate = 1;
       /* a continued slide's first frame is the rest just left: laid on at once (120 ms over a loop,
          whose phase is not frame 0); anything else is faded to, which is the exit */
-      await fadeIn(v, seamless ? (loopEl ? 120 : 0) : FADE); if (stale(my)) return;
+      if (paper) {                                  /* under the veil: the entry's first frame alone, then the veil lifted */
+        await fadeIn(v, 0); if (stale(my)) return;
+        stopLoop(); clearLayers(v); hideFrame(); await veilTo(0, 0);
+      } else { await fadeIn(v, seamless ? (loopEl ? 120 : 0) : FADE); if (stale(my)) return; }
       if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
       stopLoop(); clearLayers(v); hideFrame();
       var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); v.addEventListener("error", r, { once: true }); });
@@ -238,11 +269,15 @@
       await arriveAtRest(k, s, my);
     },
     /* backward onto (k, s) (or a cut): its rest faded in over whatever is shown, then its loop restarts */
-    back: async function (k, s, my) {
+    back: async function (k, s, my, paper) {
       freeze();
       setPhase("fade");
       await preImg(k, s); if (stale(my)) return;
-      if (!REDUCED) {
+      if (paper) {                                  /* under the veil: the rest alone, then the veil lifted */
+        await setRest(k, s, my); if (stale(my)) return;
+        restImg.style.visibility = ""; stopLoop(); clearLayers(null); hideFrame();
+        await veilTo(0, 0);
+      } else if (!REDUCED) {
         var im = document.createElement("img"); im.className = "jumpimg"; im.alt = ""; im.src = restUrl(k, s);
         if (im.decode) await im.decode().catch(function () {});
         if (stale(my)) return;
@@ -302,7 +337,14 @@
   }
   /* go to the live picture `set` (a function setting the live page): from the live page itself by a fade
      through paper (half out, half in), from anything else by fading the live page in over it */
-  async function liveTo(set, my, ms, seamless) {
+  async function liveTo(set, my, ms, seamless, paper) {
+    if (paper) {                                    /* under the veil: the picture set and shown alone, then the veil lifted */
+      set();
+      frame.style.transition = "none"; frame.style.opacity = "1"; frame.style.visibility = "";
+      if (topEl !== frame) onTop(frame);
+      hideMedia(); await veilTo(0, 0);
+      return !stale(my);
+    }
     if (frameShown()) {
       if (!seamless) { await liveFade(0, ms / 2); if (stale(my)) return false; }
       hideMedia(); set();
@@ -321,14 +363,14 @@
       LIVER.forward(k, 0, true, my, false);    /* opening is arriving forward, as with media: the live page shown at once at its entry's start, never its rest first */
     },
     /* forward onto (k, s): its entry (s = 0) or step s's enter, from its first frame, at 1x; then its rest and loop */
-    forward: async function (k, s, seamless, my, inBurst) {
+    forward: async function (k, s, seamless, my, inBurst, paper) {
       freeze();
       await ensureFrame(k); if (stale(my)) return;
       var st = s ? (INFO[k - 1].steps || [])[s - 1] : null, dur = s ? (st ? st.enter : 0) : INFO[k - 1].entry;
-      if (REDUCED || !(dur > 0)) return LIVER.back(k, s, my);
+      if (REDUCED || !(dur > 0)) return LIVER.back(k, s, my, paper);
       var at = s ? function (t) { W.Live.stepEnter(k, s, t); } : function (t) { W.Live.entry(k, t); };
       W.Live.stopLoop(); setPhase("fade");
-      if (!(await liveTo(function () { at(0); }, my, FADE, seamless))) return;
+      if (!(await liveTo(function () { at(0); }, my, FADE, seamless, paper))) return;
       if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
       var name = cueName(k, s);
       NAV.played.push(name); NAV.cue = name; setPhase("entry");
@@ -342,12 +384,12 @@
       }
       W.Live.step(k, s); liveLoop(k, s); setPhase("rest");
     },
-    back: async function (k, s, my) {
+    back: async function (k, s, my, paper) {
       freeze();
       await ensureFrame(k); if (stale(my)) return;
       if (W.Live) W.Live.stopLoop();
       setPhase("fade");
-      if (!(await liveTo(function () { W.Live.step(k, s); if (!REDUCED) liveLoop(k, s); }, my, REDUCED ? 0 : FADE, false))) return;
+      if (!(await liveTo(function () { W.Live.step(k, s); if (!REDUCED) liveLoop(k, s); }, my, REDUCED ? 0 : FADE, false, paper))) return;
       setPhase("rest");
     },
     preload: function () {}
@@ -380,7 +422,10 @@
     var my = ++NAV.gen; NAV.wakers.splice(0).forEach(function (w) { w(); });
     cur = k; curS = s; NAV.dir = dir; NAV.phase = "fade";     /* moving from now on: the renderer sets each phase after */
     update();
-    var run = dir > 0 ? R(k).forward(k, s, seamless, my, inBurst) : R(k).back(k, s, my);
+    /* leaving the slide (or the veil still up from a press just before): the fade to paper first, then the target */
+    var leaving = (k !== from && !seamless) || veilUp;
+    var arrive = function () { return dir > 0 ? R(k).forward(k, s, seamless && !leaving, my, inBurst, leaving) : R(k).back(k, s, my, leaving); };
+    var run = leaving ? leave(my).then(function (ok) { if (ok) return arrive(); }) : arrive();
     run.catch(function (e) { ERR.push("move: " + (e && e.message || e)); })
        .then(function () { if (!stale(my)) MEDIA.preload(cur, curS); });
   }

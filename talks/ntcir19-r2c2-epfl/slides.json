@@ -15,17 +15,17 @@
    "part": 1,
    "continues": false,
    "notes": "In a company the answer alone is not enough. Its confidence decides where it goes: above a threshold it goes out on its own, below it a person reviews it first. Where the threshold sits depends on what a wrong answer costs: a support desk answers routine questions fast, a contract lookup must surface its doubt, a knowledge base must cite its source, so its answer comes with the passage it quotes. The confidences and thresholds here are illustrative, not measured: the AI answers five times per use case, the support desk at 92, 41, 88, 67 and 94 against 70, the contract lookup at 95, 74, 91, 58 and 82 against 90, the knowledge base at 91, 63, 85, 47 and 88 against 80; a green tick above the threshold, a red cross below, and the answer goes out or to a person.",
-   "hash": "3fbded610d48cd9b",
-   "vhash": "de2c0cd2b9b10174"
+   "hash": "08798325eaf17869",
+   "vhash": "c5316723638735bb"
   },
   {
    "id": "03-r2c2-task",
    "title": "The R2C2 task: answer, cite, and say how sure",
    "part": 1,
-   "continues": true,
+   "continues": false,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "2fcaaee08997fccf",
-   "vhash": "2110f8b0100a2c2c"
+   "hash": "23bae938bbcff437",
+   "vhash": "380bd3f1a34f66e3"
   },
   {
    "id": "04-one-pipeline",
