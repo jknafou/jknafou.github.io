@@ -17,9 +17,8 @@ Deck.slide("04-one-pipeline", function (A, q) {
   var tools = ["search", "read", "extract", "record", "submit"];
 
   /* ---- the overview's entry: groups ---- */
-  var JOURNEY = ["han", "tag", "turn1", "turn2", "turn3", "turn4", "rows", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
-  var lit = [].slice.call(q.svg.querySelectorAll('[data-a^="db-lit"]'));
-  var aside = A.par(A.hide(JOURNEY.map(q), { dur: 0 }), A.highlight(lit, { dur: 0, out: true }));
+  var JOURNEY = ["han", "tag", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
+  var aside = A.hide(JOURNEY.map(q), { dur: 0 });
   var tree = [
     key("head"),                                                         /* the header */
     { group: [                                                           /* the pipeline */
@@ -42,15 +41,33 @@ Deck.slide("04-one-pipeline", function (A, q) {
   ];
 
   /* ---- the steps ---- */
-  /* the ten tiles' bands, drawn at no width (the entry sweeps nothing in): at their tile's width for step 4's sweep */
-  lit.forEach(function (r) { r.setAttribute("width", q("frames").getAttribute("data-tile")); });
+  /* step 4's hits in the passages DB: each tile swept yellow, its title keyed and its tile scene acting, in rank
+     order a little apart; their loop, every tile scene's ending idle */
+  var HITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  var hits = function () {
+    return A.stagger(HITS, function (r) {
+      return A.seq(A.reveal(q("dbp" + r), { dur: 0.01 }), A.highlight(q("dby" + r), { dur: 0.3 }), A.par(key("dbt" + r), A.act(q("dbs" + r))));
+    }, 0.35);
+  };
+  var hitsIdle = A.par.apply(null, HITS.map(function (r) { return A.ending(q("dbs" + r), { acted: true }); }));
+  /* a passage read grows out of its DB tile to where it stands (data-from, data-at: x, y, scale) */
+  function grow(nm) {
+    var g = q(nm + "-at"), a = g.getAttribute("data-from").split(",").map(Number), b = g.getAttribute("data-at").split(",").map(Number), E = A.ease.io;
+    return A.track(0.8, function (u) {
+      var e = E(u), x = a[0] + (b[0] - a[0]) * e, y = a[1] + (b[1] - a[1]) * e, k = a[2] * Math.pow(b[2] / a[2], e);
+      g.setAttribute("transform", "translate(" + x.toFixed(2) + "," + y.toFixed(2) + ") scale(" + k.toFixed(5) + ")");
+    });
+  }
+  /* the passage the check kept turns green in the DB, and is ticked */
+  var kept = function () { return A.seq(A.highlight(q("dbg1"), { dur: 0.5 }), A.write(q("dbk1"))); };
   /* the pipeline's parts, the units A.focus dims and lights (none inside another) */
+  var DBP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (r) { return "dbp" + r; });   /* the DB's ten hits (inside dbx) */
   var NAMES = ["head", "q-card", "l-q", "qtype", "db-blk", "model", "tr"]
     .concat(tools.map(function (k) { return "t-" + k; }), tools.map(function (k) { return "call-" + k; }),
             tools.map(function (k) { return "res-" + k; }))
     .concat(["l-type", "stub-search", "stub-read", "stub-extract", "bus", "bus-dots", "l-every", "say-every",
              "orch", "check", "gate", "rec", "l-ck", "l-rg", "l-rc", "l-cr", "say-kept", "l-sg", "l-gs", "say-back",
-             "l-ans", "ans"]);
+             "l-ans", "ans"]).concat(DBP);
   var P = NAMES.map(q);
   var ix = function (names) { return names.map(function (k) { var i = NAMES.indexOf(k); if (i < 0) throw new Error("slide 4: no part " + k); return i; }); };
   var ball = q("ball");
@@ -93,41 +110,45 @@ Deck.slide("04-one-pipeline", function (A, q) {
                                        go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), A.enter(q("tag"))); } },
     { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag"], face: "Q",   /* 3, J 3: turn 1 */
       act: function () { return A.seq(go("l-type"), A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },
-    { look: ["tr", "call-search", "t-search", "stub-search", "bus", "bus-dots", "db-blk", "l-every", "say-every", "rec"],
-      frame: "search", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "Q",   /* 4, J 3: Search */
-      act: function () { return A.seq(leave("Q", "search", "call-search"), go("g-search"), A.highlight(lit, { dur: 0.8 }),
-                                       go("gb-search"), A.reveal(q("rows"), { dur: 0.01 }),
-                                       A.pace(A.emit(q("rows"), { along: q("l-every"), draw: false }), 3.5)); } },
-    { look: ["t-search", "res-search", "tr"], frame: "turn", shown: ["rows"], away: ["rows"], face: "search",   /* 5, J 4: turn 2 */
-      act: function () { return A.seq(A.highlight(lit, { dur: 0.35, out: true }), go("res-search"), A.reveal(q("turn2"), { dur: 0.01 }), emitTurn(2)); } },
-    { look: ["tr", "call-read", "t-read", "stub-read", "bus", "bus-dots", "db-blk"],
-      frame: "read", shown: ["turn2"], away: ["turn2"], face: "search",   /* 6, J 4: Read */
-      act: function () { return A.seq(leave("search", "read", "call-read"), go("g-read"), go("gb-read"),
-                                       A.reveal([q("fun"), q("hanp")], { dur: 0.01 }), A.enter(q("fun")),
-                                       A.pace(A.enter(q("hanp")), 2.5)); },
+    { look: ["tr", "call-search", "t-search", "stub-search", "bus", "bus-dots", "db-blk"].concat(DBP),
+      frame: "search", end: "db", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "Q",   /* 4, J 3: Search */
+      act: function () { return A.seq(leave("Q", "search", "call-search"), go("g-search"),
+                                       A.zoom(q.svg, { from: F.search, to: F.db, dur: 0.8 }),
+                                       A.reveal(q("dbx"), { dur: 0.01 }), hits()); },
+      loop: hitsIdle },
+    { look: ["t-search", "res-search", "tr"], frame: "turn", shown: ["dbx"], face: "search",   /* 5, J 4: turn 2 */
+      act: function () { return A.seq(go("gb-search"), go("res-search"), A.reveal(q("turn2"), { dur: 0.01 }), emitTurn(2)); } },
+    { look: ["tr", "call-read", "t-read", "stub-read", "bus", "bus-dots", "db-blk"].concat(DBP),
+      frame: "read", shown: ["dbx", "turn2"], away: ["turn2"], face: "search",   /* 6, J 4: Read */
+      act: function () { return A.par(                                           /* two groups, started together */
+        A.seq(leave("search", "read", "call-read"), go("g-read"), go("gb-read")),   /* the call: transcript, Read, the DB */
+        A.seq(A.reveal([q("fun"), q("hanp")], { dur: 0.01 }),                     /* the DB: its two passages grow out */
+              A.par(grow("fun"), grow("hanp"), A.pace(A.enter(q("fun")), 2.5), A.pace(A.enter(q("hanp")), 2.5)))); },
       loop: A.par(idle("fun"), idle("hanp")) },
-    { look: ["t-read", "res-read", "tr"], frame: "turn", shown: ["fun", "hanp"], away: ["fun", "hanp"], face: "read",   /* 7, J 5: turn 3 */
+    { look: ["t-read", "res-read", "tr"], frame: "turn", shown: ["dbx", "fun", "hanp"], away: ["fun", "hanp"], face: "read",   /* 7, J 5: turn 3 */
       act: function () { return A.seq(go("res-read"), A.reveal(q("turn3"), { dur: 0.01 }), emitTurn(3)); } },
     { look: ["tr", "call-record", "t-record", "l-rc", "check", "l-ck", "rec"],
-      frame: "check", shown: ["turn3"], away: ["turn3"], face: "read",   /* 8, J 5: the nugget check */
+      frame: "check", shown: ["dbx", "turn3"], away: ["turn3"], face: "read",   /* 8, J 5: the nugget check */
       act: function () { return A.seq(leave("read", "record", "call-record", "l-rc"), A.reveal(q("nug"), { dur: 0.01 }),
                                        A.enter(q("nug")), A.pulse(q("l-ck"), { dur: 0.9 })); } },
-    { look: ["check", "l-cr", "say-kept", "t-record", "res-record", "tr"],
-      frame: "reply", shown: ["nug"], away: ["nug"], face: "record",   /* 9, J 5: the reply */
-      act: function () { return A.seq(go("l-cr", "res-record"), A.reveal(q("reply"), { dur: 0.01 }), key("reply")); } },
-    { look: ["tr"], frame: "turn", shown: ["reply"], away: ["reply"], face: "record",   /* 10, J 6: turn 4 */
+    { look: ["check", "l-cr", "say-kept", "t-record", "res-record", "tr", "db-blk"].concat(DBP),
+      frame: "reply", end: "db9", shown: ["dbx", "nug"], away: ["nug"], face: "record",   /* 9, J 5: the reply, the passage kept */
+      act: function () { return A.seq(go("l-cr", "res-record"), A.reveal(q("reply"), { dur: 0.01 }), key("reply"), A.wait(0.4),
+                                       A.zoom(q.svg, { from: F.reply, to: F.db9, dur: 0.7 }),
+                                       kept()); } },
+    { look: ["tr"], frame: "turn", shown: ["dbx", "reply"], away: ["reply"], face: "record",   /* 10, J 6: turn 4 */
       act: function () { return A.seq(A.reveal(q("turn4"), { dur: 0.01 }), emitTurn(4)); } },
     { look: ["tr", "call-submit", "t-submit", "l-sg", "gate", "l-rg", "rec"],
-      frame: "gate", shown: ["turn4"], away: ["turn4"], face: "record",   /* 11, J 6: the evidence gate */
+      frame: "gate", shown: ["dbx", "turn4"], away: ["turn4"], face: "record",   /* 11, J 6: the evidence gate */
       act: function () { return A.seq(leave("record", "submit", "call-submit", "l-sg"), A.pulse(q("l-rg"), { dur: 0.8 }),
                                        A.reveal(q("g5"), { dur: 0.3 }), A.count(q("g5-reading"), { dur: 1.0 }),
                                        A.write(q("g5-verdict"))); } },
-    { look: ["gate", "l-ans", "ans"], frame: "gate", shown: ["g5"], face: "submit",   /* 12, J 6: the answer */
+    { look: ["gate", "l-ans", "ans"], frame: "gate", shown: ["dbx", "g5"], face: "submit",   /* 12, J 6: the answer */
       act: function () { return A.seq(leave("submit", "A", "l-ans"), A.hide(q("ans"), { dur: 0.25 }),
                                        A.reveal(q("a5"), { dur: 0.01 }), A.enter(q("a5"))); } }
   ];
   var steps = STEPS.map(function (st, s) {
-    var from = s ? STEPS[s - 1] : null, f0 = from ? F[from.frame] : HOME, f1 = F[st.frame];
+    var from = s ? STEPS[s - 1] : null, f0 = from ? F[from.end || from.frame] : HOME, f1 = F[st.frame];
     var move = f0 === f1 ? null : A.zoom(q.svg, { from: f0, to: f1, dur: 0.7 });
     var look = A.par(move, A.focus(P, { from: from ? ix(from.look) : null, to: ix(st.look), dim: 0.3, dur: move ? 0.7 : 0.45 }),
                      putAway(st.away || []));

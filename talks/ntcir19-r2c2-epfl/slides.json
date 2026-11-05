@@ -36,8 +36,8 @@
    "part": 2,
    "continues": false,
    "notes": "The model above chooses one tool call per turn, against the passages DB; the orchestrator below checks every claim, keeps the record and rules on the answer. Then Han Solo's first pass, box by box.",
-   "hash": "3c770cf313651115",
-   "vhash": "381aa86d8b0a8814",
+   "hash": "350a8ad4eac53750",
+   "vhash": "fb99ba1fd93019c6",
    "zones": true
   },
   {
@@ -46,8 +46,8 @@
    "part": 2,
    "continues": false,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "aa117950977c7da2",
-   "vhash": "1e778e06795d919e",
+   "hash": "5cffb7405d93c3ed",
+   "vhash": "99d5b77f54e8f5ce",
    "zones": false
   }
  ]
