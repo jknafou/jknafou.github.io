@@ -18,8 +18,9 @@ body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New
 #num { position: absolute; z-index: 100000; right: 1.46%; bottom: 2.6%; pointer-events: none; user-select: none;
        font: calc(min(100cqh, 100cqw * 9 / 16) * 0.024)/1 Georgia, "Times New Roman", serif; color: var(--ink); opacity: .55;
        font-variant-numeric: tabular-nums; }
-/* the mode, before the position (only in navigation mode): quieter still, the position keeping its place */
-#num .mode { font-size: 0.72em; font-style: italic; opacity: .6; margin-right: 0.5em; }
+/* the mode, just above the position (only in navigation mode; to its left is the corner unit): quieter still, the
+   position keeping its place */
+#num .mode { position: absolute; right: 0; bottom: 120%; font-size: 0.72em; font-style: italic; opacity: .6; white-space: nowrap; }
 #num .mode:empty { display: none; }
 #box iframe { pointer-events: auto; z-index: 2; background: var(--paper); }
 /* a zone under the pointer (a slide's `zones`): a faint outline, over the slide, under the veil and the marks */

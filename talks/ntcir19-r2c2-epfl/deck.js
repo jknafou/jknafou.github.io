@@ -66,7 +66,7 @@
  *   TWO MODES (the author, 5 November 2026: "The presentation mode should be the default navigation"): PRESENTATION,
  *     the default on every opening: ← → are the linear order (as PageDown / PageUp below), 1, 2, 2.1 ... 3, 3.1 ...;
  *     ↑ or ↓ leaves it for NAVIGATION, the same press doing its move there (↓ N.1, ↑ N; a bump still switches); P
- *     returns to presentation in place. ?nav=1 opens in navigation. The corner shows a faint "nav" before the
+ *     returns to presentation in place. ?nav=1 opens in navigation. The corner shows a faint "nav" above the
  *     position in navigation mode only. The levels below are NAVIGATION mode's.
  *   SLIDE LEVEL (an overview): ← → go to the previous / next slide's overview (forward its entry, backward its rest,
  *     after the fade to paper); ↓ enters the steps at k.1, playing its enter (nothing on a slide without steps).
@@ -616,8 +616,8 @@
     if ((k === "Enter" || k === " ") && (tag === "BUTTON" || tag === "A" || tag === "INPUT")) return;   /* the offline panel's own */
     if (k === "ArrowRight") { e.preventDefault(); return NAVMODE ? level(1) : step(1); }
     if (k === "ArrowLeft") { e.preventDefault(); return NAVMODE ? level(-1) : step(-1); }
-    if (k === "ArrowDown") { e.preventDefault(); NAVMODE = true; return down(); }   /* leaves presentation mode, and moves */
-    if (k === "ArrowUp") { e.preventDefault(); NAVMODE = true; return up(); }
+    if (k === "ArrowDown") { e.preventDefault(); setMode(true); return down(); }   /* leaves presentation mode, and moves (a bump too) */
+    if (k === "ArrowUp") { e.preventDefault(); setMode(true); return up(); }
     if (low === "p") { e.preventDefault(); return setMode(false); }                /* back to presentation mode, in place */
     if (NEXT[k]) { e.preventDefault(); return step(1); }
     if (PREV[k]) { e.preventDefault(); return step(-1); }
