@@ -19,6 +19,10 @@ body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New
        font: calc(min(100cqh, 100cqw * 9 / 16) * 0.024)/1 Georgia, "Times New Roman", serif; color: var(--ink); opacity: .55;
        font-variant-numeric: tabular-nums; }
 #box iframe { pointer-events: auto; z-index: 2; background: var(--paper); }
+/* a zone under the pointer (a slide's `zones`): a faint outline, over the slide, under the veil and the marks */
+#zone { position: absolute; z-index: 99990; box-sizing: border-box; border: 1.5px solid var(--ink); border-radius: 6px;
+        opacity: .22; pointer-events: none; }
+html.nocursor #zone { display: none !important; }
 .logo { position: absolute; z-index: 100000; box-sizing: border-box; width: auto; object-fit: contain; pointer-events: none; user-select: none; }
 /* an overlay: a part of one slide, drawn by the shell over the others at the same place (deck.json "overlays") */
 .overlay { position: absolute; inset: 0; z-index: 100000; pointer-events: none; user-select: none; }

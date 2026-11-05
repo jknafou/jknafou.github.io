@@ -11,7 +11,10 @@
  *                                data-idle  the kind: tilt (rocks both ways and back), lean (one way and back), bob
  *                                           (rises and settles), throb (swells and back), dip (dims and back), flap (an
  *                                           idle-only copy, hidden at rest, flipping in and out on its beats), gap
- *                                           (hidden during its beats: flips out, flips back in)
+ *                                           (hidden during its beats: flips out, flips back in), roam (runs to
+ *                                           data-iv units along x on its odd beats and back on its even ones,
+ *                                           hopping and leaning into the run, held still between: an even number
+ *                                           of beats, so the period ends at rest)
  *                                data-ib    its beats' starts on the idle clock (s, comma-separated)
  *                                data-id    their lengths (one for all, or one per beat)
  *                                data-iv    its amount (degrees, units, a fraction)
@@ -45,16 +48,19 @@
     dip: function (u, v) { return { op: 1 - v * S2(u) }; }
   };
   var OUT = 0.15, IN = 0.25, BACK = 0.4;                  /* flap and gap: the board's flip out, flip in, the "?"'s pop back */
+  var HOP = 2.5, LEAN = 7, STEPS = 3;                     /* roam: a step's hop (units), the lean into the run (deg), steps per run */
 
   function parts(sc) {
     return [].slice.call(sc.querySelectorAll("[data-idle]")).map(function (n) {
       if (n.hasAttribute("data-act")) throw new Error("idles.js: an idle part must not be an act part (wrap it): " + n.outerHTML.slice(0, 80));
       var kind = n.getAttribute("data-idle");
-      if (!KIND[kind] && kind !== "flap" && kind !== "gap") throw new Error("idles.js: no idle kind " + kind);
+      if (!KIND[kind] && kind !== "flap" && kind !== "gap" && kind !== "roam") throw new Error("idles.js: no idle kind " + kind);
       var at = (n.getAttribute("data-ib") || "0").split(",").map(Number);
       var d = (n.getAttribute("data-id") || "1").split(",").map(Number);
       if (at.concat(d).some(function (x) { return !isFinite(x); }))     /* a malformed beat would show a flap copy for ever */
         throw new Error("idles.js: bad data-ib/data-id on a " + kind + " part: " + n.getAttribute("data-ib") + " / " + n.getAttribute("data-id"));
+      if (kind === "roam" && (at.length % 2 || !n.hasAttribute("data-iv")))   /* an odd run would leave him away from his rest */
+        throw new Error("idles.js: a roam part needs an even number of beats (there and back) and its distance (data-iv)");
       return { n: n, kind: kind, at: at, dur: at.map(function (_, i) { return d[i] != null ? d[i] : d[0]; }),
                v: n.hasAttribute("data-iv") ? +n.getAttribute("data-iv") : null, io: n.getAttribute("data-io") || "c", o: null };
     });
@@ -82,6 +88,17 @@
     n.style.opacity = st && st.op != null ? String(+st.op.toFixed(4)) : "";
   }
   function state(p, t) {                                   /* the part at t s on the idle clock; null: at rest */
+    if (p.kind === "roam") {                                /* there on odd beats, back on even ones, held between */
+      var x = 0;
+      for (var j = 0; j < p.at.length; j++) {
+        var sj = t - p.at[j], dj = p.dur[j], from = j % 2 ? p.v : 0, to = j % 2 ? 0 : p.v;
+        if (sj < 0) break;
+        if (sj >= dj) { x = to; continue; }
+        var w = sj / dj;
+        return { x: from + (to - from) * A.ease.io(w), y: -HOP * Math.abs(Math.sin(STEPS * Math.PI * w)), r: (to > from ? 1 : -1) * LEAN * S2(w) };
+      }
+      return x ? { x: x } : null;
+    }
     for (var i = 0; i < p.at.length; i++) {
       var s = t - p.at[i], d = p.dur[i];
       if (s < 0 || s > d) continue;

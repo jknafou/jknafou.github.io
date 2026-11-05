@@ -7,7 +7,8 @@
    "continues": false,
    "notes": "Introduce yourself; the talk is about telling, from what the pipeline did, when its answer is wrong.",
    "hash": "4f4018879506f11f",
-   "vhash": "f787b5e13068a5e6"
+   "vhash": "f787b5e13068a5e6",
+   "zones": false
   },
   {
    "id": "02-answer-with-confidence",
@@ -15,8 +16,9 @@
    "part": 1,
    "continues": false,
    "notes": "In a company the answer alone is not enough. Its confidence decides where it goes: above a threshold it goes out on its own, below it a person reviews it first. Where the threshold sits depends on what a wrong answer costs: a support desk answers routine questions fast, a contract lookup must surface its doubt, a knowledge base must cite its source, so its answer comes with the passage it quotes. The confidences and thresholds here are illustrative, not measured: the AI answers five times per use case, the support desk at 92, 41, 88, 67 and 94 against 70, the contract lookup at 95, 74, 91, 58 and 82 against 90, the knowledge base at 91, 63, 85, 47 and 88 against 80; a green tick above the threshold, a red cross below, and the answer goes out or to a person.",
-   "hash": "08798325eaf17869",
-   "vhash": "c5316723638735bb"
+   "hash": "579a747864241943",
+   "vhash": "c9702cb9ce179458",
+   "zones": false
   },
   {
    "id": "03-r2c2-task",
@@ -24,8 +26,9 @@
    "part": 1,
    "continues": false,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "0f03a110353606b3",
-   "vhash": "a986077b79c30f3c"
+   "hash": "85e1cc5f51434398",
+   "vhash": "c83b00e81bc3e892",
+   "zones": true
   },
   {
    "id": "04-one-pipeline",
@@ -34,7 +37,8 @@
    "continues": false,
    "notes": "The model above chooses each tool call, one per turn; the orchestrator below checks every claim, keeps the record and rules on the answer. Every journey later in the talk is this ball's roll.",
    "hash": "8cdc74f695d9f93e",
-   "vhash": "fe9f2ca2bdaedde4"
+   "vhash": "fe9f2ca2bdaedde4",
+   "zones": false
   },
   {
    "id": "05-han-solo-pass-1",
@@ -42,8 +46,9 @@
    "part": 2,
    "continues": true,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "600f16a1be69d1eb",
-   "vhash": "d8aa627c9ba1ce29"
+   "hash": "4df03efeadb1bad1",
+   "vhash": "e4cc79cfe29838cb",
+   "zones": false
   }
  ]
 }

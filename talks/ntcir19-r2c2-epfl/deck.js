@@ -14,7 +14,7 @@
  *               leaving one and the leaving one is cleared once covered, so nothing stale stays on top.
  *   ?live=1     every slide live.
  *   ?reduced=1  (or the OS setting) cuts between the rests (stills, or the live page at rest); nothing moves.
- *   ?chrome=0   hides the bar.   #/k opens slide k.
+ *   ?chrome=0   hides the bar.   #/k opens slide k, #/k.s its step s.
  *
  * NAVIGATION (the author, 4 November 2026, on build/rules.html: "if pressing <- or -> mid animation,
  * it should just stop the animation to move to the selected slide (we can navigate by pressing
@@ -43,12 +43,13 @@
  * people can start reading, then I want to speak about the first item and draw attention to it, then the second and
  * third"; anim/steps.js): a slide may have steps 1..n after its entry (its overview, step 0). The deck is then a line
  * of POSITIONS (slide k, step s): (1, 0), (2, 0), (2, 1) ... (2, n), (3, 0) ...
- *   → goes to the next position: after the entry (or a step) to the next step, playing its enter (<= ~0.8 s, from the
+ *   the NEXT POSITION (→ on a step, ↓ on an overview, Space, PageDown, Enter; see TWO LEVELS below): after the entry (or a step) to the next step, playing its enter (<= ~0.8 s, from the
  *     step before's rest, laid on at once when that rest is what is shown, else faded to in 0.35 s), then its loop;
  *     after the last step to the next slide, by the rules above: the fade to paper. A slide after one with steps is
  *     never continued (anim/steps.js clears its CONTINUES), so it starts on its own first frame.
- *   ← goes back one position, AT REST: the previous step's rest (step 0: the overview's), by a 0.35 s fade through
- *     paper within the slide; from a slide's overview the previous slide's last step, after the fade to paper. Its
+ *   the PREVIOUS POSITION (← on a step, PageUp, Backspace), AT REST: the previous step's rest, by a 0.35 s fade
+ *     through paper within the slide (the overview: by a glide, below); from a slide's overview (PageUp, Backspace)
+ *     the previous slide's last step, after the fade to paper. Its
  *     loop restarts. Nothing is played backwards.
  *   a press during a step's enter stops it where it is and moves at once, as during an entry.
  *   a BURST of k presses moves k positions, across steps and slides alike; once the keys are quiet the target's own
@@ -56,9 +57,27 @@
  *     once (a step from rest has no fade to wait behind) and is cut by the second.
  *   Home, End, T and the part keys land on a slide's overview (step 0).
  *   The bar shows "slide k / N · step s/n" on a slide with steps; the hash is #/k, or #/k.s on a step.
+ *
+ * NUMBERING AND TWO LEVELS (the author, 5 November 2026: "Their should be a normalization between slide number and
+ * animation number [...] slide number and animation number should always writen on the bottom/right [...] a
+ * navigation by level <- -> for the slide 1,2,3... and then top down for the level"; PLAN.md §Navigation):
+ *   one name per position, on every slide: the overview (entry and rest) is "k", step s is "k.s"; the corner number,
+ *   the hash (#/k, #/k.s, deep-linkable) and the bar all show it, in every mode.
+ *   SLIDE LEVEL (an overview): ← → go to the previous / next slide's overview (forward its entry, backward its rest,
+ *     after the fade to paper); ↓ enters the steps at k.1, playing its enter (nothing on a slide without steps).
+ *   STEP LEVEL (k.s): → plays k.s+1, and past the last step goes to the next slide's overview; ← lands at k.s-1's
+ *     rest; ← on k.1 and ↑ on any step both return to the overview k at rest, its camera and dimming undone by a
+ *     GLIDE (0.5 s, on a live slide; a cross-fade on a video slide, or where there is nothing to undo).
+ *   LINEAR (a clicker): Space, PageDown, Enter go to the next position in order (overview, its steps, the next
+ *     slide); PageUp, Backspace to the previous one (from an overview: the previous slide's last step, at rest).
+ *   ZONES: a slide may declare zones {step: part} (anim/steps.js); on its overview and on any of its steps a click on
+ *     a zone plays that step's enter from the picture shown, the camera gliding from where it is (no fade within the
+ *     slide; a video slide fades to the enter's first frame); hovering one shows a pointer and a faint outline.
+ *   Every rule above still holds: a press mid-motion stops it and moves, a burst is one move.
  *   Media (validated slides only): rest-<k>-<s>.webp, st-<k>-<s>.mp4 (the enter), stl-<k>-<s>.mp4 (the loop), and
  *   media.json's steps {k: n}; a live slide's steps are its timelines' (Live.info()[k-1].steps).
- *   → Space PageDown   next        ← PageUp Backspace   previous      Home / End   first / last
+ *   ← →   slides (on a step: steps)   ↓ ↑   into the steps / back to the overview
+ *   Space PageDown Enter   next, in order        PageUp Backspace   previous, in order      Home / End   first / last
  *   1-9                the first slide of that part (or a part's own letter, deck.json parts[].key)
  *   T                  the title (slide 1)
  *   F full screen      S timer (minutes; S again restarts)    O offline panel    H help
@@ -395,8 +414,32 @@
       if (!(await liveTo(function () { W.Live.step(k, s); if (!REDUCED) liveLoop(k, s); }, my, REDUCED ? 0 : FADE, false, paper))) return;
       setPhase("rest");
     },
+    /* a move within slide k from what is shown (anim/steps.js Live.glide): "enter" plays step s's enter with the
+       camera and the dimming carried from the picture shown (a zone clicked); "rest" undoes them smoothly back to
+       step s's rest (↑, or ← on step 1, to the overview). Where it cannot glide (the live page not on top, the veil
+       up, ?reduced=1, nothing to carry) it is the ordinary forward or back move */
+    glide: async function (k, s, mode, from, my) {
+      freeze();
+      await ensureFrame(k); if (stale(my)) return;
+      var g = null;
+      if (!REDUCED && frameShown() && !veilUp && W.Live.glide) { W.Live.stopLoop(); g = W.Live.glide(k, s, { mode: mode, from: from }); }
+      if (!g) return mode === "enter" ? LIVER.forward(k, s, false, my, false, false) : LIVER.back(k, s, my, false);
+      g.set(0);
+      if (mode === "enter") { var name = cueName(k, s); NAV.played.push(name); NAV.cue = name; setPhase("entry"); } else setPhase("fade");
+      var t0 = performance.now();
+      for (;;) {
+        await new Promise(function (r) { requestAnimationFrame(r); });
+        if (stale(my)) return;                                   /* stopped where it is */
+        var t = (performance.now() - t0) / 1000;
+        if (t >= g.dur) break;
+        g.set(t);
+      }
+      W.Live.step(k, s); liveLoop(k, s); setPhase("rest");
+    },
     preload: function () {}
   };
+  /* a video slide has no glide: its enter faded to, or its rest cross-faded in */
+  MEDIA.glide = function (k, s, mode, from, my) { return mode === "enter" ? MEDIA.forward(k, s, false, my, false, false) : MEDIA.back(k, s, my, false); };
   /* which renderer plays slide k */
   function R(k) { return media(k) ? MEDIA : LIVER; }
 
@@ -411,12 +454,15 @@
   /* the line of positions (slide, step) */
   function nextPos(k, s) { return s < nst(k) ? [k, s + 1] : k < N ? [k + 1, 0] : null; }
   function prevPos(k, s) { return s > 0 ? [k, s - 1] : k > 1 ? [k - 1, nst(k - 1)] : null; }
-  function goTo(k, s) {
+  /* how.play: a zone clicked: step s's attention move is played from what is shown, whichever way it lies (even
+     the step shown now, acted once more) */
+  function goTo(k, s, how) {
+    how = how || {};
     var now = performance.now(), inBurst = now - NAV.last < BURST;    /* a press inside the window waits for quiet */
     NAV.last = now;
     k = Math.max(1, Math.min(N, k)); s = Math.max(0, Math.min(nst(k), s || 0));
-    if (k === cur && s === curS) return bump();
-    var from = cur, fromS = curS, dir = (k - from || s - fromS) > 0 ? 1 : -1, atRest = NAV.phase === "rest";
+    if (k === cur && s === curS && !how.play) return bump();
+    var from = cur, fromS = curS, dir = how.play ? 1 : (k - from || s - fromS) > 0 ? 1 : -1, atRest = NAV.phase === "rest";
     /* laid on at once, with no exit: a step from the rest of the step before it, and a continued slide reached from
        its own predecessor at rest when that one has no steps (with steps, its entry starts on the overview) */
     var seamless = dir > 0 && atRest && (k === from ? s === fromS + 1 :
@@ -427,16 +473,32 @@
     update();
     /* leaving the slide (or the veil still up from a press just before): the fade to paper first, then the target */
     var leaving = (k !== from && !seamless) || veilUp;
-    var arrive = function () { return dir > 0 ? R(k).forward(k, s, seamless && !leaving, my, inBurst, leaving) : R(k).back(k, s, my, leaving); };
+    /* within the slide: a zone's step played from what is shown, or the way back to the overview, by a glide */
+    var glide = !leaving && k === from ? (how.play && !seamless ? "enter" : dir < 0 && s === 0 ? "rest" : null) : null;
+    var arrive = function () {
+      if (glide) return R(k).glide(k, s, glide, atRest ? fromS : null, my);
+      return dir > 0 ? R(k).forward(k, s, seamless && !leaving, my, inBurst, leaving) : R(k).back(k, s, my, leaving);
+    };
     var run = leaving ? leave(my).then(function (ok) { if (ok) return arrive(); }) : arrive();
     run.catch(function (e) { ERR.push("move: " + (e && e.message || e)); })
        .then(function () { if (!stale(my)) MEDIA.preload(cur, curS); });
   }
-  function step(dir) {
+  function step(dir) {                               /* the LINEAR order (a clicker): overview, its steps, the next slide */
     var p = dir > 0 ? nextPos(cur, curS) : prevPos(cur, curS);
     if (!p) { NAV.last = performance.now(); return bump(); }
     goTo(p[0], p[1]);
   }
+  /* TWO LEVELS (the author, 5 November 2026): ← → on an overview go between the slides' overviews; on a step, between
+     the steps of this slide (← on step 1 back to the overview, → past the last step on to the next slide's overview);
+     ↓ on an overview enters its steps at step 1; ↑ on a step returns to the overview */
+  function level(dir) {
+    var p = curS === 0 ? (dir > 0 ? (cur < N ? [cur + 1, 0] : null) : (cur > 1 ? [cur - 1, 0] : null))
+                       : (dir > 0 ? nextPos(cur, curS) : [cur, curS - 1]);
+    if (!p) { NAV.last = performance.now(); return bump(); }
+    goTo(p[0], p[1]);
+  }
+  function down() { if (curS === 0 && nst(cur)) return goTo(cur, 1); NAV.last = performance.now(); bump(); }
+  function up() { if (curS > 0) return goTo(cur, 0); NAV.last = performance.now(); bump(); }
   function partStart(i) { for (var k = 1; k <= N; k++) if (SL[k - 1].part === i) return k; return null; }
 
   /* ---- where am I: the bar ---------------------------------------------------- */
@@ -446,6 +508,8 @@
     return [(pn ? pn + " › " : "") + (s.title || ""), k + " / " + N];
   }
   var lastHash = null;
+  /* a position's name, one rule for every slide: its overview "k", its step s "k.s" (the corner number, the hash) */
+  function posName(k, s) { return k + (s ? "." + s : ""); }
   function going() { return NAV.phase === "fade" || NAV.phase === "hold"; }
   var numEl = null;
   function update() {
@@ -453,10 +517,12 @@
     crumb.textContent = (g ? (NAV.dir < 0 ? "← " : "→ ") : (CFG.title ? CFG.title + " · " : "")) + d[0];
     pos.textContent = n ? "slide " + d[1] + " · step " + curS + "/" + n : d[1];
     strip.classList.toggle("going", g);
-    if (numEl) numEl.textContent = String(cur);
-    var h = "#/" + cur + (curS ? "." + curS : "");
+    if (numEl) numEl.textContent = posName(cur, curS);
+    var h = "#/" + posName(cur, curS);
     if (h !== lastHash) { lastHash = h; try { history.replaceState(null, "", h + ""); } catch (e) {} }
     layoutLogos();
+    if (NAV.phase === "rest") hover();               /* the zones are where the picture at rest draws them */
+    else if (zoneEl) zoneEl.style.display = "none";
   }
 
   /* ---- the logos and overlays, from deck.json, over the stage ---------------------------- */
@@ -528,10 +594,15 @@
   }
 
   /* ---- keys ------------------------------------------------------------------ */
-  var NEXT = { ArrowRight: 1, PageDown: 1, " ": 1, Spacebar: 1 }, PREV = { ArrowLeft: 1, PageUp: 1, Backspace: 1 };
+  var NEXT = { PageDown: 1, " ": 1, Spacebar: 1, Enter: 1 }, PREV = { PageUp: 1, Backspace: 1 };   /* linear: a clicker */
   window.addEventListener("keydown", function (e) {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
-    var k = e.key || "", low = k.toLowerCase();
+    var k = e.key || "", low = k.toLowerCase(), tag = e.target && e.target.tagName;
+    if ((k === "Enter" || k === " ") && (tag === "BUTTON" || tag === "A" || tag === "INPUT")) return;   /* the offline panel's own */
+    if (k === "ArrowRight") { e.preventDefault(); return level(1); }
+    if (k === "ArrowLeft") { e.preventDefault(); return level(-1); }
+    if (k === "ArrowDown") { e.preventDefault(); return down(); }
+    if (k === "ArrowUp") { e.preventDefault(); return up(); }
     if (NEXT[k]) { e.preventDefault(); return step(1); }
     if (PREV[k]) { e.preventDefault(); return step(-1); }
     if (k === "Home") { e.preventDefault(); return goTo(1, 0); }
@@ -556,6 +627,45 @@
       else { var el = d.documentElement, r = (el.requestFullscreen || el.webkitRequestFullscreen).call(el); if (r && r.catch) r.catch(function () {}); }
     } catch (e) {}
   }
+
+  /* ---- ZONES: on a slide that declares them (its motion file's `zones`, anim/steps.js), a click on a region of the
+   * picture plays the step on it from what is shown (goTo's how.play); hovering one shows a pointer and a faint
+   * outline. Where the zones are drawn is read from the live page (the camera included): from the picture shown when
+   * the live page is on top, else from the live page set, hidden, to the position shown. ---------------------- */
+  var zoneEl = null, mouse = null;
+  function zonesOf(k) { return INFO && INFO[k - 1] && INFO[k - 1].zones || null; }
+  function zoneRects() {
+    if (!zonesOf(cur) || !W || !W.Live || !W.Live.zoneRects || !frame) return [];
+    var fr = frame.getBoundingClientRect(), shown = frame.style.visibility !== "hidden";
+    return W.Live.zoneRects(cur, shown ? null : curS).map(function (z) {
+      return { step: z.step, x: fr.left + z.r[0] * fr.width, y: fr.top + z.r[1] * fr.height, w: z.r[2] * fr.width, h: z.r[3] * fr.height };
+    });
+  }
+  function zoneAt(x, y) {                          /* the smallest zone under the point (a block inside another wins) */
+    var best = null, bx = box.getBoundingClientRect();
+    if (x < bx.left || y < bx.top || x > bx.right || y > bx.bottom) return null;
+    zoneRects().forEach(function (z) {
+      if (x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h && (!best || z.w * z.h < best.w * best.h)) best = z;
+    });
+    return best;
+  }
+  function hover() {
+    var z = mouse && zonesOf(cur) ? zoneAt(mouse[0], mouse[1]) : null;
+    box.style.cursor = z ? "pointer" : "";
+    if (!z) { if (zoneEl) zoneEl.style.display = "none"; return; }
+    if (!zoneEl) { zoneEl = document.createElement("div"); zoneEl.id = "zone"; zoneEl.setAttribute("aria-hidden", "true"); box.appendChild(zoneEl); }
+    var bx = box.getBoundingClientRect(), pad = 0.006 * bx.width;
+    zoneEl.style.left = (z.x - bx.left - pad) + "px"; zoneEl.style.top = (z.y - bx.top - pad) + "px";
+    zoneEl.style.width = (z.w + 2 * pad) + "px"; zoneEl.style.height = (z.h + 2 * pad) + "px"; zoneEl.style.display = "";
+  }
+  box.addEventListener("mousemove", function (e) { mouse = [e.clientX, e.clientY]; hover(); });
+  box.addEventListener("mouseleave", function () { mouse = null; hover(); });
+  box.addEventListener("click", function (e) {
+    var z = zonesOf(cur) ? zoneAt(e.clientX, e.clientY) : null;
+    if (!z) return;
+    e.preventDefault();
+    goTo(cur, z.step, { play: true });
+  });
 
   /* ---- the timer: whole minutes only (ticking seconds distract the audience) -------- */
   var timerEl = $("timer"), timerT0 = 0, timerTick = null;
@@ -669,14 +779,15 @@
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
     buildLogos(); await buildOverlays();
     numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true"); box.appendChild(numEl);
-    $("help").innerHTML = "<table>" + [["→ Space PageDown", "next"], ["← PageUp", "previous"], ["Home / End", "first / last"],
+    $("help").innerHTML = "<table>" + [["← →", "the slides (on a step: its steps)"], ["↓ / ↑", "into a slide's steps / back to its overview"],
+      ["Space PageDown Enter", "next, in order"], ["PageUp Backspace", "previous, in order"], ["click", "a part of the slide (where outlined): its step"], ["Home / End", "first / last"],
       ["1–9" + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return ", " + p.key.toUpperCase(); }).join(""), "a part: " + (CFG.parts || []).map(function (p, i) { return (i + 1) + " " + p.name; }).join(", ")],
       ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["H", "this help"]]
       .map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") + "</table>";
     await dropStale();
     var live = [];
     for (var i = 1; i <= N; i++) if (!media(i)) live.push(i);
-    if (live.length) await ensureFrame(cur);                     /* the live page is ready before any key */
+    if (live.length || SL.some(function (x) { return x.zones; })) await ensureFrame(cur);   /* the live page is ready before any key (and holds the zones) */
     curS = Math.max(0, Math.min(nst(cur), m && m[2] ? +m[2] : 0));
     await R(cur).init(cur, curS);
     update(); MEDIA.preload(cur, curS);
@@ -694,7 +805,8 @@
         live: (function () { var a = []; for (var i = 1; i <= N; i++) if (!media(i)) a.push(i); return a; })(),
         entries: INFO ? INFO.map(function (e) { return e.entry; }) : null,
         enters: INFO ? INFO.map(function (e) { return (e.steps || []).map(function (x) { return x.enter; }); }) : null,
-        pos: pos.textContent,
+        pos: pos.textContent, num: numEl ? numEl.textContent : null, hash: location.hash,
+        zones: zonesOf(cur) && NAV.phase === "rest" ? zoneRects() : [], zoneShown: !!zoneEl && zoneEl.style.display !== "none", cursor: box.style.cursor,
         layers: { frame: frameShown(), frameVisible: !!frame && frame.style.visibility !== "hidden", rest: restImg.style.visibility !== "hidden" && !!restImg.getAttribute("src"),
           videos: box.querySelectorAll("video.on").length, jumps: box.querySelectorAll(".jumpimg").length },
         offline: OFF.state + (OFF.ready ? " ready" : "") + " " + OFF.files + "/" + OFF.of, crumb: crumb.textContent + " | " + pos.textContent,

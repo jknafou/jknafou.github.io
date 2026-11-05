@@ -37,7 +37,10 @@
  *   Live.stepEnter(k, s, t)    t s into step s's enter (from step s-1's rest)
  *   Live.stepLoop(k, s, t)     step s's loop at t s (its rest when it has none)
  *   Live.startLoop(k, s)       plays the idle of slide k at step s (s = 0 or none: the slide's own loop)
- *   Live.info()                each slide also gets steps: [{enter, loop}] (durations in s)
+ *   Live.info()                each slide also gets steps: [{enter, loop}] (durations in s) and zones: [{step, name}]
+ *   Live.zoneRects(k, s)       where slide k's zones are drawn now (with s: at step s's rest), in viewport fractions
+ *   Live.glide(k, s, {mode})   a move within slide k from what is shown: step s's enter, or back to its rest (below)
+ * A slide may also declare `zones: {step: data-a name}` (slide 3: each region of its overview, the step on it).
  * Live.rest, Live.entry and Live.loop put a slide with steps back on its overview first, so its steps never leak
  * into its entry or its stills.
  */
@@ -179,6 +182,18 @@
         });
         ST[id] = { steps: steps, off: off, chain: A_.seq.apply(null, steps.map(function (s) { return s.enter; })) };
       }
+      /* its ZONES (PLAN.md §Navigation, "two levels"): {step: a data-a name or a selector}, the region of the overview
+         a click on which plays that step's attention move; only on a slide whose steps are regions (not slide 2's
+         transformations) */
+      if (m.zones) {
+        if (!ST[id]) throw new Error(id + ": zones without steps");
+        ST[id].zones = Object.keys(m.zones).map(function (k) {
+          var n = +k, sel = m.zones[k], el = q(sel) || q.root.querySelector(sel);
+          if (!(n >= 1 && n <= steps.length)) throw new Error(id + ": zone for step " + k + ", which does not exist");
+          if (!el) throw new Error(id + ": zone " + k + " (" + sel + ") has no element");
+          return { step: n, name: sel, el: el };
+        });
+      }
       /* a slide with steps is left by the shell's fade to paper, so the slide after it is never CONTINUED (PLAN.md
          §Navigation): live.js reads data-continues once this maker has returned, and the slides are made in order,
          so the slide before's steps are known here */
@@ -237,8 +252,97 @@
     a.forEach(function (e, i) {
       var x = S(i + 1);
       e.steps = x ? x.steps.map(function (s) { return { enter: +s.enter.dur.toFixed(3), loop: s.loop ? +s.loop.dur.toFixed(3) : 0 }; }) : [];
+      e.zones = x && x.zones ? x.zones.map(function (z) { return { step: z.step, name: z.name }; }) : null;
     });
     return a;
+  };
+  /* the zones of slide k where they are now drawn (the camera included): [{step, r: [x, y, w, h]}] in fractions of
+     this page's viewport, which the shell lays over the stage; with s, slide k is first set at step s's rest */
+  L.zoneRects = function (k, s) {
+    var x = S(k); if (!x || !x.zones) return [];
+    if (s != null) step(k, s);
+    var vw = G.innerWidth || 1, vh = G.innerHeight || 1;
+    return x.zones.map(function (z) {
+      var r = inked(z.el);
+      return { step: z.step, r: [r[0] / vw, r[1] / vh, (r[2] - r[0]) / vw, (r[3] - r[1]) / vh] };
+    });
+  };
+  /* the box of what a part draws: the union of its visible shapes, leaving out what is hidden (display none, or
+     opacity 0 of its own: a bead parked at the origin until its pulse, a scene not yet shown) */
+  function inked(el) {
+    var b = [Infinity, Infinity, -Infinity, -Infinity];
+    (function walk(e) {
+      var cs = G.getComputedStyle(e);
+      if (cs.display === "none" || cs.visibility === "hidden" || +cs.opacity === 0) return;
+      if (e.firstElementChild) { for (var c = e.firstElementChild; c; c = c.nextElementSibling) walk(c); return; }
+      var r = e.getBoundingClientRect(); if (!r.width && !r.height) return;
+      b[0] = Math.min(b[0], r.left); b[1] = Math.min(b[1], r.top); b[2] = Math.max(b[2], r.right); b[3] = Math.max(b[3], r.bottom);
+    })(el);
+    return b[0] === Infinity ? [0, 0, 0, 0] : b;
+  }
+
+  /* ---- a GLIDE: a move within a slide from whatever is shown now, its camera and its dimming carried smoothly
+   * (PLAN.md §Navigation, "two levels"). Two kinds:
+   *   enter  step s's enter played from the picture shown (a zone clicked from any position of the slide): the enter
+   *          runs from step s-1's rest as always, while the camera and the parts' opacity it starts from are offset
+   *          to what was shown, the offset easing out over the first 0.7 s, so the camera travels from where it was;
+   *   rest   back to step s's rest (the overview, from ↑ or ← on step 1): the camera and the dimming eased to the
+   *          target's in 0.5 s over the content shown (the source step's rest, `from`, when the move starts at rest),
+   *          then the target's content set. null when there is nothing to carry (a transformation only: slide 2), and
+   *          the shell fades as for any ←.
+   * What differs otherwise between the two states (a card filled, words keyed) is set at once: at the start for
+   * an enter, at the end for a rest. A track, {dur, set(t)}. ---- */
+  /* the camera as A.camera leaves it (a CSS transform on the svg), read back as the frame's centre and its scale
+     [cx, cy, s], the space A.camera moves in (the centre linear, the zoom geometric) */
+  var CAM = /translate\(([-\d.e]+)%,\s*([-\d.e]+)%\)\s*scale\(([-\d.e]+)\)/;
+  function camOf(svg) {
+    var m = CAM.exec(svg.style.transform || ""), W = A.VB[2], H = A.VB[3];
+    var tx = m ? +m[1] : 0, ty = m ? +m[2] : 0, sc = m ? +m[3] : 1;
+    return [(W / 2 - tx / 100 * W) / sc, (H / 2 - ty / 100 * H) / sc, sc];
+  }
+  function camSet(svg, c) {
+    var W = A.VB[2], H = A.VB[3], tx = (W / 2 - c[0] * c[2]) / W * 100, ty = (H / 2 - c[1] * c[2]) / H * 100;
+    svg.style.transform = Math.abs(tx) < 1e-4 && Math.abs(ty) < 1e-4 && Math.abs(c[2] - 1) < 1e-6 ? "" :
+      "translate(" + tx.toFixed(4) + "%, " + ty.toFixed(4) + "%) scale(" + c[2].toFixed(5) + ")";
+    svg.style.transformOrigin = "0 0";
+  }
+  var opOf = function (el) { return el.style.opacity === "" ? 1 : +el.style.opacity; };
+  var opSet = function (el, v) { v = Math.max(0, Math.min(1, v)); el.style.opacity = v >= 0.9999 ? "" : v.toFixed(4); };
+  function opsOf(sec) { var o = new Map(); sec.querySelectorAll('[style*="opacity"]').forEach(function (el) { if (el.style.opacity !== "") o.set(el, +el.style.opacity); }); return o; }
+  L.glide = function (k, s, o) {
+    o = o || {};
+    var x = S(k); s = clampS(k, s);
+    var sec = document.querySelectorAll("section.slide")[k - 1], svg = sec && sec.querySelector("svg");
+    if (!svg) return null;
+    var c0 = camOf(svg), o0 = opsOf(sec);                          /* what is shown now */
+    var enter = o.mode === "enter" && s > 0 && !!x, E = enter ? x.steps[s - 1].enter : null;
+    if (enter) L.stepEnter(k, s, 0); else step(k, s);
+    var c1 = camOf(svg), o1 = opsOf(sec), D = [];
+    var seen = new Set(); o0.forEach(function (v, el) { seen.add(el); }); o1.forEach(function (v, el) { seen.add(el); });
+    seen.forEach(function (el) {
+      var a = o0.has(el) ? o0.get(el) : 1, b = o1.has(el) ? o1.get(el) : 1;
+      if (Math.abs(a - b) > 0.01) D.push([el, a, b]);
+    });
+    var moved = Math.abs(c0[0] - c1[0]) + Math.abs(c0[1] - c1[1]) + 100 * Math.abs(Math.log(c0[2] / c1[2])) > 0.05;
+    if (!enter && !moved && !D.length) return null;
+    var src = !enter && o.from != null && o.from !== s ? clampS(k, o.from) : null;
+    var Tm = enter ? Math.min(0.7, E.dur) : (o.dur || 0.5), dur = enter ? E.dur : Tm, ease = A.ease.io;
+    return { dur: dur, set: function (t) {
+      t = Math.max(0, Math.min(dur, t));
+      var e = ease(Tm > 0 ? Math.min(1, t / Tm) : 1);
+      if (enter) {
+        L.stepEnter(k, s, t);
+        var w = 1 - e; if (w <= 0) return;
+        var c = camOf(svg);
+        camSet(svg, [c[0] + (c0[0] - c1[0]) * w, c[1] + (c0[1] - c1[1]) * w, c[2] * Math.pow(c0[2] / c1[2], w)]);
+        D.forEach(function (d) { opSet(d[0], opOf(d[0]) + (d[1] - d[2]) * w); });
+        return;
+      }
+      if (t >= dur) { step(k, s); return; }
+      if (src != null) step(k, src);
+      camSet(svg, [c0[0] + (c1[0] - c0[0]) * e, c0[1] + (c1[1] - c0[1]) * e, c0[2] * Math.pow(c1[2] / c0[2], e)]);
+      D.forEach(function (d) { opSet(d[0], d[1] + (d[2] - d[1]) * e); });
+    } };
   };
   /* live.js has put the first slide shown at rest by its own (inner) rest: with steps, its overview again */
   document.addEventListener("DOMContentLoaded", function () {

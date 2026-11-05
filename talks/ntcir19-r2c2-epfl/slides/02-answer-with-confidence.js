@@ -3,12 +3,13 @@
    card, each arrow after both its ends, the AI, the answer with its gauge, the gate with its threshold, the
    branches, "yes" and "no", the outcomes), then the Q ball pops in at the question card. Every line drawn, here and
    in the steps, is hidden until it has length (A.nodot), so no round cap shows as a dot where it starts.
-   LOOP (the overview, the support desk): its five rounds.
-   STEPS: 1 into the contract and regulation lookup, 2 into the internal knowledge base. Each enter: the name, its
+   The OVERVIEW ("2") is still: no loop (5 November 2026, the numbering made one rule: the overview "N", step k "N.k").
+   STEPS: 1 the support desk (its enter the Q ball popping again at its card; its loop its five rounds), 2 into the
+   contract and regulation lookup, 3 into the internal knowledge base. Steps 2 and 3's enters: the name, its
    line and the outgoing outcome's words erased and keyed anew (A.reverse of A.type, then the stacked words of the
    next use case), the threshold re-counted from the old bar to the new one (A.recount), the question card's ruled
    lines undrawn and drawn again, the gauge moving to the new
-   use case's drawn confidence (A.gaugeTo); the rest of the pipeline stays in place. Step 2 also brings the citation
+   use case's drawn confidence (A.gaugeTo); the rest of the pipeline stays in place. Step 3 also brings the citation
    in: the passage pops in under the answer, the dashed "cites" link is drawn by pen from the answer down to it,
    "cites" keyed, and the marker's yellow sweeps across its marked line (the quoted span).
    Each step's loop: that use case's five rounds (A.cycle), each the AI answering once with a new confidence
@@ -108,9 +109,11 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
       A.gaugeTo(q(k + "-a-bar"), { from: CONF[d] / 100, to: CONF[e] / 100, value: q(k + "-a-value"), dur: 0.7 }),
       e === CITE ? citation() : null);
   }
+  /* the overview is the whole row, still (PLAN.md §Navigation: the overview is "2", step k is "2.k", on every slide
+     alike); its first use case is a step like the others: 2.1 the support desk (its enter the Q ball popping again
+     at its card, its loop the five rounds), 2.2 the contract lookup, 2.3 the knowledge base */
   return {
     entry: A.par(A.type(q("head"), { quick: true }), row()),
-    loop: rounds(0),
-    steps: [{ enter: into(1), loop: rounds(1) }, { enter: into(2), loop: rounds(2) }]
+    steps: [{ enter: A.pop(ball, { dur: 0.35 }), loop: rounds(0) }, { enter: into(1), loop: rounds(1) }, { enter: into(2), loop: rounds(2) }]
   };
 });

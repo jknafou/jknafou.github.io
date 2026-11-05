@@ -70,6 +70,8 @@ Deck.slide("03-r2c2-task", function (A, q) {
     entry: A.seq(
       A.camera(q.svg, HOME, HOME, { dur: 0 }),
       A.par(A.par(key("task-head"), A.draw(q("divide"), { dur: 0.8 })), have, ret)),
-    steps: steps
+    steps: steps,
+    /* the overview's regions, each the step on it (PLAN.md §Navigation, zones): a click plays that step from what is shown */
+    zones: { 1: "corpus-blk", 2: "c0", 3: "c1", 4: "c2", 5: "c3", 6: "c4", 7: "c5", 8: "pr-blk", 9: "ac-blk", 10: "n-blk" }
   };
 });
