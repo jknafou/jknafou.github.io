@@ -14,7 +14,9 @@
  *   (c) zoom       A.zoom(svg, {from, to, pad, dur})      the camera closes on a part (A.camera, onto the 16:9 frame
  *                                                         around an element, or a frame [x, y, w, h])
  * `from` / `to` of A.focus are the index (or indexes) in `parts` of the focus, null for the overview. Each is a
- * pure track, as every motion of anim.js is.
+ * pure track, as every motion of anim.js is. A step may also TRANSFORM its part in place (slide 2's one row becoming
+ * each use case): A.reverse(track), A.recount(el, {from, to}), A.gaugeTo(bar, {from, to, value}) and
+ * A.nodot(track, el) (lines drawn without a round cap's dot at their start), below.
  *
  * A slide declares its steps in its motion file, beside its entry and loop:
  *   Deck.slide("02-...", function (A, q) {
@@ -84,6 +86,49 @@
     var tr = A.fill(bar, { dur: o.dur, value: val });
     bar.setAttribute("data-frac", f0); bar._w0 = w0; if (val) val._full = v0;           /* the drawn gauge as it was */
     return tr;
+  };
+
+  /* ---- a step that TRANSFORMS its part rather than focusing it (slide 2: one row becoming each use case in turn).
+   * A.reverse(track)                 the track played backwards: words un-keyed, lines undrawn
+   * A.recount(el, {from, to, dur})   the first number of a <text> counted from one value to another, the words
+   *                                  round it kept ("≥ 70" to "≥ 90"); `dec` decimals (default 0)
+   * A.gaugeTo(bar, {from, to, value, dur})   an answer card's gauge moved from one fraction to another, smoothly,
+   *                                  its number (`value`) following, as a percentage; not A.fillTo's hunting
+   * A.nodot(track, el)               a track that draws el's lines (A.draw, A.flow, A.enter) without the dot a
+   *                                  round cap shows while a line has no length yet: each path of el hidden until
+   *                                  its drawn part is longer than its stroke is wide
+   * ---- */
+  A.reverse = function (tr) { return { dur: tr.dur, set: function (t) { tr.set(tr.dur - t); } }; };
+  A.recount = function (el, o) {
+    var T = lst(el)[0]; if (!T) throw new Error("A.recount: no element");
+    var s0 = T.textContent, m = s0.match(/\d+(\.\d+)?/);
+    if (!m) throw new Error("A.recount: no number in " + JSON.stringify(s0));
+    var pre = s0.slice(0, m.index), post = s0.slice(m.index + m[0].length), E = o.ease || A.ease.io, dec = o.dec || 0;
+    return A.track(o.dur == null ? 0.7 : o.dur, function (u) {
+      T.textContent = pre + (o.from + (o.to - o.from) * E(u)).toFixed(dec) + post;
+    });
+  };
+  A.gaugeTo = function (bar, o) {
+    var full = parseFloat(bar.getAttribute("data-full")), min = parseFloat(bar.getAttribute("height")) || 0;
+    var val = o.value || null, E = o.ease || A.ease.io;
+    if (!(full > 0)) throw new Error("A.gaugeTo: the bar has no data-full (answer_card's gauge)");
+    return A.track(o.dur == null ? 0.7 : o.dur, function (u) {
+      var x = o.from + (o.to - o.from) * E(u);
+      bar.setAttribute("width", Math.max(min, full * x).toFixed(2)); bar.style.opacity = "";
+      if (val) { val.textContent = String(Math.round(x * 100)); val.style.opacity = ""; }
+    });
+  };
+  A.nodot = function (tr, el) {
+    var P = lst(el).reduce(function (a, n) { return a.concat(/^path$/i.test(n.tagName) ? [n] : [].slice.call(n.querySelectorAll("path"))); }, []);
+    var SWs = P.map(function (p) { return parseFloat(p.getAttribute("stroke-width")) || 3.5; });
+    var Ls = P.map(function (p) { return p.getTotalLength(); });
+    return { dur: tr.dur, set: function (t) {
+      tr.set(t);
+      P.forEach(function (p, i) {                       /* anim.js's drawTo dash: drawn = L - offset; at rest it clears both */
+        if (!p.style.strokeDasharray) return;
+        if (Ls[i] - (parseFloat(p.style.strokeDashoffset) || 0) < SWs[i]) p.style.opacity = "0";
+      });
+    } };
   };
 
   /* ---- become: the token turns over into what it now carries (concepts/question_token.py, carries=("Q", "A")):
