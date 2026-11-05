@@ -27,6 +27,14 @@ body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New
 #zone { position: absolute; z-index: 99990; box-sizing: border-box; border: 1.5px solid var(--ink); border-radius: 6px;
         opacity: .22; pointer-events: none; }
 html.nocursor #zone { display: none !important; }
+/* THE FOOT BAND: the paper behind the marks (HES-SO, the corner unit, the number), opaque from the stage's foot to
+   just above the marks' top (y 818 of 900; they span 822-877), easing to nothing at y 770, full width. Over every
+   slide layer, under the zones, the veil (paper on paper: a fade looks the same) and the marks; shown by deck.js only
+   where a mark is (not on the title) */
+#footband { position: absolute; left: 0; right: 0; bottom: 0; height: 14.45%; z-index: 99980; pointer-events: none;
+            background: linear-gradient(to top, var(--paper) 63%, color-mix(in srgb, var(--paper) 85%, transparent) 72.25%,
+              color-mix(in srgb, var(--paper) 50%, transparent) 81.5%, color-mix(in srgb, var(--paper) 15%, transparent) 90.75%,
+              color-mix(in srgb, var(--paper) 0%, transparent) 100%); }
 .logo { position: absolute; z-index: 100000; box-sizing: border-box; width: auto; object-fit: contain; pointer-events: none; user-select: none; }
 /* an overlay: a part of one slide, drawn by the shell over the others at the same place (deck.json "overlays") */
 .overlay { position: absolute; inset: 0; z-index: 100000; pointer-events: none; user-select: none; }

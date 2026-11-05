@@ -541,7 +541,7 @@
   }
 
   /* ---- the logos and overlays, from deck.json, over the stage ---------------------------- */
-  var logoEls = [], LEAVE = null;
+  var logoEls = [], LEAVE = null, bandEl = null;
   function buildLogos() {
     (CFG.logos || []).forEach(function (L) {
       var im = document.createElement("img"); im.className = "logo" + (L.chip ? " chip" : ""); im.src = L.src; im.alt = L.alt || "";
@@ -606,6 +606,9 @@
       if (x[3] && x[2].indexOf(cur) < 0) x[3].reset = false;
       el.style.display = show ? "" : "none";
     });
+    /* the foot band (deck.css #footband): under the marks, shown exactly when one of them is (so never on the title,
+       which draws its own foot) */
+    if (bandEl) bandEl.style.display = logoEls.some(function (x) { return x[0].style.display !== "none"; }) ? "" : "none";
   }
 
   /* ---- keys ------------------------------------------------------------------ */
@@ -794,6 +797,8 @@
     var m = /^#\/(\d+)(?:\.(\d+))?/.exec(location.hash);
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
     buildLogos(); await buildOverlays();
+    /* the foot band: paper fading upward behind the marks, over the slides and under the veil (deck.css #footband) */
+    bandEl = document.createElement("div"); bandEl.id = "footband"; bandEl.setAttribute("aria-hidden", "true"); bandEl.style.display = "none"; box.appendChild(bandEl);
     /* the corner: the position, right-aligned where it always was, and before it the mode, shown only in navigation */
     numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true");
     numEl.innerHTML = '<span class="mode"></span><span class="at"></span>'; box.appendChild(numEl);
