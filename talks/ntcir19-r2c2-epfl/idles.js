@@ -53,6 +53,8 @@
       if (!KIND[kind] && kind !== "flap" && kind !== "gap") throw new Error("idles.js: no idle kind " + kind);
       var at = (n.getAttribute("data-ib") || "0").split(",").map(Number);
       var d = (n.getAttribute("data-id") || "1").split(",").map(Number);
+      if (at.concat(d).some(function (x) { return !isFinite(x); }))     /* a malformed beat would show a flap copy for ever */
+        throw new Error("idles.js: bad data-ib/data-id on a " + kind + " part: " + n.getAttribute("data-ib") + " / " + n.getAttribute("data-id"));
       return { n: n, kind: kind, at: at, dur: at.map(function (_, i) { return d[i] != null ? d[i] : d[0]; }),
                v: n.hasAttribute("data-iv") ? +n.getAttribute("data-iv") : null, io: n.getAttribute("data-io") || "c", o: null };
     });
