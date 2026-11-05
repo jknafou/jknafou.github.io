@@ -23,7 +23,7 @@ Deck.slide("04-one-pipeline", function (A, q) {
   var tools = ["search", "read", "extract", "record", "submit"];
 
   /* ---- the overview's entry: groups ---- */
-  var JOURNEY = ["han", "tag", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
+  var JOURNEY = ["han", "tag", "told", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
   var aside = A.hide(JOURNEY.map(q), { dur: 0 });
   var each = function (f) { return tools.map(f); };
   /* the pipeline is a FLOW, read in order: every member and every arrow its own layer, each waiting for the one before;
@@ -136,6 +136,20 @@ Deck.slide("04-one-pipeline", function (A, q) {
       g.style.opacity = u <= 0 ? "" : u >= 1 ? "0" : (1 - e * e).toFixed(3);
     });
   }
+  /* 4.2: the six types come out of the type box, a ring passes over them and stops on the one chosen, the others
+     fade; then the orchestrator tells the model, along l-type, what it means for the answer */
+  var T6 = [0, 1, 2, 3, 4, 5], ring = q("tag-ring"), DY = +q("tag").getAttribute("data-dy");
+  var ringAt = function (a, b, dur) { return A.track(dur, function (u) { var e = A.ease.io(u); ring.style.translate = "0px " + ((a + (b - a) * e) * DY).toFixed(2) + "px"; }); };
+  function choose() {
+    var path = [0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 0], hops = [];
+    for (var i = 1; i < path.length; i++) hops.push(ringAt(path[i - 1], path[i], 0.16));
+    return A.seq(A.stagger(T6, function (i) { return A.pop(q("tag" + i), { dur: 0.35 }); }, 0.08),
+                 A.par(A.pop(ring, { dur: 0.3 }), ringAt(0, 0, 0.3)), A.seq.apply(null, hops), A.wait(0.2),
+                 A.hide([1, 2, 3, 4, 5].map(function (i) { return q("tag" + i); }), { dur: 0.4 }), A.hide(ring, { dur: 0.3 }));
+  }
+  function tell() {
+    return A.seq(A.pulse(q("l-type"), { dur: 0.6 }), A.reveal(q("told"), { dur: 0.25, dx: -40 }), key("told"));
+  }
   var putAway = function (names) { return names.length ? A.hide(names.map(q), { dur: 0.35 }) : null; };
   var idle = function (card) { return A.ending(q(card + "-scene"), { acted: true }); };
   var emitTurn = function (i) { return A.pace(A.emit(q("turn" + i)), 2.2); };
@@ -145,8 +159,8 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return A.seq(fill(), A.reveal(q("han"), { dur: 0.01 }), A.enter(q("han"))); }, loop: idle("han") },
     { look: ["q-card", "l-q", "qtype"], frame: "question", shown: ["han"], face: "Q",   /* 2, J 2: its type */
       act: function () { return A.seq(A.par(fold(), unfill(), A.at(0.35, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.35 })))),
-                                       go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), A.enter(q("tag"))); } },
-    { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag"], face: "Q",   /* 3, J 3: turn 1 */
+                                       go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), choose(), tell()); } },
+    { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag", "told"], away: ["told"], face: "Q",   /* 3, J 3: turn 1 */
       act: function () { return A.seq(go("l-type"), A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },
     { look: ["tr", "call-search", "t-search", "stub-search", "bus", "bus-dots", "db-blk"].concat(DBP),
       frame: "search", end: "db", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "Q",   /* 4, J 3: Search */
@@ -181,7 +195,7 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return A.seq(leave("record", "submit", "call-submit", "l-sg"), A.pulse(q("l-rg"), { dur: 0.8 }),
                                        A.reveal(q("g5"), { dur: 0.3 }), A.count(q("g5-reading"), { dur: 1.0 }),
                                        A.write(q("g5-verdict"))); } },
-    { look: ["gate", "l-ans", "ans"], frame: "gate", shown: ["dbx", "g5"], face: "submit",   /* 12, J 6: the answer */
+    { look: ["gate", "l-ans", "ans"], frame: "answer", shown: ["dbx", "g5"], face: "submit",   /* 12, J 6: the answer */
       act: function () { return A.seq(leave("submit", "A", "l-ans"), A.hide(q("ans"), { dur: 0.25 }),
                                        A.reveal(q("a5"), { dur: 0.01 }), A.enter(q("a5"))); } }
   ];
