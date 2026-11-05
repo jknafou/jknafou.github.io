@@ -63,6 +63,11 @@
  * navigation by level <- -> for the slide 1,2,3... and then top down for the level"; PLAN.md §Navigation):
  *   one name per position, on every slide: the overview (entry and rest) is "k", step s is "k.s"; the corner number,
  *   the hash (#/k, #/k.s, deep-linkable) and the bar all show it, in every mode.
+ *   TWO MODES (the author, 5 November 2026: "The presentation mode should be the default navigation"): PRESENTATION,
+ *     the default on every opening: ← → are the linear order (as PageDown / PageUp below), 1, 2, 2.1 ... 3, 3.1 ...;
+ *     ↑ or ↓ leaves it for NAVIGATION, the same press doing its move there (↓ N.1, ↑ N; a bump still switches); P
+ *     returns to presentation in place. ?nav=1 opens in navigation. The corner shows a faint "nav" before the
+ *     position in navigation mode only. The levels below are NAVIGATION mode's.
  *   SLIDE LEVEL (an overview): ← → go to the previous / next slide's overview (forward its entry, backward its rest,
  *     after the fade to paper); ↓ enters the steps at k.1, playing its enter (nothing on a slide without steps).
  *   STEP LEVEL (k.s): → plays k.s+1, and past the last step goes to the next slide's overview; ← lands at k.s-1's
@@ -70,13 +75,14 @@
  *     GLIDE (0.5 s, on a live slide; a cross-fade on a video slide, or where there is nothing to undo).
  *   LINEAR (a clicker): Space, PageDown, Enter go to the next position in order (overview, its steps, the next
  *     slide); PageUp, Backspace to the previous one (from an overview: the previous slide's last step, at rest).
- *   ZONES: a slide may declare zones {step: part} (anim/steps.js); on its overview and on any of its steps a click on
+ *   ZONES (both modes; a click never changes the mode): a slide may declare zones {step: part} (anim/steps.js); on its overview and on any of its steps a click on
  *     a zone plays that step's enter from the picture shown, the camera gliding from where it is (no fade within the
  *     slide; a video slide fades to the enter's first frame); hovering one shows a pointer and a faint outline.
  *   Every rule above still holds: a press mid-motion stops it and moves, a burst is one move.
  *   Media (validated slides only): rest-<k>-<s>.webp, st-<k>-<s>.mp4 (the enter), stl-<k>-<s>.mp4 (the loop), and
  *   media.json's steps {k: n}; a live slide's steps are its timelines' (Live.info()[k-1].steps).
- *   ← →   slides (on a step: steps)   ↓ ↑   into the steps / back to the overview
+ *   ← →   presentation mode: the linear order; navigation mode: slides (on a step: steps)
+ *   ↓ ↑   enter navigation mode: into the steps / back to the overview     P   back to presentation mode
  *   Space PageDown Enter   next, in order        PageUp Backspace   previous, in order      Home / End   first / last
  *   1-9                the first slide of that part (or a part's own letter, deck.json parts[].key)
  *   T                  the title (slide 1)
@@ -499,6 +505,15 @@
   }
   function down() { if (curS === 0 && nst(cur)) return goTo(cur, 1); NAV.last = performance.now(); bump(); }
   function up() { if (curS > 0) return goTo(cur, 0); NAV.last = performance.now(); bump(); }
+  /* TWO MODES (the author, 5 November 2026: "The presentation mode should be the default navigation : 1 -> 2 -> 2.1 ->
+     2.2.. -> 3 -> 3.1... to get out of the presentation mode, up or down arrow, to come back to presentation mode "P""):
+     PRESENTATION (the default) ← → are the linear order, as a clicker's keys; ↑ or ↓ leaves it for NAVIGATION, that
+     same press doing its navigation move (↓ into N.1, ↑ back to N; a bump still switches), where ← → move by level.
+     P returns to presentation from wherever the deck is, without moving. Opened with ?nav=1 in navigation mode. The
+     mode is not kept across reloads (sessionStorage would carry it into the next opening of the same tab, the walk's
+     and the speaker's alike: a reload must always start in presentation mode) */
+  var NAVMODE = params.get("nav") === "1";
+  function setMode(nav) { NAVMODE = !!nav; update(); }
   function partStart(i) { for (var k = 1; k <= N; k++) if (SL[k - 1].part === i) return k; return null; }
 
   /* ---- where am I: the bar ---------------------------------------------------- */
@@ -517,7 +532,7 @@
     crumb.textContent = (g ? (NAV.dir < 0 ? "← " : "→ ") : (CFG.title ? CFG.title + " · " : "")) + d[0];
     pos.textContent = n ? "slide " + d[1] + " · step " + curS + "/" + n : d[1];
     strip.classList.toggle("going", g);
-    if (numEl) numEl.textContent = posName(cur, curS);
+    if (numEl) { numEl.firstChild.textContent = NAVMODE ? "nav" : ""; numEl.lastChild.textContent = posName(cur, curS); }
     var h = "#/" + posName(cur, curS);
     if (h !== lastHash) { lastHash = h; try { history.replaceState(null, "", h + ""); } catch (e) {} }
     layoutLogos();
@@ -599,10 +614,11 @@
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     var k = e.key || "", low = k.toLowerCase(), tag = e.target && e.target.tagName;
     if ((k === "Enter" || k === " ") && (tag === "BUTTON" || tag === "A" || tag === "INPUT")) return;   /* the offline panel's own */
-    if (k === "ArrowRight") { e.preventDefault(); return level(1); }
-    if (k === "ArrowLeft") { e.preventDefault(); return level(-1); }
-    if (k === "ArrowDown") { e.preventDefault(); return down(); }
-    if (k === "ArrowUp") { e.preventDefault(); return up(); }
+    if (k === "ArrowRight") { e.preventDefault(); return NAVMODE ? level(1) : step(1); }
+    if (k === "ArrowLeft") { e.preventDefault(); return NAVMODE ? level(-1) : step(-1); }
+    if (k === "ArrowDown") { e.preventDefault(); NAVMODE = true; return down(); }   /* leaves presentation mode, and moves */
+    if (k === "ArrowUp") { e.preventDefault(); NAVMODE = true; return up(); }
+    if (low === "p") { e.preventDefault(); return setMode(false); }                /* back to presentation mode, in place */
     if (NEXT[k]) { e.preventDefault(); return step(1); }
     if (PREV[k]) { e.preventDefault(); return step(-1); }
     if (k === "Home") { e.preventDefault(); return goTo(1, 0); }
@@ -778,9 +794,13 @@
     var m = /^#\/(\d+)(?:\.(\d+))?/.exec(location.hash);
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1));
     buildLogos(); await buildOverlays();
-    numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true"); box.appendChild(numEl);
-    $("help").innerHTML = "<table>" + [["← →", "the slides (on a step: its steps)"], ["↓ / ↑", "into a slide's steps / back to its overview"],
-      ["Space PageDown Enter", "next, in order"], ["PageUp Backspace", "previous, in order"], ["click", "a part of the slide (where outlined): its step"], ["Home / End", "first / last"],
+    /* the corner: the position, right-aligned where it always was, and before it the mode, shown only in navigation */
+    numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true");
+    numEl.innerHTML = '<span class="mode"></span><span class="at"></span>'; box.appendChild(numEl);
+    $("help").innerHTML = "<table>" + [["Presentation mode", "(the default) ← → every position in order: 1, 2, 2.1, 2.2 … 3, 3.1 …"],
+      ["Navigation mode", "↓ or ↑ enters it (and moves); P returns to presentation mode"],
+      ["  ← →", "the slides; on a step, its steps"], ["  ↓ / ↑", "into a slide's steps / back to its overview"],
+      ["Space PageDown Enter", "next, in order (both modes)"], ["PageUp Backspace", "previous, in order (both modes)"], ["click", "a part of the slide (where outlined): its step"], ["Home / End", "first / last"],
       ["1–9" + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return ", " + p.key.toUpperCase(); }).join(""), "a part: " + (CFG.parts || []).map(function (p, i) { return (i + 1) + " " + p.name; }).join(", ")],
       ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["H", "this help"]]
       .map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") + "</table>";
@@ -805,7 +825,7 @@
         live: (function () { var a = []; for (var i = 1; i <= N; i++) if (!media(i)) a.push(i); return a; })(),
         entries: INFO ? INFO.map(function (e) { return e.entry; }) : null,
         enters: INFO ? INFO.map(function (e) { return (e.steps || []).map(function (x) { return x.enter; }); }) : null,
-        pos: pos.textContent, num: numEl ? numEl.textContent : null, hash: location.hash,
+        pos: pos.textContent, num: numEl ? numEl.lastChild.textContent : null, navmode: NAVMODE, modeShown: numEl ? numEl.firstChild.textContent : null, hash: location.hash,
         zones: zonesOf(cur) && NAV.phase === "rest" ? zoneRects() : [], zoneShown: !!zoneEl && zoneEl.style.display !== "none", cursor: box.style.cursor,
         layers: { frame: frameShown(), frameVisible: !!frame && frame.style.visibility !== "hidden", rest: restImg.style.visibility !== "hidden" && !!restImg.getAttribute("src"),
           videos: box.querySelectorAll("video.on").length, jumps: box.querySelectorAll(".jumpimg").length },

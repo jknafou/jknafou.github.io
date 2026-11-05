@@ -1,6 +1,6 @@
-/* Slide 5: its motions, from the animation bank only (anim/anim.js). It starts on slide 4's rest: slide 4's
-   stand-ins and ball are already gone there, so they are set aside at once; its heading gives way to this
-   one's. Then J 1-6 of Han Solo's pass 1, the camera closing on each step (FRAMES, drawn in the .py) and
+/* Slide 5: its motions, from the animation bank only (anim/anim.js). It starts on its own first frame (slide 4
+   has steps now, so this slide is reached by the fade to paper): Figure 1 as slide 4 drew it, its stand-ins and
+   ball set aside at once; the old heading gives way to this one's. Then J 1-6 of Han Solo's pass 1, the camera closing on each step (FRAMES, drawn in the .py) and
    opening again to the whole pipeline after each turn, where the signal rows under the record count it:
    J 1 the card typed at the mouth folds into its ball; J 2 the ball rolls into the type box, which puts out
    `simple`; J 3 turn 1 into the transcript, the ball down to Search: its two indexes, the fusion, the

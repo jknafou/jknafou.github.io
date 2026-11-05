@@ -1,46 +1,132 @@
-/* Slide 4: its motions, from the animation bank only (anim/anim.js). The heading keyed in; the corpus pops
-   at the left edge and is set aside at once (abstracted); Figure 1 is built in reading order (A.enter on
-   the pipeline, data-enter="built": the bands, the question and its type, the transcript, the tools in a
-   ripple and their calls, the two gates and the crossings, the record, the answer, the bracket).
-   Last beat, the journey's grammar, wordless: the question card folds into its ball (the card goes, the
-   ball pops on its arrow) while the answer card is set aside, not yet made; the ball rolls (A.travel)
-   into each box in turn along the pipeline's own arrows, and each box puts out (A.emit) its stand-in:
-   the type box a tag, the transcript a turn, Search its rows (an ink bead down the "every passage" leg),
-   the nugget check a nugget; the ball goes up to Record, the transcript, down to Submit and the gate,
-   and the gate puts out the answer (a bead along its arrow, the card brought back). The stand-ins and the
-   ball fade, a new question card is there: the rest. Loop (e): that same roll, from the rest to the rest. */
+/* Slide 4: its motions, from the animation bank (anim/anim.js), the steps' helpers and A.groups (anim/steps.js) and
+   the scenes' endings (anim/idles.js).
+   ENTRY, by nested groups (A.groups; the tree is in the .py's header): the journey's parts set aside at once; then the
+   title and the pipeline start together; inside the pipeline its five members start together (the entrance, the
+   passages DB, the model, the orchestrator, the answer), each made of members started together in their turn, each
+   group's links drawn as its own last layer once its members have ended; the links between the five last. It ends
+   on the OVERVIEW: everything opaque, nothing moving.
+   STEPS, twelve, Han Solo's first pass (JOURNEY.md J 1-6), each in the normalized order: the rest dimmed (A.focus)
+   while the camera pans onto the step's frame (A.zoom, one frame size: no zoom out), what the step before put out
+   put away; then the ball, what it carries, rolls along the drawn link (A.travel, A.become); the box puts out what
+   it made; the loop, where a scene played, is its ending idle (A.ending, scene rule 9). */
 Deck.slide("04-one-pipeline", function (A, q) {
-  /* the pipeline's arrows, in its drawing order (concepts/pipeline.py): 0 question -> type, 1 type ->
-     transcript, 2-9 each tool's call down (even) and result up (odd), Search, Read, Record, Submit;
-     10/11 Record -> check and back, 12/13 Submit -> gate and back, 14 "every passage" down to the record,
-     15 check -> record, 16 record -> gate, 17 gate -> answer */
-  var arrows = [].slice.call(q("p").querySelectorAll('[data-concept="flow_arrow"]'));
-  var outs = ["o-tag", "o-turn", "o-rows", "o-nugget"];
-  function journey() {
-    var ball = q("ball"), card = q("p-question"), ans = q("p-answer");
-    var go = function (i) { return A.travel(ball, { along: arrows[i] }); };
-    return A.seq(
-      A.par(A.hide(card, { dur: 0.4 }), A.dim(ans, { dur: 0.4 }), A.at(0.2, A.pop(ball, { dur: 0.5 }))),
-      go(0), A.emit(q("o-tag")),
-      go(1), A.emit(q("o-turn")),
-      go(2), A.emit(q("o-rows"), { along: arrows[14], draw: false }),
-      go(3), go(6), go(10), A.emit(q("o-nugget")),
-      go(11), go(7), go(8), go(12),
-      A.emit(ans, { along: arrows[17], draw: false, enter: A.dim(ans, { dur: 0.5, back: true }) }),
-      A.wait(1.2),
-      A.par(A.hide(outs.map(q), { dur: 0.6 }), A.hide(ball, { dur: 0.4 }), A.at(0.3, A.reveal(card, { dur: 0.5 }))),
-      A.wait(0.6)
-    );
+  var F = JSON.parse(q("frames").getAttribute("data-frames"));
+  var HOME = [0, 0, 1600, 900];
+  var key = function (n) { return A.type(q(n), { quick: true }); };
+  var fl = function (n) { return A.flow(q(n), { dur: 0.45 }); };
+  var tools = ["search", "read", "extract", "record", "submit"];
+
+  /* ---- the overview's entry: groups ---- */
+  var JOURNEY = ["han", "tag", "turn1", "turn2", "turn3", "turn4", "rows", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
+  var lit = [].slice.call(q.svg.querySelectorAll('[data-a^="db-lit"]'));
+  var aside = A.par(A.hide(JOURNEY.map(q), { dur: 0 }), A.highlight(lit, { dur: 0, out: true }));
+  var tree = [
+    key("head"),                                                         /* the header */
+    { group: [                                                           /* the pipeline */
+      { group: [A.enter(q("q-card")), A.enter(q("qtype"))], then: fl("l-q") },        /* the entrance */
+      [key("db-name"), A.enter(q("db"))],                                               /* the passages DB */
+      { group: [A.enter(q("model")), A.enter(q("tr")),                                  /* the model */
+                tools.map(function (k) { return A.enter(q("t-" + k)); })],
+        then: tools.map(function (k) { return A.par(fl("call-" + k), fl("res-" + k)); }) },
+      { group: [A.enter(q("orch")), A.enter(q("check")), A.enter(q("gate")), A.enter(q("rec"))],   /* the orchestrator */
+        then: [fl("l-ck"), fl("l-rg")] },
+      A.enter(q("ans"))                                                                 /* the answer */
+    ], then: [                                                           /* the links between them */
+      fl("l-type"),
+      A.seq(A.par.apply(null, ["stub-search", "stub-read", "stub-extract", "bus"].map(function (k) { return A.draw(q(k), { dur: 0.45 }); })),
+            A.pop(q("bus-dots"), { dur: 0.3 }), A.par(fl("l-every"), key("say-every"))),
+      A.seq(A.par(fl("l-rc"), fl("l-cr")), key("say-kept")),
+      A.seq(A.par(fl("l-sg"), fl("l-gs")), key("say-back")),
+      fl("l-ans")
+    ] }
+  ];
+
+  /* ---- the steps ---- */
+  /* the ten tiles' bands, drawn at no width (the entry sweeps nothing in): at their tile's width for step 4's sweep */
+  lit.forEach(function (r) { r.setAttribute("width", q("frames").getAttribute("data-tile")); });
+  /* the pipeline's parts, the units A.focus dims and lights (none inside another) */
+  var NAMES = ["head", "q-card", "l-q", "qtype", "db-blk", "model", "tr"]
+    .concat(tools.map(function (k) { return "t-" + k; }), tools.map(function (k) { return "call-" + k; }),
+            tools.map(function (k) { return "res-" + k; }))
+    .concat(["l-type", "stub-search", "stub-read", "stub-extract", "bus", "bus-dots", "l-every", "say-every",
+             "orch", "check", "gate", "rec", "l-ck", "l-rg", "l-rc", "l-cr", "say-kept", "l-sg", "l-gs", "say-back",
+             "l-ans", "ans"]);
+  var P = NAMES.map(q);
+  var ix = function (names) { return names.map(function (k) { var i = NAMES.indexOf(k); if (i < 0) throw new Error("slide 4: no part " + k); return i; }); };
+  var ball = q("ball");
+  /* the ball is shown only while it rolls: out of a box it appears, into a box it is gone (A.travel masks it), and at
+     every rest it is in a box, so a step's state hides it and each roll reveals it as it starts */
+  var go = function () { return A.seq(A.reveal(ball, { dur: 0.01 }), A.travel(ball, { along: [].slice.call(arguments).map(q) })); };
+  var turnTo = function (from, to) { return A.become(ball, { from: from, to: to, dur: 0.4 }); };
+  var leave = function (from, to) { return A.par(go.apply(null, [].slice.call(arguments, 2)), turnTo(from, to)); };
+  /* what is shown as a step starts: the journey's parts its step before left, opaque; every other one hidden; the
+     ball's face. A zero-length track that acts only once begun, so the chain's later steps never touch the overview */
+  function state(shown, face) {
+    var S = shown.map(q);
+    return { dur: 0, set: function (t) {
+      if (t < 0) return;
+      JOURNEY.forEach(function (k) { var e = q(k); e.style.opacity = S.indexOf(e) >= 0 ? "" : "0"; });
+      ball.style.opacity = "0";
+      [].forEach.call(ball.querySelectorAll("[data-face]"), function (f) { f.style.display = f.getAttribute("data-face") === face ? "" : "none"; });
+    } };
   }
+  var putAway = function (names) { return names.length ? A.hide(names.map(q), { dur: 0.35 }) : null; };
+  var idle = function (card) { return A.ending(q(card + "-scene"), { acted: true }); };
+  var emitTurn = function (i) { return A.pace(A.emit(q("turn" + i)), 2.2); };
+
+  var STEPS = [
+    { look: ["q-card"], frame: "question", shown: [], face: "Q",              /* 1, J 1: the question */
+      act: function () { return A.seq(A.reveal(q("han"), { dur: 0.01 }), A.enter(q("han"))); }, loop: idle("han") },
+    { look: ["q-card", "l-q", "qtype"], frame: "question", shown: ["han"], face: "Q",   /* 2, J 2: its type */
+      act: function () { return A.seq(A.par(A.hide(q("han"), { dur: 0.45 }), A.at(0.3, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.4 })))),
+                                       go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), A.enter(q("tag"))); } },
+    { look: ["qtype", "l-type", "tr"], frame: "turn", shown: ["tag"], face: "Q",   /* 3, J 3: turn 1 */
+      act: function () { return A.seq(go("l-type"), A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },
+    { look: ["tr", "call-search", "t-search", "stub-search", "bus", "bus-dots", "db-blk", "l-every", "say-every", "rec"],
+      frame: "search", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "Q",   /* 4, J 3: Search */
+      act: function () { return A.seq(leave("Q", "search", "call-search"), go("g-search"), A.highlight(lit, { dur: 0.8 }),
+                                       go("gb-search"), A.reveal(q("rows"), { dur: 0.01 }),
+                                       A.pace(A.emit(q("rows"), { along: q("l-every"), draw: false }), 3.5)); } },
+    { look: ["t-search", "res-search", "tr"], frame: "turn", shown: ["rows"], away: ["rows"], face: "search",   /* 5, J 4: turn 2 */
+      act: function () { return A.seq(go("res-search"), A.reveal(q("turn2"), { dur: 0.01 }), emitTurn(2)); } },
+    { look: ["tr", "call-read", "t-read", "stub-read", "bus", "bus-dots", "db-blk"],
+      frame: "read", shown: ["turn2"], away: ["turn2"], face: "search",   /* 6, J 4: Read */
+      act: function () { return A.seq(leave("search", "read", "call-read"), go("g-read"), go("gb-read"),
+                                       A.reveal([q("fun"), q("hanp")], { dur: 0.01 }), A.enter(q("fun")),
+                                       A.pace(A.enter(q("hanp")), 2.5)); },
+      loop: A.par(idle("fun"), idle("hanp")) },
+    { look: ["t-read", "res-read", "tr"], frame: "turn", shown: ["fun", "hanp"], away: ["fun", "hanp"], face: "read",   /* 7, J 5: turn 3 */
+      act: function () { return A.seq(go("res-read"), A.reveal(q("turn3"), { dur: 0.01 }), emitTurn(3)); } },
+    { look: ["tr", "call-record", "t-record", "l-rc", "check", "l-ck", "rec"],
+      frame: "check", shown: ["turn3"], away: ["turn3"], face: "read",   /* 8, J 5: the nugget check */
+      act: function () { return A.seq(leave("read", "record", "call-record", "l-rc"), A.reveal(q("nug"), { dur: 0.01 }),
+                                       A.enter(q("nug")), A.pulse(q("l-ck"), { dur: 0.9 })); } },
+    { look: ["check", "l-cr", "say-kept", "t-record", "res-record", "tr"],
+      frame: "reply", shown: ["nug"], away: ["nug"], face: "record",   /* 9, J 5: the reply */
+      act: function () { return A.seq(go("l-cr", "res-record"), A.reveal(q("reply"), { dur: 0.01 }), key("reply")); } },
+    { look: ["tr"], frame: "turn", shown: ["reply"], away: ["reply"], face: "record",   /* 10, J 6: turn 4 */
+      act: function () { return A.seq(A.reveal(q("turn4"), { dur: 0.01 }), emitTurn(4)); } },
+    { look: ["tr", "call-submit", "t-submit", "l-sg", "gate", "l-rg", "rec"],
+      frame: "gate", shown: ["turn4"], away: ["turn4"], face: "record",   /* 11, J 6: the evidence gate */
+      act: function () { return A.seq(leave("record", "submit", "call-submit", "l-sg"), A.pulse(q("l-rg"), { dur: 0.8 }),
+                                       A.reveal(q("g5"), { dur: 0.3 }), A.count(q("g5-reading"), { dur: 1.0 }),
+                                       A.write(q("g5-verdict"))); } },
+    { look: ["gate", "l-ans", "ans"], frame: "gate", shown: ["g5"], face: "submit",   /* 12, J 6: the answer */
+      act: function () { return A.seq(leave("submit", "A", "l-ans"), A.hide(q("ans"), { dur: 0.25 }),
+                                       A.reveal(q("a5"), { dur: 0.01 }), A.enter(q("a5"))); } }
+  ];
+  var steps = STEPS.map(function (st, s) {
+    var from = s ? STEPS[s - 1] : null, f0 = from ? F[from.frame] : HOME, f1 = F[st.frame];
+    var move = f0 === f1 ? null : A.zoom(q.svg, { from: f0, to: f1, dur: 0.7 });
+    var look = A.par(move, A.focus(P, { from: from ? ix(from.look) : null, to: ix(st.look), dim: 0.3, dur: move ? 0.7 : 0.45 }),
+                     putAway(st.away || []));
+    return { enter: A.seq(state(st.shown, st.face), look, st.act()), loop: st.loop || null };
+  });
+
   return {
-    entry: A.seq(
-      A.type(q("head"), { quick: true }),
-      A.wait(0.2),
-      A.par(A.enter(q("corpus")), A.at(0.6, A.dim(q("corpus"), { dur: 0.6 }))),
-      A.enter(q("p")),
-      A.wait(0.6),
-      journey()
-    ),
-    loop: A.seq(A.wait(0.8), journey())
+    entry: A.seq(aside, A.groups(tree)),
+    steps: steps,
+    /* each box of the overview, the first step that visits it (PLAN.md §Navigation, zones) */
+    zones: { 1: "q-card", 2: "qtype", 3: "tr", 4: "t-search", 6: "t-read", 8: "check", 11: "gate", 12: "ans" }
   };
 });

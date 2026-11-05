@@ -18,6 +18,8 @@
  * each use case): A.reverse(track), A.recount(el, {from, to}), A.gaugeTo(bar, {from, to, value}) and
  * A.nodot(track, el) (lines drawn without a round cap's dot at their start), below.
  *
+ * An entry made of nested groups (PLAN.md, "A slide animates by groups") is declared with A.groups(tree), below: a
+ * list's members start together, {group, then} closes a group with its links, {track, idle} settles a leaf into its idle.
  * A slide declares its steps in its motion file, beside its entry and loop:
  *   Deck.slide("02-...", function (A, q) {
  *     return { entry: ..., loop: ...,                     // the overview's entry and (optional) idle
