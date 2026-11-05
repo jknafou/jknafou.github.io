@@ -23,7 +23,7 @@ Deck.slide("04-one-pipeline", function (A, q) {
   var tools = ["search", "read", "extract", "record", "submit"];
 
   /* ---- the overview's entry: groups ---- */
-  var JOURNEY = ["han", "tag", "told", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "reply", "g5", "a5", "ball"];
+  var JOURNEY = ["han", "tag", "note-type", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "note-rec", "g5", "a5", "ball"];
   var aside = A.hide(JOURNEY.map(q), { dur: 0 });
   var each = function (f) { return tools.map(f); };
   /* the pipeline is a FLOW, read in order: every member and every arrow its own layer, each waiting for the one before;
@@ -90,14 +90,6 @@ Deck.slide("04-one-pipeline", function (A, q) {
   var boxTo = function (a, b) { var E = A.ease.io; return A.track(0.5, function (u) { qcR.setAttribute("height", (a + (b - a) * E(u)).toFixed(2)); }); };
   var fill = function () { return A.par(A.reverse(A.draw(q("q-card-line0"), { dur: 0.3 })), A.hide(qcQ, { dur: 0.3 }), boxTo(H0, H1)); };
   var unfill = function () { return A.at(0.2, A.par(A.draw(q("q-card-line0"), { dur: 0.3 }), A.reverse(A.hide(qcQ, { dur: 0.3 })), boxTo(H1, H0))); };
-  /* 4.9: the orchestrator's automatic reply rides up beside the ball, from the check to the transcript, and stops just
-     under it (its words drawn at the ball's waiting place; they follow the ball's roll, no lower than REST) */
-  var reply = q("reply"), RX = +reply.getAttribute("data-cx"), RY = +reply.getAttribute("data-cy");
-  var REST = +q("frames").getAttribute("data-reply-rest");
-  var follow = function (dur) { return A.track(dur, function () {
-    var m = /(-?[\d.]+)px (-?[\d.]+)px/.exec(ball.style.translate || ""), dx = m ? +m[1] : 0, dy = m ? +m[2] : 0;
-    reply.style.translate = dx.toFixed(2) + "px " + (Math.max(RY + dy, REST) - RY).toFixed(2) + "px";
-  }); };
   /* the pipeline's parts, the units A.focus dims and lights (none inside another) */
   var DBP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (r) { return "dbp" + r; });   /* the DB's ten hits (inside dbx) */
   var NAMES = ["head", "q-card", "l-q", "qtype", "db-blk", "model", "tr"]
@@ -147,8 +139,35 @@ Deck.slide("04-one-pipeline", function (A, q) {
                  A.par(A.pop(ring, { dur: 0.3 }), ringAt(0, 0, 0.3)), A.seq.apply(null, hops), A.wait(0.2),
                  A.hide([1, 2, 3, 4, 5].map(function (i) { return q("tag" + i); }), { dur: 0.4 }), A.hide(ring, { dur: 0.3 }));
   }
-  function tell() {
-    return A.seq(A.pulse(q("l-type"), { dur: 0.6 }), A.reveal(q("told"), { dur: 0.25, dx: -40 }), key("told"));
+  /* 4.2 and 4.9: the orchestrator's note to the model (concepts/orchestrator_note.py), by groups in layers: printed
+     beside the element whose rule dictates it, its rule first (A.dictate) → it folds into the ball, which pops as an
+     O at the start of the drawn link → the ball rolls along it into the transcript → the note comes out under the
+     transcript, where the T cards come out. The note is drawn at its rest (data-at); data-from is where it is printed,
+     data-out the transcript's foot it comes out of (x, y, scale) */
+  var xyk = function (g, k) { return g.getAttribute(k).split(",").map(Number); };
+  var placed = function (g, x, y, k) { g.setAttribute("transform", "translate(" + x.toFixed(2) + "," + y.toFixed(2) + ") scale(" + k.toFixed(5) + ")"); };
+  function note(nm, links) {
+    var g = q(nm + "-at"), a = xyk(g, "data-from"), b = xyk(g, "data-at"), out = xyk(g, "data-out"), E = A.ease.io;
+    var bb = q(nm).querySelector("rect"), W = +bb.getAttribute("width"), H = +bb.getAttribute("height");
+    var start = q(links[0]).querySelector('[data-part="shaft"]').getPointAtLength(0), tiny = a[2] * 0.06;
+    var into = A.track(0.55, function (u) {                       /* folds into the ball at the link's start */
+      var e = E(u), k = a[2] + (tiny - a[2]) * e, cx = a[0] + a[2] * W / 2 + (start.x - a[0] - a[2] * W / 2) * e,
+          cy = a[1] + a[2] * H / 2 + (start.y - a[1] - a[2] * H / 2) * e;
+      placed(g, cx - k * W / 2, cy - k * H / 2, k);
+      g.style.opacity = u <= 0 ? "" : u >= 1 ? "0" : (1 - e * e).toFixed(3);
+    });
+    var outOf = A.track(0.55, function (u) {                      /* comes out of the transcript's foot to its rest */
+      var e = E(u), k = tiny + (b[2] - tiny) * e, x = out[0] - k * W / 2 + (b[0] - out[0] + k * W / 2) * e, y = out[1] + (b[1] - out[1]) * e;
+      placed(g, x, y, k);
+      g.style.opacity = u <= 0 ? "0" : u >= 1 ? "" : Math.min(1, 3 * e).toFixed(3);
+    });
+    var face = { dur: 0, set: function (t) { if (t < 0) return;
+      [].forEach.call(ball.querySelectorAll("[data-face]"), function (f) { f.style.display = f.getAttribute("data-face") === "O" ? "" : "none"; }); } };
+    return { name: "the orchestrator's note", layers: [
+      { name: "rule, then printed", track: A.seq(A.reveal(q(nm), { dur: 0.01 }), A.dictate(q(nm))) },
+      { name: "into the ball", group: [into, A.at(0.3, A.seq(face, A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.3 })))] },
+      { name: "along the link", track: A.travel(ball, { along: links.map(q) }) },
+      { name: "out under the transcript", track: outOf }] };
   }
   var putAway = function (names) { return names.length ? A.hide(names.map(q), { dur: 0.35 }) : null; };
   var idle = function (card) { return A.ending(q(card + "-scene"), { acted: true }); };
@@ -159,12 +178,13 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return A.seq(fill(), A.reveal(q("han"), { dur: 0.01 }), A.enter(q("han"))); }, loop: idle("han") },
     { look: ["q-card", "l-q", "qtype"], frame: "question", shown: ["han"], face: "Q",   /* 2, J 2: its type */
       act: function () { return A.seq(A.par(fold(), unfill(), A.at(0.35, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.35 })))),
-                                       go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), choose(), tell()); } },
-    { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag", "told"], away: ["told"], face: "Q",   /* 3, J 3: turn 1 */
-      act: function () { return A.seq(go("l-type"), A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },
+                                       go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), choose()); },
+      then: function () { return note("note-type", ["l-type"]); } },
+    { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag", "note-type"], away: ["note-type"], face: "O",   /* 3, J 3: turn 1 */
+      act: function () { return A.seq(A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },   /* the question went in with its note (4.2) */
     { look: ["tr", "call-search", "t-search", "stub-search", "bus", "bus-dots", "db-blk"].concat(DBP),
-      frame: "search", end: "db", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "Q",   /* 4, J 3: Search */
-      act: function () { return A.seq(leave("Q", "search", "call-search"), go("g-search"),
+      frame: "search", end: "db", shown: ["tag", "turn1"], away: ["turn1", "tag"], face: "O",   /* 4, J 3: Search */
+      act: function () { return A.seq(leave("O", "search", "call-search"), go("g-search"),
                                        A.zoom(q.svg, { from: F.search, to: F.db, dur: 0.8 }),
                                        A.reveal(q("dbx"), { dur: 0.01 }), hits()); },
       loop: hitsIdle },
@@ -184,15 +204,14 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return A.seq(leave("read", "record", "call-record", "l-rc"), A.reveal(q("nug"), { dur: 0.01 }),
                                        A.enter(q("nug")), A.pulse(q("l-ck"), { dur: 0.9 })); } },
     { look: ["check", "l-cr", "say-kept", "t-record", "res-record", "tr", "db-blk"].concat(DBP),
-      frame: "kept", shown: ["dbx", "nug"], away: ["nug"], face: "record",   /* 9, J 5: the reply, the passage kept */
-      act: function () { var up = go("l-cr", "res-record");
-        return A.par(A.seq(A.reveal(reply, { dur: 0.01 }), A.par(up, follow(up.dur), A.at(0.15, key("reply")))),   /* the reply ‖ */
-                     A.at(0.5, kept())); } },                                                            /* the passage kept */
-    { look: ["tr"], frame: "turn", shown: ["dbx", "reply"], away: ["reply"], face: "record",   /* 10, J 6: turn 4 */
+      frame: "kept", shown: ["dbx", "nug"], away: ["nug"], face: "record",   /* 9, J 5: the note, the passage kept */
+      act: function () { return [note("note-rec", ["l-cr", "res-record"]),                       /* two groups, started together */
+                                 { name: "the passage kept", track: kept() }]; } },
+    { look: ["tr"], frame: "turn", shown: ["dbx", "note-rec"], away: ["note-rec"], face: "O",   /* 10, J 6: turn 4 */
       act: function () { return A.seq(A.reveal(q("turn4"), { dur: 0.01 }), emitTurn(4)); } },
     { look: ["tr", "call-submit", "t-submit", "l-sg", "gate", "l-rg", "rec"],
-      frame: "gate", shown: ["dbx", "turn4"], away: ["turn4"], face: "record",   /* 11, J 6: the evidence gate */
-      act: function () { return A.seq(leave("record", "submit", "call-submit", "l-sg"), A.pulse(q("l-rg"), { dur: 0.8 }),
+      frame: "gate", shown: ["dbx", "turn4"], away: ["turn4"], face: "O",   /* 11, J 6: the evidence gate */
+      act: function () { return A.seq(leave("O", "submit", "call-submit", "l-sg"), A.pulse(q("l-rg"), { dur: 0.8 }),
                                        A.reveal(q("g5"), { dur: 0.3 }), A.count(q("g5-reading"), { dur: 1.0 }),
                                        A.write(q("g5-verdict"))); } },
     { look: ["gate", "l-ans", "ans"], frame: "answer", shown: ["dbx", "g5"], face: "submit",   /* 12, J 6: the answer */
@@ -204,9 +223,10 @@ Deck.slide("04-one-pipeline", function (A, q) {
     var move = f0 === f1 ? null : A.zoom(q.svg, { from: f0, to: f1, dur: 0.7 });
     var look = { name: "look", group: [move, A.focus(P, { from: from ? ix(from.look) : null, to: ix(st.look), dim: 0.3, dur: move ? 0.7 : 0.45 }),
                                        putAway(st.away || [])] };
-    var act = st.act();
+    var act = st.act(), then = st.then ? st.then() : null;
     return { enter: A.groups({ name: "4." + (s + 1), layers: [{ name: "state", track: state(st.shown, st.face) }, look,
-                                                              Array.isArray(act) ? { name: "act", group: act } : { name: "act", track: act }] }),
+                                                              Array.isArray(act) ? { name: "act", group: act } : { name: "act", track: act },
+                                                              then].filter(Boolean) }),
              loop: st.loop || null };
   });
 

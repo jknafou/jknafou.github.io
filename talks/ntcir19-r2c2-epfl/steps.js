@@ -157,6 +157,35 @@
     });
   };
 
+  /* ---- dictate: the orchestrator's note (concepts/orchestrator_note.py) enters, its rule first. Four layers: the
+   * slip pops, its "O" and "orchestrator" keyed; the rule keyed, then its marker swept (the rule fires); the message
+   * printed at a machine's even pace, no typo, the gear turning while it prints, the slot's field popping and its
+   * value counting (a number) or flipping (a type's name) where it stands; the caption keyed. Pure: at 0 the slip is
+   * not there, at its end it is at rest, every word written and the gear back where it was drawn ---- */
+  A.dictate = function (el, o) {
+    o = o || {};
+    var N = lst(el)[0], nm = N && N.getAttribute("data-a");
+    if (!N || N.getAttribute("data-concept") !== "orchestrator_note") throw new Error("A.dictate: not an orchestrator_note");
+    var part = function (k) { return N.querySelector('[data-a="' + nm + "-" + k + '"]'); };
+    var T = function (g) { return g ? [].slice.call(g.querySelectorAll("text")) : []; };
+    var rule = part("rule"), gear = part("gear"), msg = part("msg"), cap = part("caption");
+    var print = [], run = [];
+    var flush = function () { if (run.length) print.push(A.type(run, { quick: true, cps: o.cps || 40 })); run = []; };
+    [].forEach.call(msg.children, function (c) {
+      if (c.tagName.toLowerCase() === "text") { run.push(c); return; }
+      flush();
+      var t = c.querySelector("text"), k = t.getAttribute("data-anim");
+      print.push(A.seq(A.pop(c.querySelector("rect"), { dur: 0.3 }), k === "flip" ? A.flip(t) : A.count(t, { dur: 0.6 })));
+    });
+    flush();
+    var printed = A.seq.apply(null, print);
+    gear.style.transformBox = "fill-box"; gear.style.transformOrigin = "center";
+    var spin = A.track(printed.dur, function (u) { gear.style.rotate = u <= 0 || u >= 1 ? "" : (A.ease.io(u) * 135).toFixed(2) + "deg"; });
+    return A.seq(A.pop(N, { dur: 0.45 }), A.type(T(part("head")), { quick: true }),
+                 A.type(T(rule), { quick: true }), A.highlight([].slice.call(rule.querySelectorAll("rect[data-hl]")), { dur: 0.45 }),
+                 A.par(printed, spin), cap ? A.type(T(cap), { quick: true }) : null);
+  };
+
   /* ---- groups: a slide's entry (and a step's enter) as a TREE of groups in LAYERS (PLAN.md, "A slide animates by
    * groups"; the author, 5 November 2026: "first assign nested groups for each slide, then normally, for a given layer
    * all the nested groups should start their animation simultaneously, only layer should wait for one to finish,
