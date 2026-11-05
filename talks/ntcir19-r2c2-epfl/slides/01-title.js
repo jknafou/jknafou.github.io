@@ -8,16 +8,20 @@
      ├─ HES-SO     its letters appear one after another (H e s · s o, 9 a second), no plate behind them
      ├─ corner     layers: the portrait pops → its ring drawn from the top → the three marks pop in turn → "jknafou"
      │             typed, the caret staying: its IDLE, the caret blinking, starts the moment "jknafou" is written
-     └─ emblem     layers: query → model → answer → the links
+     └─ emblem     layers: query → arrow → model → arrow → answer (each arrow its own group, between the two it
+        │          joins: it waits for the query to end, the model waits for it; the author: "the arrows are
+        │          independent groups that needs to be animated between the sequence of question/model/answer")
         ├─ query   the question card entering by its layers
+        ├─ arrow   question → block, drawn by pen
         ├─ model   layers: [tool calls ‖ passages ‖ the block's frame] → the calls
         │  ├─ tool calls  one layer: "tool calls" keyed ‖ the five tools, each its track ‖ its chip, all together
         │  ├─ passages    one layer: "passages" keyed ‖ the window ‖ its rails
         │  ├─ frame       the block's frame drawn in
-        │  └─ then the calls, what joins the tools to the passages: the 16 calls grow their bars one step each in the
-        │     trace's order while the passages roll left through the window, two laps, Ilum coming to rest in front
-        ├─ answer  the answer card entering, its gauge settling at 91
-        └─ links   the two arrows together: question → block, block → answer (every arrow after both of its ends)
+        │  └─ then the calls, what joins the tools to the passages (they start in the same layer, so their link comes
+        │     after them): the 16 calls grow their bars one step each in the trace's order while the passages roll
+        │     left through the window, two laps, Ilum coming to rest in front
+        ├─ arrow   block → answer, drawn by pen
+        └─ answer  the answer card entering, its gauge settling at 91
    Rest loop (8 blinks, 8.48 s, starting and ending on the rest still): the caret blinks; the answer's confidence
    breathes twice, up to 95, down to 35 and back to 91, its number following the bar (A.breathe); the passages
    keep rolling slowly left, one lap, so the marked one is in front again at the loop's end. */
@@ -54,14 +58,15 @@ Deck.slide("01-title", function (A, q) {
                                { name: "jknafou", track: handle, idle: handle.blink(blink) }] },
     { name: "emblem", layers: [
       { name: "query", track: A.enter(q("q")) },
+      { name: "arrow to the model", track: A.flow(q("ar-q"), { dur: 0.45 }) },
       { name: "model", layers: [
         [{ name: "tool calls", group: [{ name: "tool calls label", track: A.type(q("lab-t"), { quick: true }) }].concat(tools.map(function (t) {
            return { name: "tool " + t, group: [A.pop(q("track-" + t), { dur: 0.4 }), A.pop(q("chip-" + t), { dur: 0.4 })] }; })) },
          { name: "passages", group: [A.type(q("lab-p"), { quick: true }), A.reveal(car, { dur: 0.5 }), A.reveal(q("car-rails"), { dur: 0.5 })] },
          { name: "frame", track: A.reveal(q("blockframe"), { dur: 0.45 }) }],
         { name: "calls", group: [bars, roll(mark - 2 * N, mark, bars.dur + 0.2)] }] },
-      { name: "answer", track: A.enter(q("a")) },
-      { name: "links", group: [A.flow(q("ar-q"), { dur: 0.45 }), A.flow(q("ar-p"), { dur: 0.45 })] }] }
+      { name: "arrow to the answer", track: A.flow(q("ar-p"), { dur: 0.45 }) },
+      { name: "answer", track: A.enter(q("a")) }] }
   ]] };
 
   var k = 8, bl = [], br = [];

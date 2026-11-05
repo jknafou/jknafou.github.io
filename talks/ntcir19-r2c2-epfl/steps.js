@@ -168,8 +168,12 @@
    *   [n1, n2, ...]                  ONE LAYER: its members all start at the same moment, each runs to its own end
    *   {layers: [L1, L2, ...]}        a group of layers, each Li a node (usually a list): L2 starts when L1 has ended...
    *   {group: L, then: n}            the same as {layers: [L, n]}: a group whose last layer (`then`: the links between
-   *                                  its members, every arrow after both of its ends) starts once its members have
-   *                                  ended; a link between two groups belongs to the smallest group holding both
+   *                                  members that START TOGETHER in L, every arrow after both of its ends) starts once
+   *                                  they have ended; a link between two groups belongs to the smallest group holding
+   *                                  both. A link between two members that come ONE AFTER THE OTHER is a group of its
+   *                                  own, a layer between them: query → arrow → model → arrow → answer (the author:
+   *                                  "the arrows are independent groups that needs to be animated between the
+   *                                  sequence of question/model/answer")
    *   {track: t, idle: i}            a leaf that settles into its idle the moment it ends (an idle starts when its own
    *                                  group ends): `i` round and round from then on, while the others play; the leaf's
    *                                  length is its track's, so its idle never lengthens the entry, and at the tree's
