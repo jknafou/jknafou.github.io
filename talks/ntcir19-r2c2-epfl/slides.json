@@ -26,8 +26,8 @@
    "part": 1,
    "continues": false,
    "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "1d8d6fe1a624f973",
-   "vhash": "546da013da8074cd",
+   "hash": "04da0431dddc5871",
+   "vhash": "fad4081a4cbb4205",
    "zones": true
   },
   {
@@ -36,8 +36,8 @@
    "part": 2,
    "continues": false,
    "notes": "The model above chooses one tool call per turn, against the passages DB; the orchestrator below checks every claim, keeps the record and rules on the answer. Then Han Solo's first pass, box by box.",
-   "hash": "af4269a5b7ac99fc",
-   "vhash": "51c22753ac4bd111",
+   "hash": "590d505efef23592",
+   "vhash": "5c6c43a13a5846a8",
    "zones": true
   },
   {
@@ -46,8 +46,8 @@
    "part": 2,
    "continues": false,
    "notes": "Pass 1 in full: one search, one read, one nugget the check scores 0.975, one submission. The gate accepts \"Starkiller Base\" at 98 on a single, very strong passage.",
-   "hash": "495812915273a723",
-   "vhash": "cb610c1e9415abed",
+   "hash": "62230a7fd6bdebb5",
+   "vhash": "033c7531231dc2eb",
    "zones": false
   }
  ]

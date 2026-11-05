@@ -16,7 +16,12 @@
  *                                           hopping and leaning into the run, held still between: an even number
  *                                           of beats, so the period ends at rest; it faces the way it runs: a run
  *                                           against its drawing's facing, data-if, is mirrored, and the beat's
- *                                           last TURN s turn it back to its drawn facing, still, where it stopped)
+ *                                           last TURN s turn it back to its drawn facing, still, where it stopped),
+ *                                           fall (an idle-only copy, hidden at rest, that on each beat fades in where
+ *                                           it stood, holds a moment, then falls: data-iv "dx,dy,deg,scale", the
+ *                                           act's own fall (gravity: the square of time), tumbling to deg and
+ *                                           shrinking to scale, fading out over the last 30%: hidden again at the
+ *                                           beat's end; its own [data-idle] sub-parts, arms, move with it)
  *                                data-ib    its beats' starts on the idle clock (s, comma-separated)
  *                                data-id    their lengths (one for all, or one per beat)
  *                                data-iv    its amount (degrees, units, a fraction)
@@ -52,20 +57,24 @@
   };
   var OUT = 0.15, IN = 0.25, BACK = 0.4;                  /* flap and gap: the board's flip out, flip in, the "?"'s pop back */
   var HOP = 2.5, LEAN = 7, STEPS = 3, TURN = 0.25;        /* roam: a step's hop (units), the lean into the run (deg), steps per run, a turn (s) */
+  var FIN = 0.35, FHOLD = 0.35, FOUT = 0.3;               /* fall: its fade in (s), its hold where it stood (s), the fade out (fraction of the fall) */
 
   function parts(sc) {
     return [].slice.call(sc.querySelectorAll("[data-idle]")).map(function (n) {
       if (n.hasAttribute("data-act")) throw new Error("idles.js: an idle part must not be an act part (wrap it): " + n.outerHTML.slice(0, 80));
       var kind = n.getAttribute("data-idle");
-      if (!KIND[kind] && kind !== "flap" && kind !== "gap" && kind !== "roam") throw new Error("idles.js: no idle kind " + kind);
+      if (!KIND[kind] && kind !== "flap" && kind !== "gap" && kind !== "roam" && kind !== "fall") throw new Error("idles.js: no idle kind " + kind);
       var at = (n.getAttribute("data-ib") || "0").split(",").map(Number);
       var d = (n.getAttribute("data-id") || "1").split(",").map(Number);
       if (at.concat(d).some(function (x) { return !isFinite(x); }))     /* a malformed beat would show a flap copy for ever */
         throw new Error("idles.js: bad data-ib/data-id on a " + kind + " part: " + n.getAttribute("data-ib") + " / " + n.getAttribute("data-id"));
       if (kind === "roam" && (at.length % 2 || !n.hasAttribute("data-iv") || d.some(function (x) { return x <= TURN; })))
         throw new Error("idles.js: a roam part needs an even number of beats (there and back: an odd run would leave it away from its rest), its distance (data-iv), and beats longer than its turn");
-      return { n: n, kind: kind, at: at, dur: at.map(function (_, i) { return d[i] != null ? d[i] : d[0]; }),
-               v: n.hasAttribute("data-iv") ? +n.getAttribute("data-iv") : null, io: n.getAttribute("data-io") || "c", o: null,
+      var fv = kind === "fall" ? (n.getAttribute("data-iv") || "").split(",").map(Number) : null;
+      if (fv && (fv.length !== 4 || fv.some(function (x) { return !isFinite(x); }) || d.some(function (x) { return x <= FIN + FHOLD; })))
+        throw new Error("idles.js: a fall part needs data-iv \"dx,dy,deg,scale\" and beats longer than its fade in and hold");
+      return { n: n, kind: kind, f: fv, at: at, dur: at.map(function (_, i) { return d[i] != null ? d[i] : d[0]; }),
+               v: n.hasAttribute("data-iv") && !fv ? +n.getAttribute("data-iv") : null, io: n.getAttribute("data-io") || "c", o: null,
                face: n.getAttribute("data-if") === "-1" ? -1 : 1 };
     });
   }
@@ -113,6 +122,13 @@
         var k = s < IN ? A.ease.out(s / IN) : s > d - OUT ? 1 - A.ease.io((s - (d - OUT)) / OUT) : 1;
         return { sy: Math.max(0.001, k), op: 1 };
       }
+      if (p.kind === "fall") {                              /* fades in where it stood, holds, falls as in the act, fades out */
+        if (s < FIN) return { op: A.ease.out(s / FIN) };
+        var w = (s - FIN - FHOLD) / (d - FIN - FHOLD);
+        if (w <= 0) return { op: 1 };
+        var g = w * w, f = p.f;
+        return { x: f[0] * g, y: f[1] * g, r: f[2] * A.ease.out(w), s: 1 + (f[3] - 1) * g, op: w < 1 - FOUT ? 1 : Math.max(0, (1 - w) / FOUT) };
+      }
       if (p.kind === "gap") {                               /* flips out, is gone, pops back in */
         if (s < OUT * 1.4) return { sy: Math.max(0.001, 1 - A.ease.io(s / (OUT * 1.4))) };
         if (s > d - BACK) { var v = (s - (d - BACK)) / BACK; return { s: Math.max(0.001, 1 - Math.cos(2.5 * Math.PI * v) * Math.exp(-4.2 * v)) }; }
@@ -120,7 +136,7 @@
       }
       return KIND[p.kind](s / d, p.v == null ? 0.1 : p.v);
     }
-    return p.kind === "flap" ? { op: 0 } : null;            /* a flap copy is hidden at rest (markup opacity 0, kept) */
+    return p.kind === "flap" || p.kind === "fall" ? { op: 0 } : null;   /* a flap or fall copy is hidden at rest (markup opacity 0, kept) */
   }
 
   A.idle = function (sc) {

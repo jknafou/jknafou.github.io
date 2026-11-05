@@ -79,7 +79,25 @@ Deck.slide("04-one-pipeline", function (A, q) {
     });
   }
   /* the passage the check kept turns green in the DB, and is ticked */
-  var kept = function () { return A.seq(A.highlight(q("dbg1"), { dur: 0.5 }), A.write(q("dbk1"))); };
+  var kept = function () { return A.seq(A.highlight(q("dbg1"), { dur: 0.5 }), A.pop(q("dbk1"), { dur: 0.35 }), A.write(q("dbk1-tick"))); };
+  /* 4.1: the pipeline's own question box becomes Han Solo's question (no new card): its ruled line lifted and its "Q"
+     handed over while it grows down to the question's height, then the question typed in it and its scene acting;
+     4.2 gives it back: the box shrinks to its ruled self as the question folds into the ball */
+  var qc = q("q-card"), qcR = qc.querySelector("rect"), qcQ = [].filter.call(qc.children, function (c) { return c.tagName === "text"; })[0];
+  var hanR = q("han").querySelector("rect"), hanK = +q("han-at").getAttribute("data-at").split(",")[2];
+  hanR.style.display = "none";                                   /* the box is the pipeline's own: Han Solo's card has no frame */
+  var H0 = +qcR.getAttribute("height"), H1 = +hanR.getAttribute("height") * hanK;
+  var boxTo = function (a, b) { var E = A.ease.io; return A.track(0.5, function (u) { qcR.setAttribute("height", (a + (b - a) * E(u)).toFixed(2)); }); };
+  var fill = function () { return A.par(A.reverse(A.draw(q("q-card-line0"), { dur: 0.3 })), A.hide(qcQ, { dur: 0.3 }), boxTo(H0, H1)); };
+  var unfill = function () { return A.at(0.2, A.par(A.draw(q("q-card-line0"), { dur: 0.3 }), A.reverse(A.hide(qcQ, { dur: 0.3 })), boxTo(H1, H0))); };
+  /* 4.9: the orchestrator's automatic reply rides up beside the ball, from the check to the transcript, and stops just
+     under it (its words drawn at the ball's waiting place; they follow the ball's roll, no lower than REST) */
+  var reply = q("reply"), RX = +reply.getAttribute("data-cx"), RY = +reply.getAttribute("data-cy");
+  var REST = +q("frames").getAttribute("data-reply-rest");
+  var follow = function (dur) { return A.track(dur, function () {
+    var m = /(-?[\d.]+)px (-?[\d.]+)px/.exec(ball.style.translate || ""), dx = m ? +m[1] : 0, dy = m ? +m[2] : 0;
+    reply.style.translate = dx.toFixed(2) + "px " + (Math.max(RY + dy, REST) - RY).toFixed(2) + "px";
+  }); };
   /* the pipeline's parts, the units A.focus dims and lights (none inside another) */
   var DBP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (r) { return "dbp" + r; });   /* the DB's ten hits (inside dbx) */
   var NAMES = ["head", "q-card", "l-q", "qtype", "db-blk", "model", "tr"]
@@ -124,9 +142,9 @@ Deck.slide("04-one-pipeline", function (A, q) {
 
   var STEPS = [
     { look: ["q-card"], frame: "question", shown: [], face: "Q",              /* 1, J 1: the question */
-      act: function () { return A.seq(A.reveal(q("han"), { dur: 0.01 }), A.enter(q("han"))); }, loop: idle("han") },
+      act: function () { return A.seq(fill(), A.reveal(q("han"), { dur: 0.01 }), A.enter(q("han"))); }, loop: idle("han") },
     { look: ["q-card", "l-q", "qtype"], frame: "question", shown: ["han"], face: "Q",   /* 2, J 2: its type */
-      act: function () { return A.seq(A.par(fold(), A.at(0.35, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.35 })))),
+      act: function () { return A.seq(A.par(fold(), unfill(), A.at(0.35, A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.35 })))),
                                        go("l-q"), A.reveal(q("tag"), { dur: 0.01 }), A.enter(q("tag"))); } },
     { look: ["qtype", "l-type", "tr"], frame: "turn1", shown: ["tag"], face: "Q",   /* 3, J 3: turn 1 */
       act: function () { return A.seq(go("l-type"), A.reveal(q("turn1"), { dur: 0.01 }), emitTurn(1)); } },
@@ -152,10 +170,10 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return A.seq(leave("read", "record", "call-record", "l-rc"), A.reveal(q("nug"), { dur: 0.01 }),
                                        A.enter(q("nug")), A.pulse(q("l-ck"), { dur: 0.9 })); } },
     { look: ["check", "l-cr", "say-kept", "t-record", "res-record", "tr", "db-blk"].concat(DBP),
-      frame: "reply", end: "db9", shown: ["dbx", "nug"], away: ["nug"], face: "record",   /* 9, J 5: the reply, the passage kept */
-      act: function () { return A.seq(go("l-cr", "res-record"), A.reveal(q("reply"), { dur: 0.01 }), key("reply"), A.wait(0.4),
-                                       A.zoom(q.svg, { from: F.reply, to: F.db9, dur: 0.7 }),
-                                       kept()); } },
+      frame: "kept", shown: ["dbx", "nug"], away: ["nug"], face: "record",   /* 9, J 5: the reply, the passage kept */
+      act: function () { var up = go("l-cr", "res-record");
+        return A.par(A.seq(A.reveal(reply, { dur: 0.01 }), A.par(up, follow(up.dur), A.at(0.15, key("reply")))),   /* the reply ‖ */
+                     A.at(0.5, kept())); } },                                                            /* the passage kept */
     { look: ["tr"], frame: "turn", shown: ["dbx", "reply"], away: ["reply"], face: "record",   /* 10, J 6: turn 4 */
       act: function () { return A.seq(A.reveal(q("turn4"), { dur: 0.01 }), emitTurn(4)); } },
     { look: ["tr", "call-submit", "t-submit", "l-sg", "gate", "l-rg", "rec"],
