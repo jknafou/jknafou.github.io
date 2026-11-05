@@ -14,11 +14,14 @@
  *                                           (hidden during its beats: flips out, flips back in), roam (runs to
  *                                           data-iv units along x on its odd beats and back on its even ones,
  *                                           hopping and leaning into the run, held still between: an even number
- *                                           of beats, so the period ends at rest)
+ *                                           of beats, so the period ends at rest; it faces the way it runs: a run
+ *                                           against its drawing's facing, data-if, is mirrored, and the beat's
+ *                                           last TURN s turn it back to its drawn facing, still, where it stopped)
  *                                data-ib    its beats' starts on the idle clock (s, comma-separated)
  *                                data-id    their lengths (one for all, or one per beat)
  *                                data-iv    its amount (degrees, units, a fraction)
  *                                data-io    its origin: c, b, t (its box's centre, bottom, top) or "x,y"
+ *                                data-if    roam: the way its drawing faces (1 right, -1 left; default 1)
  *   A.settle(lead, idle)       `lead` played once, then `idle` round and round: a track as long as an hour, so a loop
  *                              runner (live.js, steps.js: t modulo the track's length) never comes back to the lead
  *                              while a speaker is on it. Its .lead and .period say how it is made (for media later:
@@ -48,7 +51,7 @@
     dip: function (u, v) { return { op: 1 - v * S2(u) }; }
   };
   var OUT = 0.15, IN = 0.25, BACK = 0.4;                  /* flap and gap: the board's flip out, flip in, the "?"'s pop back */
-  var HOP = 2.5, LEAN = 7, STEPS = 3;                     /* roam: a step's hop (units), the lean into the run (deg), steps per run */
+  var HOP = 2.5, LEAN = 7, STEPS = 3, TURN = 0.25;        /* roam: a step's hop (units), the lean into the run (deg), steps per run, a turn (s) */
 
   function parts(sc) {
     return [].slice.call(sc.querySelectorAll("[data-idle]")).map(function (n) {
@@ -59,10 +62,11 @@
       var d = (n.getAttribute("data-id") || "1").split(",").map(Number);
       if (at.concat(d).some(function (x) { return !isFinite(x); }))     /* a malformed beat would show a flap copy for ever */
         throw new Error("idles.js: bad data-ib/data-id on a " + kind + " part: " + n.getAttribute("data-ib") + " / " + n.getAttribute("data-id"));
-      if (kind === "roam" && (at.length % 2 || !n.hasAttribute("data-iv")))   /* an odd run would leave him away from his rest */
-        throw new Error("idles.js: a roam part needs an even number of beats (there and back) and its distance (data-iv)");
+      if (kind === "roam" && (at.length % 2 || !n.hasAttribute("data-iv") || d.some(function (x) { return x <= TURN; })))
+        throw new Error("idles.js: a roam part needs an even number of beats (there and back: an odd run would leave it away from its rest), its distance (data-iv), and beats longer than its turn");
       return { n: n, kind: kind, at: at, dur: at.map(function (_, i) { return d[i] != null ? d[i] : d[0]; }),
-               v: n.hasAttribute("data-iv") ? +n.getAttribute("data-iv") : null, io: n.getAttribute("data-io") || "c", o: null };
+               v: n.hasAttribute("data-iv") ? +n.getAttribute("data-iv") : null, io: n.getAttribute("data-io") || "c", o: null,
+               face: n.getAttribute("data-if") === "-1" ? -1 : 1 };
     });
   }
   function origin(p) {                                    /* measured once, the first time a beat moves it (at rest by then) */
@@ -94,8 +98,11 @@
         var sj = t - p.at[j], dj = p.dur[j], from = j % 2 ? p.v : 0, to = j % 2 ? 0 : p.v;
         if (sj < 0) break;
         if (sj >= dj) { x = to; continue; }
-        var w = sj / dj;
-        return { x: from + (to - from) * A.ease.io(w), y: -HOP * Math.abs(Math.sin(STEPS * Math.PI * w)), r: (to > from ? 1 : -1) * LEAN * S2(w) };
+        var dir = to > from ? 1 : -1, mir = dir !== p.face, run = mir ? dj - TURN : dj;
+        if (sj >= run) return { x: to, s: -Math.cos(Math.PI * (sj - run) / TURN), sy: 1 };   /* turning back, in place */
+        var w = sj / run;
+        return { x: from + (to - from) * A.ease.io(w), y: -HOP * Math.abs(Math.sin(STEPS * Math.PI * w)), r: dir * LEAN * S2(w),
+                 s: mir ? -1 : null, sy: mir ? 1 : null };
       }
       return x ? { x: x } : null;
     }
