@@ -152,6 +152,32 @@
     });
   };
 
+  /* ---- groups: a slide's entry as a TREE of groups (PLAN.md, "A slide animates by groups"; the author, 5 November
+   * 2026: "the animation start all the groups at the same time, when starting a group which contains group, each
+   * group should start at the same time in that same group and so on"). A node is
+   *   a track                      a leaf: one concept's layers, or one run of them, played to its own end
+   *   [n1, n2, ...]                a group: its members all start at the same moment, each runs to its own end
+   *   {group: [n1, ...], then: n}  a group whose own last layer (`then`: the links between its members, every
+   *                                arrow after both of its ends) starts once all its members have ended
+   *   {track: t, idle: i}          a leaf that settles into its idle the moment it ends (an idle starts when its
+   *                                own group ends): `i` round and round from then on, while the others play; the
+   *                                leaf's length is its track's, so its idle never lengthens the entry
+   * A.groups(tree) is one pure track, as every motion of the bank is. ---- */
+  A.groups = function (node) {
+    if (!node) return null;
+    if (Array.isArray(node)) return A.par.apply(null, node.map(A.groups));
+    if (node.group) return A.seq(A.groups(node.group), A.groups(node.then));
+    if (node.track && node.idle) {
+      var tr = node.track, id = node.idle;
+      return { dur: tr.dur, set: function (t) {
+        if (t <= tr.dur) { tr.set(t); id.set(0); return; }
+        tr.set(tr.dur); id.set(id.dur > 0 ? (t - tr.dur) % id.dur : 0);
+      } };
+    }
+    if (typeof node.set === "function") return node;
+    throw new Error("A.groups: a node is a track, a list, {group, then} or {track, idle}");
+  };
+
   /* ---- (c) zoom: the camera onto the 16:9 frame around a part (measured once, at rest, when defined) ---- */
   A.frameOf = function (el, pad) {
     var svg = el.ownerSVGElement || el, r = el.getBoundingClientRect(), s = svg.getBoundingClientRect();
