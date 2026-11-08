@@ -23,7 +23,7 @@ Deck.slide("04-one-pipeline", function (A, q) {
   var tools = ["search", "read", "extract", "record", "submit"];
 
   /* ---- the overview's entry: groups ---- */
-  var JOURNEY = ["han", "tag", "note-type", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "note-rec", "g5", "a5", "ball"];
+  var JOURNEY = ["han", "tag", "note-type", "turn1", "turn2", "turn3", "turn4", "dbx", "fun", "hanp", "nug", "note-rec", "g5", "cb", "cb-lead", "gl", "a5", "ball"];
   var aside = A.hide(JOURNEY.map(q), { dur: 0 });
   var each = function (f) { return tools.map(f); };
   /* the pipeline is a FLOW, read in order: every member and every arrow its own layer, each waiting for the one before;
@@ -169,6 +169,15 @@ Deck.slide("04-one-pipeline", function (A, q) {
       { name: "along the link", track: A.travel(ball, { along: links.map(q) }) },
       { name: "out under the transcript", track: outOf }] };
   }
+  /* 4.11: the gate's rules come out of it (its right edge) to where they stand (data-from, data-at: x, y, scale) */
+  function outOfGate(nm) {
+    var g = q(nm + "-at"), a = xyk(g, "data-from"), b = xyk(g, "data-at"), E = A.ease.io;
+    return A.track(0.6, function (u) {
+      var e = E(u), k = a[2] * Math.pow(b[2] / a[2], e), px = a[0] + (b[0] - a[0]) * e, py = a[1] + (b[1] - a[1]) * e;
+      placed(g, px, py, k);
+      g.style.opacity = u <= 0 ? "0" : u >= 1 ? "" : Math.min(1, 4 * e).toFixed(3);
+    });
+  }
   var putAway = function (names) { return names.length ? A.hide(names.map(q), { dur: 0.35 }) : null; };
   var idle = function (card) { return A.ending(q(card + "-scene"), { acted: true }); };
   var emitTurn = function (i) { return A.pace(A.emit(q("turn" + i)), 2.2); };
@@ -208,14 +217,21 @@ Deck.slide("04-one-pipeline", function (A, q) {
       act: function () { return [note("note-rec", ["l-cr", "res-record"]),                       /* two groups, started together */
                                  { name: "the passage kept", track: kept() }]; } },
     { look: ["tr"], frame: "turn", shown: ["dbx", "note-rec"], away: ["note-rec"], face: "O",   /* 10, J 6: turn 4 */
-      act: function () { return A.seq(A.reveal(q("turn4"), { dur: 0.01 }), emitTurn(4)); } },
-    { look: ["tr", "call-submit", "t-submit", "l-sg", "gate", "l-rg", "rec"],
+      act: function () { return A.seq(A.reveal(q("turn4"), { dur: 0.01 }), emitTurn(4),
+                                       A.lift(q("turn4-lift"))); } },   /* the answer out of its rationale */
+    { look: ["tr", "call-submit", "t-submit", "l-sg", "gate", "l-rg", "rec", "check"],   /* the check: the nugget's score */
       frame: "gate", shown: ["dbx", "turn4"], away: ["turn4"], face: "O",   /* 11, J 6: the evidence gate */
       act: function () { return A.seq(leave("O", "submit", "call-submit", "l-sg"), A.pulse(q("l-rg"), { dur: 0.8 }),
+                                       A.reveal(q("cb"), { dur: 0.01 }),        /* the answer's confidence, the orchestrator's, step by */
+                                       A.confidence(q("cb"), { feed: [q("cb-lead")] }),   /* step, the nugget's score fed from the check */
                                        A.reveal(q("g5"), { dur: 0.3 }), A.count(q("g5-reading"), { dur: 1.0 }),
+                                       A.reveal(q("gl"), { dur: 0.01 }), outOfGate("gl"),         /* its rules, out of the gate */
+                                       A.checklist(q("gl"), { pop: false }),                  /* evaluated in order, ticked */
                                        A.write(q("g5-verdict"))); } },
-    { look: ["gate", "l-ans", "ans"], frame: "answer", shown: ["dbx", "g5"], face: "submit",   /* 12, J 6: the answer */
-      act: function () { return A.seq(leave("submit", "A", "l-ans"), A.hide(q("ans"), { dur: 0.25 }),
+    { look: ["gate", "l-ans"], frame: "answer", shown: ["dbx", "g5", "cb", "cb-lead", "gl"], away: ["cb", "cb-lead", "gl"],
+      face: "submit",   /* 12, J 6: the answer; the ruled answer stays dimmed, a5 takes its place (test_vanish) */
+      act: function () { return A.seq(leave("submit", "A", "l-ans"), A.track(0.25, function (u) {   /* the dimmed ruled answer goes */
+                                         q("ans").style.opacity = (0.3 * (1 - u)).toFixed(3); }),
                                        A.reveal(q("a5"), { dur: 0.01 }), A.enter(q("a5"))); } }
   ];
   var steps = STEPS.map(function (st, s) {

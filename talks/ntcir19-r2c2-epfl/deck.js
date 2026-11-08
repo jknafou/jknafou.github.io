@@ -164,12 +164,29 @@
   var cueName = function (k, s) { return s ? "st-" + k + "-" + s : "in-" + k; };
   var has = function (name) { return !LIVE && !!(MED && MED.files && MED.files[name]); };
   var media = function (k) { return has("rest-" + k); };        /* a validated slide: its stills and videos exist */
-  var imgs = {};
+  /* the rests preloaded, each an <img> DECODED ahead (← lands on one within 0.7 s: the 2x still is not decoded on the
+     press, and the one faded in becomes the rest itself, so it is not decoded a second time; takeImg) */
+  var imgs = {}, imgEl = {};
   function preImg(k, s) {
     if (k < 1 || k > N || !media(k) || (s && !has("rest-" + k + "-" + s))) return null;
     var u = restUrl(k, s);
-    if (!imgs[u]) { var im = new Image(); im.src = u; imgs[u] = im.decode ? im.decode().catch(function () {}) : Promise.resolve(); }
+    if (!imgs[u]) { var im = new Image(); im.alt = ""; im.src = u; imgEl[u] = im; imgs[u] = im.decode ? im.decode().catch(function () {}) : Promise.resolve(); }
     return imgs[u];
+  }
+  /* the decoded <img> of (k, s)'s rest, taken out of the cache (it is laid on the stage); a new one when none is free */
+  async function takeImg(k, s) {
+    var u = restUrl(k, s);
+    await preImg(k, s);
+    var im = imgEl[u];
+    if (im && !im.isConnected) { delete imgs[u]; delete imgEl[u]; return im; }
+    im = document.createElement("img"); im.alt = ""; im.src = u;
+    if (im.decode) await im.decode().catch(function () {});
+    return im;
+  }
+  /* a still faded in over the stage becomes the rest (#rest), in place of the old one: no second decode */
+  function adoptRest(im) {
+    im.className = ""; im.id = "rest"; im.style.transition = "none"; im.style.opacity = ""; im.style.zIndex = ""; im.style.visibility = "";
+    box.insertBefore(im, restImg); restImg.remove(); restImg = im;
   }
   var moves = {};
   function moveVideo(name) {
@@ -184,29 +201,49 @@
     });
     return v;
   }
-  var loopEl = null, loopK = null;                 /* loopK: the name of the loop playing (loop-<k>, stl-<k>-<s>) */
+  /* A SCENE'S ENDING (anim/idles.js: its lead once, then its idle round and round) comes as two files
+     (tools/make_media.mjs): lead-<k>[-<s>].mp4, played once, then the loop's file, one idle period, looped; a loop
+     whose ending has no lead (a scene acted in the step's enter) is its period alone. The period is laid on over the
+     lead's last frame the moment the lead ends: its first frame is the state the lead ends on. */
+  var leadName = function (k, s) { return "lead-" + k + (s ? "-" + s : ""); };
+  var loopEl = null, loopK = null, leadEl = null;  /* loopK: the name of the loop playing (loop-<k>, stl-<k>-<s>) */
+  function dropVideo(v) { try { v.pause(); } catch (e) {} v.removeAttribute("src"); try { v.load(); } catch (e) {} v.remove(); }
   function stopLoop() {
+    if (leadEl) { dropVideo(leadEl); leadEl = null; }
     if (!loopEl) return;
     var v = loopEl; loopEl = null; loopK = null;
-    try { v.pause(); } catch (e) {} v.removeAttribute("src"); try { v.load(); } catch (e) {} v.remove();
+    dropVideo(v);
   }
   async function startLoop(k, s) {
-    var name = loopName(k, s);
+    var name = loopName(k, s), lead = has(leadName(k, s)) ? leadName(k, s) : null;
     if (REDUCED || !has(name)) { stopLoop(); return; }
-    if (loopK === name && loopEl) { try { loopEl.currentTime = 0; } catch (e) {} return; }   /* its loop from the start */
+    if (loopK === name && loopEl && !lead) { try { loopEl.currentTime = 0; } catch (e) {} return; }   /* its loop from the start */
     stopLoop();
     var v = video(mediaUrl(name, "mp4"), restUrl(k, s)); v.loop = true; v.className = "loopvid";
     box.insertBefore(v, restImg.nextSibling);
     loopEl = v; loopK = name;
-    await ready(v, 3000);
+    var l = null;
+    if (lead) { l = video(mediaUrl(lead, "mp4"), restUrl(k, s)); l.className = "loopvid"; box.insertBefore(l, v.nextSibling); leadEl = l; }
+    await Promise.all([ready(v, 3000), l ? ready(l, 3000) : null]);
     if (loopEl !== v) return;
+    if (l) {                                        /* the lead once, over the period (paused on its first frame) */
+      var p0 = l.play(); if (p0 && p0.catch) p0.catch(function () {});
+      await firstFrame(l);
+      if (loopEl !== v) return;
+      l.classList.add("on");
+      await new Promise(function (r) { l.addEventListener("ended", r, { once: true }); l.addEventListener("error", r, { once: true }); });
+      if (loopEl !== v) return;
+    }
     var p = v.play(); if (p && p.catch) p.catch(function () {});
     await firstFrame(v);
-    if (loopEl === v) v.classList.add("on");
+    if (loopEl !== v) return;
+    v.classList.add("on");
+    if (l && leadEl === l) { leadEl = null; dropVideo(l); }
   }
   async function setRest(k, s, my) {
     await preImg(k, s);
     if (stale(my)) return;
+    if (restImg.getAttribute("src") === restUrl(k, s) && restImg.complete) return;   /* adopted: already this still, decoded */
     restImg.src = restUrl(k, s);
     if (restImg.decode) await restImg.decode().catch(function () {});
   }
@@ -310,11 +347,12 @@
         restImg.style.visibility = ""; stopLoop(); clearLayers(null); hideFrame();
         await veilTo(0, 0);
       } else if (!REDUCED) {
-        var im = document.createElement("img"); im.className = "jumpimg"; im.alt = ""; im.src = restUrl(k, s);
-        if (im.decode) await im.decode().catch(function () {});
+        var im = await takeImg(k, s); im.className = "jumpimg";
         if (stale(my)) return;
         box.appendChild(im);
-        await fadeIn(im, FADE); if (stale(my)) return;
+        await fadeIn(im, FADE);
+        if (stale(my)) return;          /* (a newer press fades from it as shown; clearLayers removes it after) */
+        stopLoop(); clearLayers(im); adoptRest(im);
       }
       await arriveAtRest(k, s, my);
     },
@@ -579,7 +617,12 @@
   /* how far into its idle (rest loop) slide k is, in s, or null when it is not idling (mid-entry, a fade) */
   function idleTime(k) {
     if (NAV.phase !== "rest") return null;
-    if (media(k)) return loopEl && loopK === loopName(k, curS) ? loopEl.currentTime : null;
+    if (media(k)) {
+      if (!loopEl || loopK !== loopName(k, curS)) return null;
+      if (leadEl) return leadEl.currentTime;            /* still in its lead */
+      var f = MED.files[loopName(k, curS)] || {};
+      return (f.lead || 0) + loopEl.currentTime;        /* an ending's period starts where its lead ends */
+    }
     return liveLoopAt.k === k && liveLoopAt.s === curS ? (performance.now() - liveLoopAt.t) / 1000 : null;
   }
   /* restart a caret's blink as if it had been blinking for t s (0: shown, as at rest) */
@@ -680,7 +723,8 @@
   }
   function hover() {
     var z = mouse && zonesOf(cur) ? zoneAt(mouse[0], mouse[1]) : null;
-    box.style.cursor = z ? "pointer" : "";
+    var h3 = mouse ? g3() : null;                  /* over a draggable 3D graph: the hand says it can be turned */
+    box.style.cursor = h3 && g3at(h3, mouse[0], mouse[1]) ? "grab" : z ? "pointer" : "";
     if (!z) { if (zoneEl) zoneEl.style.display = "none"; return; }
     if (!zoneEl) { zoneEl = document.createElement("div"); zoneEl.id = "zone"; zoneEl.setAttribute("aria-hidden", "true"); box.appendChild(zoneEl); }
     var bx = box.getBoundingClientRect(), pad = 0.006 * bx.width;
@@ -689,6 +733,39 @@
   }
   box.addEventListener("mousemove", function (e) { mouse = [e.clientX, e.clientY]; hover(); });
   box.addEventListener("mouseleave", function () { mouse = null; hover(); });
+  /* ---- A DRAGGABLE 3D GRAPH (slide 8.3, concepts/field_scatter_3d.py's drag): when the live page is on top and the
+   * slide shown offers one (window.Live3D[id] in the live page, active only at its 3D rest), a pointer pressed on it
+   * orbits the graph and the wheel zooms it; a drag never reaches the zones or the keys (captured and stopped here),
+   * and a press released without moving (under 4 px) is left to be an ordinary click. A video cannot be dragged. */
+  var drag3 = null, eatClick = false;
+  function g3() {
+    if (!frameShown() || !W || !W.Live3D || !INFO || !INFO[cur - 1]) return null;
+    var h = W.Live3D[INFO[cur - 1].id];
+    return h && h.active() ? h : null;
+  }
+  function g3at(h, x, y) { var fr = frame.getBoundingClientRect(); return h.hit(x - fr.left, y - fr.top); }
+  box.addEventListener("pointerdown", function (e) {
+    var h = g3(); if (!h || !g3at(h, e.clientX, e.clientY)) return;
+    drag3 = { h: h, x: e.clientX, y: e.clientY, moved: false };
+    try { box.setPointerCapture(e.pointerId); } catch (_) {}
+    h.start(); e.stopPropagation();
+  }, true);
+  box.addEventListener("pointermove", function (e) {
+    if (!drag3) return;
+    var dx = e.clientX - drag3.x, dy = e.clientY - drag3.y;
+    if (!drag3.moved && Math.hypot(dx, dy) < 4) return;
+    drag3.moved = true; drag3.h.move(dx, dy); drag3.x = e.clientX; drag3.y = e.clientY;
+    e.stopPropagation(); e.preventDefault();
+  }, true);
+  function g3up(e) { if (!drag3) return; eatClick = drag3.moved; drag3.h.end(); drag3 = null; e.stopPropagation(); }
+  box.addEventListener("pointerup", g3up, true);
+  box.addEventListener("pointercancel", g3up, true);
+  box.addEventListener("click", function (e) { if (eatClick) { eatClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  box.addEventListener("wheel", function (e) {
+    var h = g3(); if (!h || !g3at(h, e.clientX, e.clientY)) return;
+    e.preventDefault(); e.stopPropagation(); h.zoom(e.deltaY);
+  }, { passive: false, capture: true });
+
   box.addEventListener("click", function (e) {
     var z = zonesOf(cur) ? zoneAt(e.clientX, e.clientY) : null;
     if (!z) return;

@@ -186,6 +186,81 @@
                  A.par(printed, spin), cap ? A.type(T(cap), { quick: true }) : null);
   };
 
+  /* ---- checklist: the evidence gate's rules (concepts/gate_checklist.py) evaluated in order. Layers: the card pops
+   * (unless o.pop === false: the slide brings it out of the gate itself); its words keyed and the faint way back
+   * keyed, its hook drawn; then each check in turn, each of its values' dotted leaders drawn and the value counting
+   * (a number) or keyed (a word), then its mark written in its tick slot (a green tick, a red cross; none when it does not apply);
+   * then the ruling's mark, and, when the answer was turned back (or sent to the fallbacks), that line's marker band
+   * swept. Pure: at 0 nothing of it is there, at its end it is at rest ---- */
+  A.checklist = function (el, o) {
+    o = o || {};
+    var N = lst(el)[0], nm = N && N.getAttribute("data-a");
+    if (!N || N.getAttribute("data-concept") !== "gate_checklist") throw new Error("A.checklist: not a gate_checklist");
+    var part = function (k) { return N.querySelector('[data-a="' + nm + "-" + k + '"]'); };
+    var T = function (g) { return g ? [].slice.call(g.querySelectorAll("text")) : []; };
+    var slots = [].slice.call(N.querySelectorAll("[data-check]")), order = [];
+    slots.forEach(function (s) { var c = s.getAttribute("data-check"); if (order.indexOf(c) < 0) order.push(c); });
+    var faint = [part("back"), part("fmt")];
+    var bands = faint.map(function (g) { return g.querySelector("rect[data-hl]"); }).filter(Boolean);
+    var hook = part("back").querySelectorAll('path[fill="none"]');
+    var value = function (s) {                          /* its leader drawn to the value's column, then the value */
+      var t = s.querySelector("text"), d = s.querySelector("path");
+      return A.seq(d ? A.draw(d, { dur: 0.25 }) : null, t ? (t.getAttribute("data-anim") === "count" ? A.count(t, { dur: 0.5 }) : A.type(t, { quick: true })) : null);
+    };
+    var checks = order.map(function (c) {
+      var m = part("m-" + c);
+      return A.seq.apply(null, slots.filter(function (s) { return s.getAttribute("data-check") === c; }).map(value)
+        .concat([m ? A.write(m, { dur: 0.4 }) : A.wait(0.15)]));
+    });
+    var res = part("m-result");
+    return A.seq(o.pop === false ? null : A.pop(N, { dur: 0.45 }),
+                 A.par(A.type(T(part("words")), { quick: true }), A.type(T(faint[0]).concat(T(faint[1])), { quick: true }),
+                       hook.length ? A.draw([].slice.call(hook), { dur: 0.4 }) : null),
+                 A.seq.apply(null, checks),
+                 res ? A.write(res, { dur: 0.45 }) : null,
+                 bands.length ? A.highlight(bands, { dur: 0.45 }) : null);
+  };
+
+  /* ---- confidence: the answer's confidence computed step by step (concepts/confidence_box.py), in the order it is
+   * computed: the slip pops and its title is keyed; the rule (1); the weight's heading (2); then each kept claim's row:
+   * its nugget score arrives, along its leader from where the check gave it when o.feed[i] is one (the leader drawn,
+   * then the score popping), and the rest of its row keyed (× trust = weight, its reason); the claims needed (3); the
+   * value (4); the notes. Pure ---- */
+  A.confidence = function (el, o) {
+    o = o || {};
+    var N = lst(el)[0], nm = N && N.getAttribute("data-a");
+    if (!N || N.getAttribute("data-concept") !== "confidence_box") throw new Error("A.confidence: not a confidence_box");
+    var part = function (k) { return N.querySelector('[data-a="' + nm + "-" + k + '"]'); };
+    var T = function (g) { return g ? [].slice.call(g.querySelectorAll("text")) : []; };
+    var key = function (g) { var t = T(g); return t.length ? A.type(t, { quick: true }) : null; };
+    var rows = [];
+    for (var i = 0; part("w" + i); i++) {
+      var sc = part("s" + i), f = (o.feed || [])[i];
+      var rest = T(part("w" + i)).filter(function (t) { return !sc.contains(t); });
+      rows.push(A.seq(f ? A.seq(A.reveal(f, { dur: 0.01 }), A.draw(f, { dur: 0.6 })) : null,
+                      A.pop(sc, { dur: 0.45 }), rest.length ? A.type(rest, { quick: true }) : null));
+    }
+    return A.seq(o.pop === false ? null : A.pop(N, { dur: 0.4 }), key(part("head")), key(part("l1")), key(part("l2")),
+                 A.seq.apply(null, rows), key(part("l3")), key(part("l4")), key(part("notes")));
+  };
+
+  /* ---- lift: words drawn out of a longer text into their own field (concepts/turn.py `lift`: the submit_answer
+   * call's answer out of its rationale). The part (data-concept "lift") carries data-from, where the words stand in
+   * the source; they leave that place and land where they are drawn. Pure: hidden until it starts, at rest at its
+   * end ---- */
+  A.lift = function (el, o) {
+    o = o || {};
+    var g = lst(el)[0];
+    if (!g || g.getAttribute("data-concept") !== "lift") throw new Error("A.lift: not a lift part");
+    var t = g.querySelector("text"), f = g.getAttribute("data-from").split(",").map(Number);
+    var x1 = +t.getAttribute("x"), y1 = +t.getAttribute("y");
+    return A.track(o.dur == null ? 0.8 : o.dur, function (u) {
+      var e = A.ease.io(u);
+      g.style.opacity = u <= 0 ? "0" : "";
+      g.setAttribute("transform", u >= 1 ? "" : "translate(" + ((f[0] - x1) * (1 - e)).toFixed(2) + "," + ((f[1] - y1) * (1 - e)).toFixed(2) + ")");
+    });
+  };
+
   /* ---- groups: a slide's entry (and a step's enter) as a TREE of groups in LAYERS (PLAN.md, "A slide animates by
    * groups"; the author, 5 November 2026: "first assign nested groups for each slide, then normally, for a given layer
    * all the nested groups should start their animation simultaneously, only layer should wait for one to finish,

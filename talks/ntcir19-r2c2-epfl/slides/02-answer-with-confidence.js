@@ -53,9 +53,10 @@ Deck.slide("02-answer-with-confidence", function (A, q) {
       id.set(since < lead ? 0 : ((((t - END.t) % D) + D) % D));
     } };
   }
-  /* the answer enters with its gauge empty, then the gauge grows to its confidence, the number counting with it */
+  /* the gauge grows from empty to its confidence, the number counting with it, as the answer card enters (at once,
+     not after it: the author, 5 November 2026: "the progress bar should load right away") */
   var aIn = enter("a"), grow = A.gaugeTo(bar, { from: 0, to: GEN[0] / 100, value: val, dur: 1.2 });
-  var answerIn = A.seq(A.par(aIn, A.hold(grow, aIn.dur, 0)), grow);
+  var answerIn = A.par(aIn, grow);
   var tree = { name: "slide", group: [
     { name: "no ball on the overview", track: A.hide(ball, { dur: 0 }) },
     { name: "words", layers: [key(q("head")), key([q(k + "-name-g"), q(k + "-note-g")])] },
