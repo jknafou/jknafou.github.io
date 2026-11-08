@@ -14,8 +14,9 @@ body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New
 #box video.on { opacity: 1; }
 #box .loopvid { z-index: 1; } #box .movevid { z-index: 3; }
 #box .jumpimg { z-index: 4; }
-/* the slide's number, on the stage itself (so ?chrome=0 and full screen keep it), bottom right */
-#num { position: absolute; z-index: 100000; right: 1.46%; bottom: 2.6%; pointer-events: none; user-select: none;
+/* the slide's number, on the stage itself (so ?chrome=0 and full screen keep it), bottom right; a long one set smaller to clear
+   the corner unit's portrait (deck.js fitNum) */
+#num { position: absolute; z-index: 100000; right: 0.8%; bottom: 2.6%; pointer-events: none; user-select: none;
        font: calc(min(100cqh, 100cqw * 9 / 16) * 0.024)/1 Georgia, "Times New Roman", serif; color: var(--ink); opacity: .55;
        font-variant-numeric: tabular-nums; }
 /* the mode, just above the position (only in navigation mode; to its left is the corner unit): quieter still, the

@@ -620,12 +620,20 @@
   function posName(k, s) { return k + (s ? "." + s : ""); }
   function going() { return NAV.phase === "fade" || NAV.phase === "hold"; }
   var numEl = null;
+  /* the number never runs under the corner unit's portrait (its right edge at 96.1% of the stage): a long one ("10.10",
+     "11.10") is set smaller until it fits the 2.6% of the stage between the portrait (and a 0.5% gap) and the number's
+     right edge (deck.css #num, right 0.8%) */
+  function fitNum() {
+    var at = numEl.lastChild; at.style.fontSize = "";
+    var w = at.getBoundingClientRect().width, W = box.getBoundingClientRect().width, room = 0.026 * W;
+    if (w > room && W > 0) at.style.fontSize = (room / w).toFixed(3) + "em";
+  }
   function update() {
     var g = going(), d = describe(cur), n = nst(cur);
     crumb.textContent = (g ? (NAV.dir < 0 ? "← " : "→ ") : (CFG.title ? CFG.title + " · " : "")) + d[0];
     pos.textContent = n ? "slide " + d[1] + " · step " + curS + "/" + n : d[1];
     strip.classList.toggle("going", g);
-    if (numEl) { numEl.firstChild.textContent = NAVMODE ? "nav" : ""; numEl.lastChild.textContent = posName(cur, curS); }
+    if (numEl) { numEl.firstChild.textContent = NAVMODE ? "nav" : ""; numEl.lastChild.textContent = posName(cur, curS); fitNum(); }
     var h = "#/" + posName(cur, curS);
     if (h !== lastHash) { lastHash = h; try { history.replaceState(null, "", h + ""); } catch (e) {} }
     layoutLogos();

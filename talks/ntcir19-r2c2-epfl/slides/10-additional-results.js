@@ -26,6 +26,9 @@ Deck.slide("10-additional-results", function (A, q) {
   };
   var scatter3d = fromData("fs-js", "scatter3d"), stripMorph = fromData("strip-js", "stripMorph");
   var S3 = scatter3d("fs");
+  /* the neighbour cells' teams view (slide 8's drawing's nt-js, one home), in the scatter's teams loops (10.4-10.8) */
+  var NT = fromData("nt-js", "neighTeams")(q);
+  var teams = function (k) { return S3.teamsLoop(S3.rests[k + 1], NT); };
   /* the live drag at the 3D step's rest, as slide 8 (the shell forwards pointer events through window.Live3D) */
   window.Live3D = window.Live3D || {};
   window.Live3D["10-additional-results"] = S3.drag;
@@ -178,13 +181,15 @@ Deck.slide("10-additional-results", function (A, q) {
   }
   var said = function (g) { return A.seq(SHOW(g), A.draw(g.querySelector("path"), { dur: 0.4 }), KEY(g)); };
   /* 10.4's loop: field_scatter_3d's teams loop (the runs gather onto their team's best and back), each additional run's
-     rank line unkeyed and its team rank keyed in its place during the teams phase */
+     rank line unkeyed and its team rank keyed in its place during the teams phase; the neighbour cells' teams view
+     with it (NT, as at 10.5-10.8) */
   var TW = ["ld", "ia"].map(function (k) {
     var g = q("fs10-" + k + "-name"), t = q("fs10-" + k + "-team"), T = [].slice.call(g.querySelectorAll("text")).filter(function (x) { return x !== t; });
     var own = T[T.length - 1];
     return { own: own, ownS: own.textContent, t: t, tS: t.textContent };
   });
-  function teamWords(team, tp) {
+  function teamWords(team, tp, tv) {
+    NT(team, tp, tv);
     var a = Math.max(0, Math.min(1, 1 - 2 * tp)), b = Math.max(0, Math.min(1, 2 * tp - 1));
     TW.forEach(function (o) {
       o.own.textContent = o.ownS.slice(0, Math.round(o.ownS.length * a));
@@ -245,10 +250,10 @@ Deck.slide("10-additional-results", function (A, q) {
             { enter: step2, loop: calm([q("st-q" + i60 + "-v")], 0.6) },
             { enter: step3, loop: calm([q("st-q" + i65 + "-v")], 0.6) },
             { enter: step4, loop: S3.teamsLoop(S3.rests[1], teamWords) },
-            { enter: fs(1, "10.5 HMR flattened", true), loop: S3.steps[1].loop },
-            { enter: fs(2, "10.6 accuracy flattened"), loop: S3.steps[2].loop },
-            { enter: fs(3, "10.7 the 3D view, bullet time"), loop: S3.steps[3].loop },
-            { enter: fs(4, "10.8 accHMR flattened"), loop: S3.steps[4].loop },
+            { enter: fs(1, "10.5 HMR flattened", true), loop: teams(1) },
+            { enter: fs(2, "10.6 accuracy flattened"), loop: teams(2) },
+            { enter: fs(3, "10.7 the 3D view, bullet time"), loop: teams(3) },
+            { enter: fs(4, "10.8 accHMR flattened"), loop: teams(4) },
             { enter: step9t, loop: calm(tyRing, 0.35) },
             { enter: step10, loop: calm(ours4.concat([rgBar]), 0.3) }],
     zones: { 1: "strip", 4: "scatter", 9: "types", 10: "mistakes" }

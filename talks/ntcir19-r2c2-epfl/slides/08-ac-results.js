@@ -25,6 +25,10 @@ Deck.slide("08-ac-results", function (A, q) {
   };
   var scatter3d = fromData("fs-js", "scatter3d"), stripMorph = fromData("strip-js", "stripMorph");
   var S3 = scatter3d("fs");
+  /* the neighbour cells' teams view (the drawing's nt-js, one home): accuracy by type and our mistakes said in teams
+     during the teams phase of the scatter's loops (8.6-8.10), dimmed as they are; teamsLoop calls it on every frame */
+  var NT = fromData("nt-js", "neighTeams")(q);
+  var teams = function (k) { return S3.teamsLoop(S3.rests[k + 1], NT); };
   /* the live drag at the 3D step's rest (field_scatter_3d's drag): the deck's shell forwards pointer events to it
      through window.Live3D (the live page sits under the shell, which takes the pointer); a page opened alone listens */
   window.Live3D = window.Live3D || {};
@@ -184,9 +188,9 @@ Deck.slide("08-ac-results", function (A, q) {
   return {
     entry: A.groups(tree),
     steps: [{ enter: step1 }, { enter: step2 }, { enter: step3 }, { enter: step4 }, { enter: step5 },
-            { enter: step6, loop: S3.steps[0].loop },
-            { enter: fs(1, "8.7 HMR flattened"), loop: S3.steps[1].loop }, { enter: fs(2, "8.8 accuracy flattened"), loop: S3.steps[2].loop },
-            { enter: fs(3, "8.9 the 3D view, bullet time"), loop: S3.steps[3].loop }, { enter: fs(4, "8.10 accHMR flattened"), loop: S3.steps[4].loop },
+            { enter: step6, loop: teams(0) },
+            { enter: fs(1, "8.7 HMR flattened"), loop: teams(1) }, { enter: fs(2, "8.8 accuracy flattened"), loop: teams(2) },
+            { enter: fs(3, "8.9 the 3D view, bullet time"), loop: teams(3) }, { enter: fs(4, "8.10 accHMR flattened"), loop: teams(4) },
             { enter: step11, loop: loop11 }, { enter: step12, loop: loop12 }],
     zones: { 1: "strip", 6: "scatter", 11: "types", 12: "mistakes" }
   };

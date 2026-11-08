@@ -1,5 +1,5 @@
 /* Slide 11: its motions, from the animation bank (anim/anim.js), the steps' helpers and A.groups (anim/steps.js).
-   The tree of groups, the six steps and the grid are in the .py's header. Slide 5's picture (the passages DB, the
+   The tree of groups, the ten steps and the grid are in the .py's header. Slide 5's picture (the passages DB, the
    maquette, the four pass boxes, filled as 5.6 leaves them) enters as slide 5's does (its tree restated: a slide's
    motions cannot be imported from another's); each step adds its part on a temporary paper overlay or in the right
    column the camera opens, and puts away what the step before added as it starts. */
@@ -21,6 +21,7 @@ Deck.slide("11-conclusion", function (A, q) {
   /* ---- what the steps add: set aside at the overview; at each step, what it shows as it starts ---- */
   var JOURNEY = ["any", "est-say", "lee", "concl", "nug-at", "gl-at", "gl-x", "ev", "lk", "ck", "g1", "a1", "estw", "est", "est-in", "pbg", "pbw",
                  "md", "md-big", "md-small", "ustrip", "mw", "u-say", "cap-u2", "unans", "fly8",
+                 "qa-head", "qa-me", "qq", "aq", "qa-note", "ball",                    /* 11.10's */
                  "g2", "g3", "g4", "gtb1", "gtb2", "a2", "a3", "a4", "ab"];   /* slide 5's other readings and answers: never */
   function state(shownNames) {
     var O = {};                                     /* "name" shown; "name@0.3" shown at that opacity */
@@ -271,6 +272,31 @@ Deck.slide("11-conclusion", function (A, q) {
   var fx = function (i) { return A.seq(SHOW(q("fx" + i)), A.type(all(q("fx" + i), "text"), { quick: true })); };
   var cnt = q.root.querySelector('[data-a="st-count"]');
 
+  /* ---- 11.10: questions? The speaker is the RAG system. The pipeline's own question box takes the audience's
+     question (slide 4.1's device: its ruled line lifted and its "Q" handed over while it fits the question); the
+     ball rolls the drawn links into the model, now "Me", out through Submit and the gate to the exit; the answer,
+     generated: "Good question!", its gauge hunting, its number "?" ---- */
+  var qc = q("q-card"), qcR = qc.querySelector("rect"), qcQ = [].filter.call(qc.children, function (c) { return c.tagName === "text"; })[0];
+  var QH0 = +qcR.getAttribute("height"), QH1 = +q("qq").querySelector("rect").getAttribute("height");
+  var boxTo = function (a, b) { return A.track(0.5, function (u) { qcR.setAttribute("height", (a + (b - a) * A.ease.io(u)).toFixed(2)); }); };
+  var qFill = A.par(A.reverse(A.draw(q("q-card-line0"), { dur: 0.3 })), A.hide(qcQ, { dur: 0.3 }), boxTo(QH0, QH1));
+  var ball = q("ball");
+  var go = function () { return A.seq(A.reveal(ball, { dur: 0.01 }), A.travel(ball, { along: [].slice.call(arguments).map(q) })); };
+  var leave = function (from, to) { return A.par(go.apply(null, [].slice.call(arguments, 2)), A.become(ball, { from: from, to: to, dur: 0.4 })); };
+  var HEAD = q("head");
+  var headAway = A.track(0.8, function (u) {         /* the slide's heading, dimmed at 11.9, out of the frame: gone */
+    var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.io(u); HEAD.style.opacity = (0.3 * (1 - e)).toFixed(4); });
+  var AQV = q("aq-value"), AQB = q("aq-bar");
+  var rock = A.track(1.0, function (u) {             /* the "?" rocks a little, as a question's "?" does, back at rest */
+    AQV.style.transformBox = "fill-box"; AQV.style.transformOrigin = "50% 80%";
+    AQV.style.rotate = u <= 0 || u >= 1 ? "" : (9 * Math.sin(u * Math.PI * 3) * (1 - u)).toFixed(2) + "deg";
+  });
+  /* the question box and the ruled exit stay dimmed by the look: the box lights as it takes the question (once its
+     ruled line is gone), the ruled exit fades as the answer takes its place */
+  var QA_LOOK = NAMES.filter(function (k) { return ["head", "db-blk5", "lane1", "lane2", "lane3", "lane4", "lvs", "q-card", "ans"].indexOf(k) < 0; });
+  var dimTo = function (el, a, b, dur) { return A.track(dur, function (u) {
+    var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.io(u), v = a + (b - a) * e; el.style.opacity = v >= 0.9999 ? "" : v.toFixed(4); }); };
+
   var LOOK_CASE = ["check", "gate", "l-ans", "ans", "l-ck", "l-rg", "rec"];
   var CASE_SHOWN = ["nug-at", "gl-at", "ev", "ck", "g1", "a1"];
   var STEPS = [
@@ -371,7 +397,23 @@ Deck.slide("11-conclusion", function (A, q) {
          cnt ? L("72 questions", A.recount(cnt, { from: UD.n0, to: UD.n1, dur: 1.2 })) : null,
          L("hypothetical", A.seq(SHOW(q("cap-u2")), KEY(q("cap-u2"))))].filter(Boolean),
         [L("the red mean", mwIn), L("collapsed", redden(1))],
-        L("careful about wrong answers", A.seq(SHOW(q("u-say")), key("u-say")))]; } }
+        L("careful about wrong answers", A.seq(SHOW(q("u-say")), key("u-say")))]; } },
+    { look: QA_LOOK, frame: "qa", shown: ["estw", "ustrip", "unans", "fly8", "u-say", "cap-u2", "mw"],   /* 11.10 questions? */
+      away: ["estw", "unans", "fly8"], also: function () { return headAway; },
+      act: function () { return [
+        [L("Questions?", A.seq(shown("qa-head"), key("qa-head"))),
+         G("the model is me", [L("its title, un-keyed", A.reverse(key("model-title"))),
+                               L("my portrait", A.seq(shown("qa-me"), A.pop(q("me-portrait"), { dur: 0.45 }))),
+                               L("its ring", A.draw(q("me-ring"), { dur: 0.4 })),
+                               L("Me", key("me-title"))]),
+         G("your question, in the question box", [L("the box takes it, and lights", A.par(qFill, A.at(0.3, dimTo(qc, 0.3, 1, 0.5)))),
+                                                  L("typed", A.seq(shown("qq"), A.enter(q("qq"))))])],
+        L("its ball", A.seq(A.reveal(ball, { dur: 0.01 }), A.pop(ball, { dur: 0.35 }))),
+        L("into me", go("l-q", "l-type")),
+        L("my answer, submitted, through the gate", leave("Q", "submit", "call-submit", "l-sg")),
+        [L("out", leave("submit", "A", "l-ans")), L("the orchestrator's rule, for me", A.seq(shown("qa-note"), key("qa-note")))],
+        L("the answer: generated, its confidence unknown", A.seq(dimTo(q("ans"), 0.3, 0, 0.25), shown("aq"), A.enter(q("aq"))))]; },
+      loop: A.seq(A.wait(1.0), A.breathe(AQB, { hi: 0.92, lo: 0.12, dur: 3.2 }), A.wait(1.2), rock, A.wait(1.4)) }
   ];
   var putAway = function (names) { return names && names.length ? A.hide(names.map(q), { dur: 0.35 }) : null; };
   var steps = STEPS.map(function (st, s) {

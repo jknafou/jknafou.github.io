@@ -76,8 +76,8 @@
    "part": 4,
    "continues": false,
    "notes": "A run, question by question: each bar its confidence, green when right, red when wrong. R_U is the mean of the green bars, R_O one minus the mean of the red ones, HMR their harmonic mean. An absurd trick: answer the one question we are surest of at 100 and every other one deliberately wrong at 0: R_U 1, R_O 1, HMR 1.0000 at accuracy 1/64. Repeat with 4, 16, 32 answers: still 1.0000, whatever the accuracy; with none right at all, still 1.0000. Confidence 50 everywhere gives 0.5000 at any accuracy, here at the median, 0.8125. Our AC-2: 0.4915, below that: our wrong answers kept a mean confidence of 65.4 (Hannibal's 'fava beans' at 100). Among the 25 official runs AC-2 is 6th on accuracy, 0.9219, 13th on HMR; accHMR, accuracy times HMR, puts the tricks at k/64 and every answer wrong at 0, and AC-2 7th.",
-   "hash": "c7394e12dbc4f87f",
-   "vhash": "1b7478e7d9760942",
+   "hash": "220ce95e74b1a403",
+   "vhash": "d16b73278c786dfe",
    "zones": true
   },
   {
@@ -96,8 +96,8 @@
    "part": 5,
    "continues": false,
    "notes": "Slide 8's four graphs, each submitted run of ours turning into the additional run that reads the same passes differently; neither was sent to the organisers: each answer takes the label of the identical answer they judged. The single pass, BITEM-AC-1 into revised-longest-deliberation: the same answers, every confidence now 100 or 0; Han Solo's wrong Starkiller Base goes from 99 to 0; HMR 0.2719 to 0.6639. The four passes, BITEM-AC-2 into revised-independent-agreement: 39 confidences change and one verdict, Rogue One, wrong at 97, now pass 1's own answer, right at 50; HMR 0.4915 to 0.6985. Among the 25 official runs: longest deliberation 11th on HMR, 7th on accHMR; independent agreement 9th on HMR, 5th on accuracy, 5th on accHMR. By type only multi-hop changes, to 10 of 10. Hannibal's wrong answer goes from 100 to 0.",
-   "hash": "7b1414928dbc19ea",
-   "vhash": "cb39c7121ea41b01",
+   "hash": "6d3c7ab5de245bf3",
+   "vhash": "2c745b1417cb7152",
    "zones": true
   },
   {
@@ -106,8 +106,8 @@
    "part": 6,
    "continues": false,
    "notes": "What the results showed: for passages, pooling the four passes is 4th of 22 runs, one pass 5th; for answers as submitted, accuracy is strong (AC-2 6th of 25) and the confidence weak (HMR 13th); the additional runs read the same passes with new rules and give better confidence: independent agreement 5th on accuracy, 9th on HMR, 5th on accHMR; longest deliberation 7th on accHMR. Future work: the gate checks each nugget against its passage, never the answer against the nuggets: Han Solo's nugget was entailed at 0.975, the gate passed at 98, and the planet is Ilum (the orchestrator's only answer-to-nugget test, `_db_nugget_entails_answer`, is a word overlap in a fallback, and it would say yes here: 2 of 5 words). Then an estimator fitted on the signals a pass already records, chosen on synthetic questions and tested once on R2C2's 64. Aggregation is AC-2's lowest rank by question type (6 of 7 right, 7th of 25; six runs got all 7): a count's evidence is split across passes, each withholding what the passes before met; one pass of the same model, asked to gather more proof, would keep it together (four passes cost 4.8 times one pass's calls). Every pass ran Qwen3.5-122B-A10B-FP8: would a smaller or a bigger model change the results? And the benchmark never tests a question whose answer is not in the corpus: a model right on every question scores perfectly by answering everything at 100; eight such questions answered at 100 take its HMR to 0.",
-   "hash": "3dcdac50a5e21e18",
-   "vhash": "d481d69844197827",
+   "hash": "8e684d02f437dea1",
+   "vhash": "881c9a975dfbe2a9",
    "zones": false
   },
   {
