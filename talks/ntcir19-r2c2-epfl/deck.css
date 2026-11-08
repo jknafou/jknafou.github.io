@@ -62,3 +62,33 @@ body.nochrome #strip { display: none; }
         border: 1px solid var(--ink); border-radius: 8px; padding: 14px 20px; display: none; max-width: calc(100vw - 32px); box-sizing: border-box; }
 #help.on { display: block; } #help td { padding: 1px 10px 1px 0; vertical-align: top; }
 html.nocursor, html.nocursor * { cursor: none !important; }
+/* THE PROGRESS LINE (deck.js, header): a 2 px hairline of the muted ink along the stage's very foot, under the marks
+   (they end at y 877 of 900), over the veil with them; its length is the deck's position, set by deck.js (scaleX) */
+#prog { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; z-index: 100000; background: #8C8682;
+        transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; will-change: transform; }
+#prog.off { display: none; }
+/* THE SLIDE GRID (G): the slides on paper, 4 columns, sized so three rows and their captions fit the window */
+#grid { --gap: 18px; --cap: 34px; position: fixed; inset: 0; z-index: 200000; display: none; overflow: auto;   /* over the stage's marks (z 100000) */
+        background: var(--paper); }
+#grid.on { display: flex; align-items: center; justify-content: center; }
+#grid .cells { display: grid; gap: var(--gap); padding: 16px; box-sizing: border-box;
+               grid-template-columns: repeat(4, min(calc((100vw - 32px - 3 * var(--gap)) / 4),
+                                                  calc((100vh - 32px - 2 * var(--gap) - 3 * var(--cap)) / 3 * 16 / 9))); }
+#grid .cell { display: block; cursor: pointer; color: var(--ink); user-select: none; }
+#grid .thumb { position: relative; aspect-ratio: 16 / 9; background: var(--paper); box-sizing: border-box; overflow: hidden;
+               outline: 1px solid color-mix(in srgb, var(--ink) 22%, transparent); outline-offset: 0; border-radius: 3px; }
+#grid .thumb .img { display: block; width: 100%; height: 100%; }
+#grid .thumb .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; opacity: .3; }
+#grid .cap { display: flex; gap: 8px; align-items: baseline; height: var(--cap); padding-top: 6px; box-sizing: border-box;
+             font-size: 14px; line-height: 1.2; overflow: hidden; }
+#grid .cap .n { font-variant-numeric: tabular-nums; opacity: .55; flex: 0 0 auto; }
+#grid .cap .ti { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#grid .cell.sel .thumb { outline: 1px solid var(--ink); }
+#grid .cell.cur .thumb { outline: 2px solid var(--ink); outline-offset: 2px; }
+#grid .cell.cur .cap .n { opacity: 1; }
+#grid .cell.cur .cap .ti { font-style: italic; }
+/* THE BAR hidden (deck.js: in full screen by default, C toggles): the stage takes its height */
+body.nobar #strip { display: none; }
+/* BLANK (B or .): plain paper over everything, the marks included; any key or a click returns */
+#blank { position: fixed; inset: 0; z-index: 2147483000; background: var(--paper); display: none; cursor: none; }
+#blank.on { display: block; }

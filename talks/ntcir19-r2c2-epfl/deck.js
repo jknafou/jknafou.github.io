@@ -84,9 +84,48 @@
  *   ← →   presentation mode: the linear order; navigation mode: slides (on a step: steps)
  *   ↓ ↑   enter navigation mode: into the steps / back to the overview     P   back to presentation mode
  *   Space PageDown Enter   next, in order        PageUp Backspace   previous, in order      Home / End   first / last
- *   1-9                the first slide of that part (or a part's own letter, deck.json parts[].key)
+ *   1-9, 0             slide 1 to 9, 0 slide 10, at its overview (the author, 8 November 2026); a part by its own letter (deck.json parts[].key)
  *   T                  the title (slide 1)
- *   F full screen      S timer (minutes; S again restarts)    O offline panel    H help
+ *   G                  the slide grid      L the progress line on / off      Z or `   back to before the last jump
+ *   B or .             blank screen (any key or a click returns)      C the bar on / off
+ *   F or F5 full screen      S timer (minutes; S again restarts)    O offline panel    H help
+ *   A held key (auto-repeat) is one press: its repeats are ignored. Ctrl/Alt/Cmd combinations are the browser's.
+ *
+ * THE PROGRESS LINE (the author, 8 November 2026: "the progress bar should evolve with the slide animation, e.g. 5.4,
+ *   5.5...."): a 2 px hairline in the muted ink (#8C8682) along the stage's bottom edge, below the marks (they end at
+ *   y 877 of 900), over the veil like them. The line of positions 1, 2, 2.1 ... 12 is cut in EQUAL shares, one per
+ *   position (each position is one press of the speaker; weighting by motion time would make a slide of long entries
+ *   look "longer" than the talk time spent on it, which the motion does not decide). Position i of P sits at i/(P-1).
+ *   One press forward to the next position (not in a burst): the line grows from the previous position's mark to the
+ *   new one DRIVEN BY THE MOTION'S OWN PLAYBACK (the video's currentTime / duration, the live timeline's t / dur), so
+ *   it moves with the entry or the step's enter and is still while the fade to paper runs; any other move (a burst, a
+ *   jump, a part or number key, the grid) puts it on the target's mark at once (250 ms ease forward, a cut backward);
+ *   at rest it sits exactly on the position's mark, and loops never move it. B hides it, on by default at every
+ *   opening. It is the player's (index.html), never live.html's, so no recorded video holds it (tools/make_media.mjs
+ *   records live.html).
+ * NAVIGATION AIDS (the author, 8 November 2026: "add the navigation features we spoke about"):
+ *   THE BAR (#strip: the crumb, the position, the timer) is the speaker's: hidden in full screen (the API's, or a window
+ *     as large as the screen), shown in a window; C overrides that either way until pressed again or until full screen is entered or left. The timer runs on
+ *     while the bar is hidden.
+ *   BLANK: B or "." (a clicker's blank-screen button sends one of them) lays plain paper over the whole window, the
+ *     marks and the bar included; any key or a click takes it away and does nothing else, so the deck is back at the
+ *     same position. A motion playing when it was blanked plays on under the paper.
+ *   JUMP BACK: a JUMP is a move not in the linear order: the grid, 1-9 and 0, a part's letter, Home, End, T, a click
+ *     on a zone, and Z itself. Z (or `) goes back to the position held before the last jump, at rest (as ←: no entry
+ *     replayed), and records the one it left, so Z twice returns to the jump's target (also at rest).
+ *   F5 (Shift+F5: a clicker's "present" button) toggles full screen instead of reloading.
+ *   THE WARM PASS: 4 s after the opening, and only while the deck is at rest, every video of media.json (the entries,
+ *     step enters, loops and leads; 127 files, 74 MB on 8 November 2026) is read once, in the talk's order from the
+ *     current slide on, into a detached <video preload=auto> that is released at its first decoded frame
+ *     (loadeddata): one decoder at a time, none kept, so memory stays flat. The files land in the browser's caches
+ *     (the service worker's media cache, filled from offline-manifest.json, already holds them over http(s); this pass
+ *     also covers a server without it) and the platform's decoders are warmed. Decoding all of them and keeping the
+ *     frames was refused: ~127 decoders at 1920x1080 is gigabytes.
+ * THE SLIDE GRID (G): every slide's rest at its overview as a thumbnail (media/rest-<k>.webp, the versioned still the
+ *   player and its offline cache already hold, decoded once at 640x360; a live slide: its number on paper), numbered
+ *   and titled, 4 columns; the current slide outlined in ink. ← → ↑ ↓ choose, Enter (or a click) jumps to that
+ *   slide's overview by the rules of any jump; G or Esc closes it; any other key closes it and acts. It is shown to
+ *   the audience: it is in the one window.
  */
 (function () {
   "use strict";
@@ -110,7 +149,7 @@
    * picture where it was for the new one to fade from. ------------------------------------------ */
   var NAV = { gen: 0, phase: "rest", dir: 0, last: 0, wakers: [], played: [], cue: null };   /* played: the entries and step enters started, for the walk */
   function stale(my) { return my !== NAV.gen; }
-  function setPhase(p) { NAV.phase = p; update(); }
+  function setPhase(p) { NAV.phase = p; if (p === "rest") progRest(); update(); }
   /* resolves when the generation `my` is superseded */
   function superseded(my) { return new Promise(function (r) { if (stale(my)) r(); else NAV.wakers.push(r); }); }
   /* the burst: wait until the keys have been quiet for BURST (false if a newer press came) */
@@ -285,6 +324,7 @@
   async function leave(my) {
     freeze();
     if (loopEl) { try { loopEl.pause(); } catch (e) {} }
+    if (leadEl) { try { leadEl.pause(); } catch (e) {} }   /* an ending's lead still playing is frozen too (it kept moving under the fade) */
     if (W && W.Live) W.Live.stopLoop();
     if (REDUCED) { await veilTo(1, 0); return !stale(my); }
     await veilTo(1, FADE);
@@ -324,6 +364,10 @@
          whose phase is not frame 0); anything else is faded to, which is the exit */
       if (paper) {                                  /* under the veil: the entry's first frame alone, then the veil lifted */
         await fadeIn(v, 0); if (stale(my)) return;
+        /* the leaving slide's rest still hidden too: lifted before the entry's first frame is painted, the veil showed
+           it again for a frame (the walk, 8 November 2026: "98 % of what only A inked is inked"); now that frame is
+           paper. arriveAtRest shows the still again, set to this slide's rest */
+        restImg.style.visibility = "hidden";
         stopLoop(); clearLayers(v); hideFrame(); await veilTo(0, 0);
       } else { await fadeIn(v, seamless ? (loopEl ? 120 : 0) : FADE); if (stale(my)) return; }
       if (inBurst) { setPhase("hold"); if (!(await quiet(my))) return; }
@@ -331,6 +375,7 @@
       var ended = new Promise(function (r) { v.addEventListener("ended", r, { once: true }); v.addEventListener("error", r, { once: true }); });
       var p = v.play(); if (p && p.catch) p.catch(function () {});
       curMove = v; NAV.played.push(name); NAV.cue = name; setPhase("entry");
+      progPlay(my, function () { return v.duration ? v.currentTime / v.duration : 0; });
       preImg(k, s);
       await Promise.race([ended, superseded(my)]);
       if (stale(my)) return;
@@ -445,6 +490,7 @@
       var name = cueName(k, s);
       NAV.played.push(name); NAV.cue = name; setPhase("entry");
       var t0 = performance.now();
+      progPlay(my, function () { return (performance.now() - t0) / 1000 / dur; });
       for (;;) {
         await new Promise(function (r) { requestAnimationFrame(r); });
         if (stale(my)) return;                                   /* stopped where it is */
@@ -475,6 +521,7 @@
       g.set(0);
       if (mode === "enter") { var name = cueName(k, s); NAV.played.push(name); NAV.cue = name; setPhase("entry"); } else setPhase("fade");
       var t0 = performance.now();
+      if (mode === "enter") progPlay(my, function () { return (performance.now() - t0) / 1000 / g.dur; });
       for (;;) {
         await new Promise(function (r) { requestAnimationFrame(r); });
         if (stale(my)) return;                                   /* stopped where it is */
@@ -510,7 +557,8 @@
     NAV.last = now;
     k = Math.max(1, Math.min(N, k)); s = Math.max(0, Math.min(nst(k), s || 0));
     if (k === cur && s === curS && !how.play) return bump();
-    var from = cur, fromS = curS, dir = how.play ? 1 : (k - from || s - fromS) > 0 ? 1 : -1, atRest = NAV.phase === "rest";
+    var from = cur, fromS = curS, dir = how.play ? 1 : how.rest ? -1 : (k - from || s - fromS) > 0 ? 1 : -1, atRest = NAV.phase === "rest";
+    if (how.jump) JUMPED = [from, fromS];          /* Z returns here (a jump: the grid, a number, a part, Home, End, T, a zone, Z) */
     /* laid on at once, with no exit: a step from the rest of the step before it, and a continued slide reached from
        its own predecessor at rest when that one has no steps (with steps, its entry starts on the overview) */
     var seamless = dir > 0 && atRest && (k === from ? s === fromS + 1 :
@@ -518,6 +566,8 @@
     LEAVE = { k: from, t: idleTime(from), dir: dir };
     var my = ++NAV.gen; NAV.wakers.splice(0).forEach(function (w) { w(); });
     cur = k; curS = s; NAV.dir = dir; NAV.phase = "fade";     /* moving from now on: the renderer sets each phase after */
+    /* the progress line: one press on to the next position grows with its motion (progPlay); anything else lands */
+    progAim(my, dir > 0 && !inBurst && posIndex(k, s) === posIndex(from, fromS) + 1, dir > 0);
     update();
     /* leaving the slide (or the veil still up from a press just before): the fade to paper first, then the target */
     var leaving = (k !== from && !seamless) || veilUp;
@@ -666,9 +716,14 @@
 
   /* ---- keys ------------------------------------------------------------------ */
   var NEXT = { PageDown: 1, " ": 1, Spacebar: 1, Enter: 1 }, PREV = { PageUp: 1, Backspace: 1 };   /* linear: a clicker */
+  var JUMP = { jump: true };
   window.addEventListener("keydown", function (e) {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     var k = e.key || "", low = k.toLowerCase(), tag = e.target && e.target.tagName;
+    if (k === "F5") { e.preventDefault(); if (!e.repeat) toggleFull(); return; }   /* a clicker's "present" button (F5, Shift+F5): never a reload */
+    if (e.repeat) { if (k.length === 1 || /^(Arrow|Page|Home|End|Enter|Backspace)/.test(k)) e.preventDefault(); return; }   /* a held key or clicker button: one press */
+    if (blanked()) { e.preventDefault(); return blank(false); }   /* any key brings the slide back, and does nothing else */
+    if (gridShown() && gridKey(e)) return;                   /* the grid's own keys first */
     if ((k === "Enter" || k === " ") && (tag === "BUTTON" || tag === "A" || tag === "INPUT")) return;   /* the offline panel's own */
     if (k === "ArrowRight") { e.preventDefault(); return NAVMODE ? level(1) : step(1); }
     if (k === "ArrowLeft") { e.preventDefault(); return NAVMODE ? level(-1) : step(-1); }
@@ -677,16 +732,21 @@
     if (low === "p") { e.preventDefault(); return setMode(false); }                /* back to presentation mode, in place */
     if (NEXT[k]) { e.preventDefault(); return step(1); }
     if (PREV[k]) { e.preventDefault(); return step(-1); }
-    if (k === "Home") { e.preventDefault(); return goTo(1, 0); }
-    if (k === "End") { e.preventDefault(); return goTo(N, 0); }
-    if (/^[1-9]$/.test(k)) { var s = partStart(+k); e.preventDefault(); return s ? goTo(s, 0) : bump(); }
+    if (k === "Home") { e.preventDefault(); return goTo(1, 0, JUMP); }
+    if (k === "End") { e.preventDefault(); return goTo(N, 0, JUMP); }
+    if (/^[0-9]$/.test(k)) { e.preventDefault(); var kk = k === "0" ? 10 : +k; return kk <= N ? goTo(kk, 0, JUMP) : bump(); }   /* slide k; 0 slide 10 */
+    if (low === "g") { e.preventDefault(); return gridOpen(); }
+    if (low === "b" || k === ".") { e.preventDefault(); return blank(true); }        /* a clicker's blank-screen button sends one of them */
+    if (low === "l") { e.preventDefault(); return toggleProg(); }
+    if (low === "c") { e.preventDefault(); return toggleBar(); }
+    if (low === "z" || k === "`") { e.preventDefault(); return jumpBack(); }
     if (low === "f") { e.preventDefault(); return toggleFull(); }
     if (low === "s") { e.preventDefault(); return startTimer(); }
     if (low === "o") { e.preventDefault(); return toggleOffPanel(); }
     if (low === "h" || k === "?") { e.preventDefault(); return $("help").classList.toggle("on"); }
-    if (low === "t") { e.preventDefault(); return goTo(1, 0); }
+    if (low === "t") { e.preventDefault(); return goTo(1, 0, JUMP); }
     var parts = CFG.parts || [];
-    for (var i = 0; i < parts.length; i++) if (parts[i].key && parts[i].key.toLowerCase() === low) { e.preventDefault(); var p = partStart(i + 1); return p ? goTo(p, 0) : bump(); }
+    for (var i = 0; i < parts.length; i++) if (parts[i].key && parts[i].key.toLowerCase() === low) { e.preventDefault(); var p = partStart(i + 1); return p ? goTo(p, 0, JUMP) : bump(); }
   });
   window.addEventListener("hashchange", function () {
     var m = /^#\/(\d+)(?:\.(\d+))?/.exec(location.hash);
@@ -770,13 +830,109 @@
     var z = zonesOf(cur) ? zoneAt(e.clientX, e.clientY) : null;
     if (!z) return;
     e.preventDefault();
-    goTo(cur, z.step, { play: true });
+    goTo(cur, z.step, { play: true, jump: true });
   });
 
   /* ---- the timer: whole minutes only (ticking seconds distract the audience) -------- */
   var timerEl = $("timer"), timerT0 = 0, timerTick = null;
   function timerShow() { timerEl.textContent = Math.floor((Date.now() - timerT0) / 60000) + " min"; }
   function startTimer() { timerT0 = Date.now(); timerShow(); if (!timerTick) timerTick = setInterval(timerShow, 250); }
+
+  /* ---- the progress line (header: THE PROGRESS LINE) ------------------------------- */
+  var progEl = null, PROG = { at: 0, aim: null, run: 0 };
+  /* position (k, s)'s index on the line 1, 2, 2.1 ... (0 for slide 1's overview), and its mark in [0, 1] */
+  function posIndex(k, s) { var i = 0; for (var j = 1; j < k; j++) i += nst(j) + 1; return i + (s || 0); }
+  function progMark(k, s) { var P = posIndex(N, nst(N)); return P > 0 ? posIndex(k, s) / P : 0; }
+  function progSet(f, ms) {
+    f = Math.max(0, Math.min(1, f)); PROG.at = f;
+    if (!progEl) return;
+    progEl.style.transition = ms ? "transform " + ms + "ms cubic-bezier(.25,.1,.25,1)" : "none";
+    progEl.style.transform = "scaleX(" + f.toFixed(5) + ")";
+  }
+  /* a move begins: `grow` (one press on to the next position) waits on the previous mark for the motion to drive it;
+     otherwise the line lands on the target's mark now (eased forward, cut backward) */
+  function progAim(my, grow, fwd) {
+    PROG.run++;
+    var to = progMark(cur, curS);
+    if (grow) { PROG.aim = { my: my, from: progMark.apply(null, prevPos(cur, curS) || [1, 0]), to: to }; progSet(PROG.aim.from, 0); }
+    else { PROG.aim = null; progSet(to, fwd ? 250 : 0); }
+  }
+  /* the motion of generation `my` is playing: the line follows `frac` (its playback, 0..1) until it ends or is cut */
+  function progPlay(my, frac) {
+    var a = PROG.aim; if (!a || a.my !== my) return;
+    var run = ++PROG.run;
+    (function tick() {
+      if (run !== PROG.run || stale(my)) return;
+      var f = frac(); f = f > 0 ? Math.min(1, f) : 0;
+      progSet(a.from + (a.to - a.from) * f, 0);
+      if (f < 1) requestAnimationFrame(tick);
+    })();
+  }
+  /* at rest: exactly on the position's mark */
+  function progRest() { PROG.run++; PROG.aim = null; if (N) progSet(progMark(cur, curS), 0); }
+  function toggleProg() { if (progEl) progEl.classList.toggle("off"); }
+
+  /* ---- the slide grid (header: THE SLIDE GRID) --------------------------------------- */
+  var gridEl = null, gridSel = 1, thumbs = {}, COLS = 4;
+  /* slide k's thumbnail: its overview's rest still, decoded once at 640x360 (a 2x still decoded whole is 33 MB) */
+  function thumb(k) {
+    if (thumbs[k]) return thumbs[k];
+    thumbs[k] = (async function () {
+      if (!media(k)) return null;
+      var u = restUrl(k, 0), W = 640, H = 360, c = document.createElement("canvas"); c.width = W; c.height = H;
+      var g = c.getContext("2d"); g.imageSmoothingQuality = "high";
+      try {
+        var blob = await (await fetch(u)).blob(), bm = await createImageBitmap(blob, { resizeWidth: W, resizeHeight: H, resizeQuality: "high" });
+        g.drawImage(bm, 0, 0, W, H); if (bm.close) bm.close();
+      } catch (e) {
+        try { var im = new Image(); im.src = u; await im.decode(); g.drawImage(im, 0, 0, W, H); im.src = ""; } catch (e2) { return null; }
+      }
+      return c;
+    })();
+    return thumbs[k];
+  }
+  function gridMark() {
+    if (!gridEl) return;
+    [].forEach.call(gridEl.querySelectorAll(".cell"), function (c) {
+      var k = +c.getAttribute("data-k");
+      c.classList.toggle("cur", k === cur); c.classList.toggle("sel", k === gridSel);
+      c.setAttribute("aria-current", k === cur ? "true" : "false");
+    });
+  }
+  function gridOpen() {
+    if (!N) return;
+    if (!gridEl) {
+      gridEl = document.createElement("div"); gridEl.id = "grid"; gridEl.setAttribute("role", "dialog"); gridEl.setAttribute("aria-label", "All slides");
+      var wrap = document.createElement("div"); wrap.className = "cells"; gridEl.appendChild(wrap);
+      for (var k = 1; k <= N; k++) (function (k) {
+        var c = document.createElement("div"); c.className = "cell"; c.setAttribute("role", "button"); c.setAttribute("data-k", k);   /* not a <button>: a focused one would take the clicker's Enter and Space once closed */
+        var t = document.createElement("div"); t.className = "thumb"; t.innerHTML = '<span class="ph">' + k + "</span>";
+        var cap = document.createElement("div"); cap.className = "cap";
+        var n = document.createElement("span"); n.className = "n"; n.textContent = k;
+        var ti = document.createElement("span"); ti.className = "ti"; ti.textContent = (SL[k - 1] || {}).title || "";
+        cap.appendChild(n); cap.appendChild(ti); c.title = k + " · " + ti.textContent;
+        c.appendChild(t); c.appendChild(cap); wrap.appendChild(c);
+        c.addEventListener("click", function (e) { e.preventDefault(); gridGo(k); });
+        c.addEventListener("mousemove", function () { if (gridSel !== k) { gridSel = k; gridMark(); } });
+        thumb(k).then(function (cv) { if (cv) { cv.className = "img"; t.innerHTML = ""; t.appendChild(cv); } });
+      })(k);
+      gridEl.addEventListener("click", function (e) { if (e.target === gridEl || e.target === wrap) gridClose(); });   /* the paper around: closes */
+      document.body.appendChild(gridEl);
+    }
+    gridSel = cur; gridMark(); gridEl.classList.add("on");
+  }
+  function gridClose() { if (gridEl) gridEl.classList.remove("on"); }
+  function gridShown() { return !!gridEl && gridEl.classList.contains("on"); }
+  function gridGo(k) { gridClose(); goTo(k, 0, { jump: true }); }
+  /* a key while the grid is open: true when the grid took it */
+  function gridKey(e) {
+    var k = e.key, low = (k || "").toLowerCase(), mv = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: COLS, ArrowUp: -COLS }[k];
+    if (mv) { e.preventDefault(); var t = gridSel + mv; if (t >= 1 && t <= N) { gridSel = t; gridMark(); } return true; }
+    if (k === "Enter" || k === " ") { e.preventDefault(); gridGo(gridSel); return true; }
+    if (k === "Home" || k === "End") { e.preventDefault(); gridSel = k === "Home" ? 1 : N; gridMark(); return true; }
+    if (k === "Escape" || low === "g") { e.preventDefault(); gridClose(); return true; }
+    gridClose(); return false;                      /* any other key: the grid closes and the key acts */
+  }
 
   /* ---- offline: sw.js serves the shell network-first and the media cache-first; this fills the
    * media cache from offline-manifest.json, file by file, each with its hash. It starts a few
@@ -859,11 +1015,63 @@
     document.body.appendChild(offPanel); offShow();
   }
 
+  /* full screen: the API's, or a window as large as the screen (F11, a kiosk) */
+  function full() { return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+    (window.innerHeight >= screen.height - 1 && window.innerWidth >= screen.width - 1)); }
+
+  /* ---- THE BAR (header): hidden in full screen, shown in a window; C overrides it until full screen is entered or left ---- */
+  var BAR = null, barFull = null;                  /* BAR null: by the screen */
+  function barShown() { return BAR !== null ? BAR : !full(); }
+  function layoutBar() {
+    var f = full(); if (f !== barFull) { barFull = f; BAR = null; }   /* entering or leaving full screen: its default again */
+    document.body.classList.toggle("nobar", !barShown());
+  }
+  function toggleBar() { BAR = !barShown(); layoutBar(); }
+  document.addEventListener("fullscreenchange", layoutBar); document.addEventListener("webkitfullscreenchange", layoutBar);
+  window.addEventListener("resize", layoutBar);
+
+  /* ---- BLANK (header): plain paper over everything; the deck under it is left exactly as it is ---------------- */
+  var blankEl = null;
+  function blanked() { return !!blankEl && blankEl.classList.contains("on"); }
+  function blank(on) {
+    if (!blankEl) { blankEl = document.createElement("div"); blankEl.id = "blank"; blankEl.setAttribute("aria-hidden", "true");
+      blankEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); blank(false); }); document.body.appendChild(blankEl); }
+    blankEl.classList.toggle("on", !!on);
+  }
+
+  /* ---- JUMP BACK (header): Z returns to the position held before the last jump, at rest; twice toggles ---- */
+  var JUMPED = null;
+  function jumpBack() {
+    if (!JUMPED || (JUMPED[0] === cur && JUMPED[1] === curS)) { NAV.last = performance.now(); return bump(); }
+    goTo(JUMPED[0], JUMPED[1], { rest: true, jump: true });
+  }
+
+  /* ---- THE WARM PASS (header): every video read once, one at a time, while the deck is at rest -------------- */
+  var WARM = { done: 0, of: 0, on: false };
+  async function warm() {
+    if (WARM.on || REDUCED || LIVE || !MED || !MED.files) return;
+    WARM.on = true;
+    var names = [], seen = {};
+    /* in the order the talk reaches them, from where the deck is: the entry, each step's enter, their loops and leads */
+    for (var k = 1; k <= N; k++) for (var s = 0; s <= nst(k); s++)
+      [cueName(k, s), leadName(k, s), loopName(k, s)].forEach(function (n) { if (has(n) && !seen[n]) { seen[n] = 1; names.push([k, n]); } });
+    names.sort(function (a, b) { return (a[0] < cur) - (b[0] < cur) || a[0] - b[0]; });
+    WARM.of = names.length;
+    for (var i = 0; i < names.length; i++) {
+      while (NAV.phase !== "rest" || document.hidden) await sleep(500);     /* never beside a motion playing */
+      await new Promise(function (r) { (window.requestIdleCallback || setTimeout)(r, { timeout: 1000 }); });
+      var v = document.createElement("video");              /* detached: never on the stage, one decoder at a time */
+      v.muted = true; v.preload = "auto"; v.src = mediaUrl(names[i][1], "mp4");
+      await new Promise(function (r) { var to = setTimeout(r, 8000);
+        ["loadeddata", "error"].forEach(function (ev) { v.addEventListener(ev, function () { clearTimeout(to); r(); }, { once: true }); }); });
+      v.removeAttribute("src"); try { v.load(); } catch (e) {}  /* the decoder and its buffers released */
+      WARM.done++;
+    }
+  }
+
   /* ---- in full screen the pointer hides after 1.5 s without moving ---------------- */
   (function () {
     var timer = null, root = document.documentElement;
-    function full() { return !!(document.fullscreenElement || document.webkitFullscreenElement ||
-      (window.innerHeight >= screen.height - 1 && window.innerWidth >= screen.width - 1)); }
     function arm() {
       root.classList.remove("nocursor"); clearTimeout(timer);
       if (full()) timer = setTimeout(function () { if (full()) root.classList.add("nocursor"); }, 1500);
@@ -889,21 +1097,28 @@
     /* the corner: the position, right-aligned where it always was, and before it the mode, shown only in navigation */
     numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true");
     numEl.innerHTML = '<span class="mode"></span><span class="at"></span>'; box.appendChild(numEl);
+    /* the progress line, along the stage's foot, over the veil with the marks (deck.css #prog) */
+    progEl = document.createElement("div"); progEl.id = "prog"; progEl.setAttribute("aria-hidden", "true"); box.appendChild(progEl);
     $("help").innerHTML = "<table>" + [["Presentation mode", "(the default) ← → every position in order: 1, 2, 2.1, 2.2 … 3, 3.1 …"],
       ["Navigation mode", "↓ or ↑ enters it (and moves); P returns to presentation mode"],
       ["  ← →", "the slides; on a step, its steps"], ["  ↓ / ↑", "into a slide's steps / back to its overview"],
       ["Space PageDown Enter", "next, in order (both modes)"], ["PageUp Backspace", "previous, in order (both modes)"], ["click", "a part of the slide (where outlined): its step"], ["Home / End", "first / last"],
-      ["1–9" + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return ", " + p.key.toUpperCase(); }).join(""), "a part: " + (CFG.parts || []).map(function (p, i) { return (i + 1) + " " + p.name; }).join(", ")],
-      ["T", "the title"], ["F", "full screen"], ["S", "timer"], ["O", "offline"], ["H", "this help"]]
+      ["1–9, 0", "slide 1 to 9, 0: slide 10"], ["G", "all the slides (← → ↑ ↓ Enter or a click; G or Esc closes)"],
+      [(CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return p.key.toUpperCase(); }).join(", "), "a part: " + (CFG.parts || []).filter(function (p) { return p.key; }).map(function (p) { return p.key.toUpperCase() + " " + p.name; }).join(", ")],
+      ["Z or `", "back to where I was before the last jump (twice: forth again)"],
+      ["T", "the title"], ["B or .", "blank screen (any key returns)"], ["L", "the progress line on / off"], ["C", "this bar on / off (hidden in full screen)"],
+      ["F or F5", "full screen"], ["S", "timer (minutes; S again restarts)"], ["O", "offline"], ["H", "this help"]]
       .map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") + "</table>";
     await dropStale();
     var live = [];
     for (var i = 1; i <= N; i++) if (!media(i)) live.push(i);
     if (live.length || SL.some(function (x) { return x.zones; })) await ensureFrame(cur);   /* the live page is ready before any key (and holds the zones) */
     curS = Math.max(0, Math.min(nst(cur), m && m[2] ? +m[2] : 0));
+    progRest();
     await R(cur).init(cur, curS);
-    update(); MEDIA.preload(cur, curS);
+    update(); MEDIA.preload(cur, curS); layoutBar();
     document.documentElement.setAttribute("data-ready", "1");
+    setTimeout(warm, 4000);                         /* after the opening's entry has started, at idle priority */
   }).catch(function (e) { ERR.push("start: " + (e && e.message || e)); crumb.textContent = "could not start: " + e; });
 
   if (canOffline) {
@@ -923,7 +1138,7 @@
           videos: box.querySelectorAll("video.on").length, jumps: box.querySelectorAll(".jumpimg").length },
         offline: OFF.state + (OFF.ready ? " ready" : "") + " " + OFF.files + "/" + OFF.of, crumb: crumb.textContent + " | " + pos.textContent,
         marks: logoEls.map(function (x) { return { what: x[0].tagName === "IMG" ? x[0].getAttribute("src") : "overlay", shown: x[0].style.display !== "none", except: x[2] }; }),
-        timer: timerEl.textContent, full: !!document.fullscreenElement, loop: loopK, errors: ERR.slice() };
+        timer: timerEl.textContent, prog: +PROG.at.toFixed(5), progMark: N ? +progMark(cur, curS).toFixed(5) : 0, progOn: !!progEl && !progEl.classList.contains("off"), grid: gridShown(), blank: blanked(), bar: barShown(), jumped: JUMPED ? posName(JUMPED[0], JUMPED[1]) : null, warm: WARM.done + "/" + WARM.of, full: !!document.fullscreenElement, loop: loopK, errors: ERR.slice() };
     },
     started: started, fillCache: fillCache
   };

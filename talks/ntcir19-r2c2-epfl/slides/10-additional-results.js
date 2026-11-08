@@ -177,6 +177,21 @@ Deck.slide("10-additional-results", function (A, q) {
     return A.seq(SHOW(PTG[i]), A.pop(c, { dur: 0.45 }), glide);
   }
   var said = function (g) { return A.seq(SHOW(g), A.draw(g.querySelector("path"), { dur: 0.4 }), KEY(g)); };
+  /* 10.4's loop: field_scatter_3d's teams loop (the runs gather onto their team's best and back), each additional run's
+     rank line unkeyed and its team rank keyed in its place during the teams phase */
+  var TW = ["ld", "ia"].map(function (k) {
+    var g = q("fs10-" + k + "-name"), t = q("fs10-" + k + "-team"), T = [].slice.call(g.querySelectorAll("text")).filter(function (x) { return x !== t; });
+    var own = T[T.length - 1];
+    return { own: own, ownS: own.textContent, t: t, tS: t.textContent };
+  });
+  function teamWords(team, tp) {
+    var a = Math.max(0, Math.min(1, 1 - 2 * tp)), b = Math.max(0, Math.min(1, 2 * tp - 1));
+    TW.forEach(function (o) {
+      o.own.textContent = o.ownS.slice(0, Math.round(o.ownS.length * a));
+      o.t.textContent = o.tS.slice(0, Math.round(o.tS.length * b));
+      o.t.style.opacity = b > 0 ? "" : "0";
+    });
+  }
   var step4 = A.groups(G("10.4 the scatter: the additional runs", [
     look(0, 1),
     L("out of BITEM-AC-1: revised-longest-deliberation", out(0, "ld")),
@@ -229,7 +244,7 @@ Deck.slide("10-additional-results", function (A, q) {
     steps: [{ enter: step1, loop: null },
             { enter: step2, loop: calm([q("st-q" + i60 + "-v")], 0.6) },
             { enter: step3, loop: calm([q("st-q" + i65 + "-v")], 0.6) },
-            { enter: step4, loop: calm(PT, 0.35) },
+            { enter: step4, loop: S3.teamsLoop(S3.rests[1], teamWords) },
             { enter: fs(1, "10.5 HMR flattened", true), loop: S3.steps[1].loop },
             { enter: fs(2, "10.6 accuracy flattened"), loop: S3.steps[2].loop },
             { enter: fs(3, "10.7 the 3D view, bullet time"), loop: S3.steps[3].loop },

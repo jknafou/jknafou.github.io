@@ -66,8 +66,8 @@
    "part": 4,
    "continues": false,
    "notes": "The organisers' official PR scores (direct judgements), nDCG@20 over the 64 scored questions. Pooling the passes, PG-2, is 4th of the 22 PR runs and the single pass, PG-1, 5th; the three above are one team's, hit-u. Question by question PG-2 is higher on 42, the same on 7, lower on 15; Han Solo is one of its largest gains. Why PG-1 trails: its list is pass 1's record, so it is as long as what pass 1 met; on 21 questions pass 1 searched once, got its 10 results and stopped, and 37 lists are under 20. The gain lives there: +0.1104 on the 37 short lists, +0.0167 on the 27 full ones; cut to PG-1's length, PG-2's lead halves to 0.0411. By type, the gain is largest on post-processing-heavy and multi-hop, the two types whose answer is in no single passage, and there PG-2 is the top run of all 22. Said, not shown: the difference of the means is not significant (Tukey HSD p = 0.4854). Q@20 ranks the runs the same way.",
-   "hash": "38d6b31230672336",
-   "vhash": "bcd5a9638697ffb6",
+   "hash": "d91a2abe43af1c25",
+   "vhash": "9cf060c1d7a88618",
    "zones": true
   },
   {
@@ -76,8 +76,8 @@
    "part": 4,
    "continues": false,
    "notes": "A run, question by question: each bar its confidence, green when right, red when wrong. R_U is the mean of the green bars, R_O one minus the mean of the red ones, HMR their harmonic mean. An absurd trick: answer the one question we are surest of at 100 and every other one deliberately wrong at 0: R_U 1, R_O 1, HMR 1.0000 at accuracy 1/64. Repeat with 4, 16, 32 answers: still 1.0000, whatever the accuracy; with none right at all, still 1.0000. Confidence 50 everywhere gives 0.5000 at any accuracy, here at the median, 0.8125. Our AC-2: 0.4915, below that: our wrong answers kept a mean confidence of 65.4 (Hannibal's 'fava beans' at 100). Among the 25 official runs AC-2 is 6th on accuracy, 0.9219, 13th on HMR; accHMR, accuracy times HMR, puts the tricks at k/64 and every answer wrong at 0, and AC-2 7th.",
-   "hash": "35feabd88a0efbe8",
-   "vhash": "35dd9c3201fe7a99",
+   "hash": "c7394e12dbc4f87f",
+   "vhash": "1b7478e7d9760942",
    "zones": true
   },
   {
@@ -96,8 +96,8 @@
    "part": 5,
    "continues": false,
    "notes": "Slide 8's four graphs, each submitted run of ours turning into the additional run that reads the same passes differently; neither was sent to the organisers: each answer takes the label of the identical answer they judged. The single pass, BITEM-AC-1 into revised-longest-deliberation: the same answers, every confidence now 100 or 0; Han Solo's wrong Starkiller Base goes from 99 to 0; HMR 0.2719 to 0.6639. The four passes, BITEM-AC-2 into revised-independent-agreement: 39 confidences change and one verdict, Rogue One, wrong at 97, now pass 1's own answer, right at 50; HMR 0.4915 to 0.6985. Among the 25 official runs: longest deliberation 11th on HMR, 7th on accHMR; independent agreement 9th on HMR, 5th on accuracy, 5th on accHMR. By type only multi-hop changes, to 10 of 10. Hannibal's wrong answer goes from 100 to 0.",
-   "hash": "86f51196d83ec0cd",
-   "vhash": "b03aaa4c6a421b20",
+   "hash": "7b1414928dbc19ea",
+   "vhash": "cb39c7121ea41b01",
    "zones": true
   },
   {

@@ -134,7 +134,29 @@ Deck.slide("07-pr-results", function (A, q) {
     L("ours: rank, name and value", A.par.apply(null, g1hl.map(function (h) { return A.highlight(h, { dur: 0.5 }); })))]));
   var loop1 = A.seq(A.wait(0.8), swell([bars[D.ours[0]]], 0.35), A.wait(0.4), swell([bars[D.ours[1]]], 0.35), A.wait(3));
 
-  var step2 = A.groups(G("7.2", [
+  /* 7.2 THE TEAMS VIEW (the author, 8 November 2026: "7.1->new7.2 which merges the bars by team name with their best
+     runs"): every run of a team slides onto its team's best and folds into it; the best of each team moves to its
+     team's row (the 7 rows spread down the graph); its name becomes its team's, its rank its team rank; the heading
+     says what is now shown */
+  var row = function (i) { return ["g1-k", "g1-n", "g1-b", "g1-v"].map(function (n) { return q(n + i); }).concat(q("g1-t" + i) ? [q("g1-t" + i)] : [], q("g1-hl" + i) ? [q("g1-hl" + i)] : []); };
+  var fold = A.par.apply(null, R1.map(function (i) {
+    var t = D.g1t[i], els = row(i), mv = A.move(els, { from: [0, 0], to: [0, t[0]], dur: 1.2 });
+    return t[1] ? A.par(mv, A.dim(els, { to: 0, dur: 1.2 })) : mv;
+  }));
+  var BESTS = R1.filter(function (i) { return !D.g1t[i][1]; });
+  var renamed = A.par.apply(null, BESTS.map(function (i) {
+    var t = q("g1-t" + i);
+    var shown = A.track(0.01, function (u) { t.style.opacity = u > 0 ? "" : "0"; });   /* opacity only: its row's move stays */
+    return A.par(A.seq(A.reverse(A.type(q("g1-n" + i), { quick: true })), shown, A.type(t, { quick: true })),
+                 A.recount(q("g1-k" + i), { from: D.g1t[i][2], to: D.g1t[i][3], dur: 0.6 }));
+  }));
+  var headed = A.seq(A.reverse(key("g1-h")), A.reveal(q("g1-h2"), { dur: 0.01 }), key("g1-h2"));
+  var stepT = A.groups(G("7.2 the teams: each its best run", [
+    [L("each team's runs fold into its best", fold), L("the heading", headed)],
+    L("each best named by its team, ranked among the teams", renamed)]));
+  var loopT = A.seq(A.wait(0.8), swell([bars[D.ours[0]]], 0.35), A.wait(3));
+
+  var step2 = A.groups(G("7.3", [
     look(1).concat([L("the graph taken back", back(A.par(A.par.apply(null, regions().map(function (r) { return r.track; })),
                                                           A.draw(q("g2-diag"), { dur: 0.5 }), keyOf(), mean(), han())))]),
     regions(),
@@ -144,16 +166,44 @@ Deck.slide("07-pr-results", function (A, q) {
 
   var g3others = function () { return A.par.apply(null, R3.map(function (k) { return popIn(others(k), 0.02); })); };
   var g3pg1 = function () { return A.pop(R3.map(function (k) { return q("g3-a" + k); }), { dur: 0.4 }); };
-  var step3 = A.groups(G("7.4", [
+  var step3 = A.groups(G("7.5", [
     look(3).concat([L("the graph taken back", back(A.par(g3others(), g3pg1(), A.par.apply(null, R3.map(slideOut)))))]),
     [L("the other runs", g3others()), L("PG-1", g3pg1())],
     L("PG-2 and the gain", A.par.apply(null, R3.map(slideOut))),
     L("1st of 22", A.par(A.par.apply(null, g3hl.map(function (h) { return A.seq(A.reveal(h, { dur: 0.01 }), A.highlight(h, { dur: 0.5 })); })),
                          A.par.apply(null, pins.map(function (p) { return A.seq(A.reveal(p, { dur: 0.01 }), A.type(p, { quick: true })); }))))]));
-  var b3 = D.firsts.map(function (k) { return q("g3-b" + k); });
-  var loop3 = A.seq(A.wait(0.8), swell([b3[0]], 0.4), A.wait(0.4), swell([b3[1]], 0.4), A.wait(3));
+  /* 7.5's loop, THE TEAMS VIEW (field_scatter_3d's teams loop, its timing): on every row each run's disc gathers onto
+     its team's best on that type, fading into it (PG-1 into PG-2, the gain going with it); "1st of 22" unkeyed and the
+     team rank keyed in its place; held; back to the runs; it starts and ends on the rest */
+  var TL = [1.0, 1.4, 0.7, 2.6, 0.5, 1.4, 0.8], TAT = [], to_ = 0;
+  TL.forEach(function (d) { TAT.push(to_); to_ += d; });
+  var G3D = R3.map(function (k) {
+    var row_ = q("g3-r" + k), by = {};
+    [].forEach.call(row_.querySelectorAll("circle[data-run]"), function (c) { by[c.getAttribute("data-run")] = c; });
+    return Object.keys(by).map(function (run) {
+      var c = by[run], b = by[D.g3t[k][run]];
+      return { c: c, dx: +b.getAttribute("cx") - +c.getAttribute("cx"), dy: +b.getAttribute("cy") - +c.getAttribute("cy"), me: b === c };
+    });
+  });
+  var segs = R3.map(function (k) { return q("g3-s" + k); });
+  var TPIN = D.firsts.map(function (k) { var a = q("g3-pin" + k), b = q("g3-tpin" + k); return { a: a, as: a.textContent, b: b, bs: b.textContent }; });
+  var loop3 = A.track(to_, function (u) {
+    var t = u * to_, f = function (i) { var v = (t - TAT[i]) / TL[i]; return v < 0 ? 0 : v > 1 ? 1 : v; };
+    var e = t < TAT[4] ? A.ease.io(f(1)) : 1 - A.ease.io(f(5)), tp = t < TAT[4] ? f(2) : 1 - f(4);
+    G3D.forEach(function (R_) { R_.forEach(function (o) {
+      if (o.me) return;
+      o.c.style.translate = e > 0 ? (o.dx * e).toFixed(2) + "px " + (o.dy * e).toFixed(2) + "px" : "";
+      o.c.style.opacity = e > 0 ? (1 - 0.9 * e).toFixed(4) : "";
+    }); });
+    segs.forEach(function (sg) { sg.style.opacity = e > 0 ? (1 - e).toFixed(4) : ""; });
+    var a = Math.max(0, Math.min(1, 1 - 2 * tp)), b = Math.max(0, Math.min(1, 2 * tp - 1));
+    TPIN.forEach(function (o) {
+      o.a.textContent = o.as.slice(0, Math.round(o.as.length * a));
+      o.b.textContent = o.bs.slice(0, Math.round(o.bs.length * b)); o.b.style.opacity = b > 0 ? "" : "0";
+    });
+  });
 
-  var step4 = A.groups(G("7.3", [
+  var step4 = A.groups(G("7.4", [
     look(2).concat([L("the graph taken back", back(A.par(g4lengths(), g4note(), g4rows([0, 1]), g4rows([SHORT, FULL]))))]),
     [G("the lengths (left)", [L("the bars", g4lengths()), L("the note on the 10s", g4note())]),
      G("the leads (right)", [L("all 64", g4rows([0, 1])), L("the short and the full lists", g4rows([SHORT, FULL]))])],
@@ -162,7 +212,8 @@ Deck.slide("07-pr-results", function (A, q) {
 
   return {
     entry: A.groups(tree),
-    steps: [{ enter: step1, loop: loop1 }, { enter: step2, loop: loop2 }, { enter: step4, loop: loop4 }, { enter: step3, loop: loop3 }],
-    zones: { 1: "g1", 2: "g2", 3: "g4", 4: "g3" }
+    steps: [{ enter: step1, loop: loop1 }, { enter: stepT, loop: loopT }, { enter: step2, loop: loop2 }, { enter: step4, loop: loop4 },
+            { enter: step3, loop: loop3 }],
+    zones: { 1: "g1", 3: "g2", 4: "g4", 5: "g3" }
   };
 });
