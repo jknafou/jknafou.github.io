@@ -692,6 +692,9 @@
     logoEls.forEach(function (x) {
       var el = x[0], was = el.style.display !== "none", want = !x[1] || x[1].indexOf(cur) >= 0;
       var mine = x[2].indexOf(cur) >= 0, show = want && !(mine && drawing);
+      /* leaving a slide that drew it while its own copy is the one inked (its entry frozen under the veil's fade):
+         still hidden until the veil covers that picture (UNDER then none), so the two never show at once */
+      if (!was && under !== null && under !== cur && x[2].indexOf(under) >= 0) show = false;
       /* a slide playing from video recorded before this (media.json without it in "bare": its rest still draws the
          marks): the mark hidden once that picture covers the stage, as it was; tools/make_media.mjs re-records it */
       if (mine && media(cur) && !(MED && (MED.bare || []).indexOf(cur) >= 0))
