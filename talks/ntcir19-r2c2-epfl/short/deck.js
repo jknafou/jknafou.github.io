@@ -989,7 +989,7 @@
     try {               /* the caches of an older worker's schema first: that worker may still be answering this page */
       var names = await caches.keys();
       await Promise.all(names.filter(function (n) { return /^deck-(shell|media)(-\d+)?:/.test(n) && n.slice(n.indexOf(":") + 1) === ROOTP &&
-        n !== CACHE && n !== "deck-shell-2:" + ROOTP; }).map(function (n) { return caches.delete(n); }));
+        n !== CACHE && n !== "deck-shell-3:" + ROOTP; })   /* sw.js's SHELL */.map(function (n) { return caches.delete(n); }));
     } catch (e) {}
     try {
       var man = await (await fetch("offline-manifest.json", { cache: "no-store" })).json();

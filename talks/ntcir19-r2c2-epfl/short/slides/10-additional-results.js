@@ -1,6 +1,6 @@
 /* Slide 10: its motions, from the animation bank (anim/anim.js), the steps' helpers and A.groups (anim/steps.js), the
    strip's morph (confidence_strip.py's MORPH_JS) and field_scatter_3d's motion (its SCATTER3D_JS), both handed over by
-   slide 8's drawing as data (one home each). The tree of groups, the nine steps and the numbers are in the .py's header.
+   slide 8's drawing as data (one home each). The tree of groups, the twelve steps and the numbers are in the .py's header.
    Slide 8's motion file keeps its change(), swell() and entry tree to itself (no hook): the ones here are this
    slide's own, on the data slide 8's drawing exposes (strip-data's states, slots and means). */
 Deck.slide("10-additional-results", function (A, q) {
@@ -106,6 +106,11 @@ Deck.slide("10-additional-results", function (A, q) {
   var lgOld = q("ty-legend").lastElementChild, lgNew = q("ty-legend-ia");
   var tyHl = TY.firsts.map(function (k) { return q("ty" + k + "-hl"); });
   var later = [q("note"), q("caps"), q("tag-ld"), q("tag-ia"), q("mw-0065-new")].concat(RN, PTG, PW, tyRing, tyV2, [lgNew]);
+  /* 10.10-10.11's marks and words (one pass against four, by type), shown by their steps */
+  var P11 = ["r", "d", "s", "va", "vb", "w"].reduce(function (a, p) {
+    return a.concat([].slice.call(q.root.querySelectorAll('[data-a^="ty11-' + p + '"]')).filter(function (e) { return /^ty11-(r|d|s|va|vb|w)\d$/.test(e.getAttribute("data-a")); }));
+  }, []).concat([q("ty11-lg"), q("ty11-ma"), q("ty11-mb"), q("ty11-h")]);
+  later = later.concat(P11);
   var bands = [q("hmr-hl"), q("hmr-hl-ld"), q("hmr-hl-ia"), q("acc-hl"), q("mw-hl"), q("mw-hl2"), q("mw-0065-hl"), q("tag-ld-hl"), q("tag-ia-hl")].concat(tyHl, tyHl2);
   var aside = A.par(A.camera(q.svg, HOME, HOME, { dur: 0 }), A.focus(P, { from: null, to: null, dur: 0 }),
                     A.hide(later, { dur: 0 }), A.hide(bands, { dur: 0 }));
@@ -220,7 +225,68 @@ Deck.slide("10-additional-results", function (A, q) {
                                         A.pop(lgNew.querySelector("circle"), { dur: 0.35 }), key(lgNew.querySelector("text"))))],
     L("1st", sweep(tyHl2))]));
 
-  /* 10.10 our mistakes: after the camera settles, Rogue One turns right and the four confidences change, slowly */
+  /* ---- 10.10, 10.11: one pass against four, by type (slide 7's per-type graph, its 7.5: the single pass an open ring,
+     the four passes a filled disc sliding out of it, the gain an ink segment drawn behind it, the value at the row's
+     end); every mark's place set by these tracks from the data, so each step starts on the one before's rest ---- */
+  var PD = JSON.parse(q("ty11-data").getAttribute("data-t")), R6p = PD.map(function (_, k) { return k; });
+  var pRing = R6p.map(function (k) { return q("ty11-r" + k); }), pDisc = R6p.map(function (k) { return q("ty11-d" + k); });
+  var pSeg = R6p.map(function (k) { return q("ty11-s" + k); }), pLy = pSeg.map(function (s) { return s.getAttribute("d").split(",")[1].split("H")[0]; });
+  var pVa = R6p.map(function (k) { return q("ty11-va" + k); }), pVb = R6p.map(function (k) { return q("ty11-vb" + k); });
+  var pW = R6p.map(function (k) { return q("ty11-w" + k); });
+  var pField = R6.map(function (k) { return q("ty" + k + "-d"); });
+  /* the ring at r, the disc at d, the segment between them: from one state to another (per row [ring x, disc x]) */
+  function marks(from, to, dur) {
+    return A.track(dur, function (u) {
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : E(u);
+      R6p.forEach(function (k) {
+        var r = from(k)[0] + (to(k)[0] - from(k)[0]) * e, d = from(k)[1] + (to(k)[1] - from(k)[1]) * e;
+        pRing[k].setAttribute("cx", r.toFixed(2)); pDisc[k].setAttribute("cx", d.toFixed(2));
+        pSeg[k].setAttribute("d", "M" + r.toFixed(2) + "," + pLy[k] + "H" + d.toFixed(2));
+      });
+    });
+  }
+  /* the camera held on the graph (exactly its frame, as the next step's first state sets it) and the focus held */
+  var held = function (k) { return [L("the camera held", A.zoom(q.svg, { from: F[k], to: F[k], dur: 0.01 }))].concat(still(k)); };
+  var at = function (s, i) { return function (k) { return [PD[k][s][0], PD[k][s][i]]; }; };   /* i = 0: the disc in the ring */
+  var fade = function (els, a, b, dur) {             /* an opacity from a to b (the field: dimmed, then gone) */
+    return A.track(dur, function (u) {
+      var v = a + (b - a) * (u >= 1 ? 1 : u <= 0 ? 0 : E(u));
+      els.forEach(function (el) { el.style.opacity = v >= 0.9999 ? "" : v.toFixed(4); });
+    });
+  };
+  var lgP = q("ty11-lg");
+  /* words keyed (or un-keyed) on every row together, as slide 7's values count together */
+  var each = function (els, f) { return els.length != null && !els.tagName ? A.par.apply(null, [].map.call(els, f)) : f(els); };
+  var keyed = function (els) { return each(els, function (e) { return A.seq(SHOW(e), A.type(e, { quick: true })); }); };
+  var unkey = function (els) { return each(els, function (e) { return A.reverse(A.type(e, { quick: true })); }); };
+  var rowVals = R6.map(function (k) {             /* AC-2's value on each row as 10.9 leaves it (multi-hop: its new one) */
+    var i = TD.map(function (d) { return d.k; }).indexOf(k);
+    return i >= 0 ? tyV2[i] : q("ty" + k + "-v");
+  });
+
+  /* 10.10 accuracy by type: revised-longest-deliberation (1 pass) against revised-independent-agreement (4 passes) */
+  var step10a = A.groups(G("10.10 accuracy by type: 1 pass against 4 passes", [
+    held(2).concat([L("10.9's ring, bands and legend put away", away(tyRing.concat(tyHl, tyHl2, [lgNew, q("ty-legend")]))),
+                     L("the field dimmed", A.dim(pField, { to: 0.15, dur: 0.5 })),
+                     L("AC-2's values and the measure unkeyed", A.par(unkey(rowVals), unkey(q("types-m"))))]),
+    L("1 pass: a ring on every row", A.seq(marks(at("a", 0), at("a", 0), 0.01), A.pop(pRing, { dur: 0.4 }))),
+    [L("4 passes: the disc slides out, the gain drawn", A.seq(SHOW(pDisc.concat(pSeg)), marks(at("a", 0), at("a", 1), 0.9))),
+     L("the values: 1 pass -> 4 passes", keyed(pVa))],
+    [L("the legend", A.seq(SHOW(lgP), A.pop(lgP.querySelectorAll("circle"), { dur: 0.35 }), A.type(lgP.querySelectorAll("text"), { quick: true }))),
+     L("all 64: 58/64 -> 60/64", keyed(q("ty11-ma")))]]));
+
+  /* 10.11 HMR by type: the same rows, the axis turns to HMR; each row's wrong answers, on which its HMR rests */
+  var step11b = A.groups(G("10.11 HMR by type: 1 pass against 4 passes", [
+    held(2).concat([L("the accuracy values unkeyed", A.par(unkey(pVa), unkey(q("ty11-ma")))),
+                     L("the field gone", fade(pField, 0.15, 0, 0.5)),
+                     L("the disc back into the ring", A.seq(marks(at("a", 1), at("a", 0), 0.6), A.hide(pDisc, { dur: 0.15 })))]),
+    [L("the heading: HMR", A.seq(unkey(q("types-h")), SHOW(q("ty11-h")), key("ty11-h"))),
+     L("the rings glide to the single pass's HMR", marks(at("a", 0), at("b", 0), 1.0))],
+    [L("4 passes: the disc slides out, the gain drawn", A.seq(SHOW(pDisc), marks(at("b", 0), at("b", 1), 0.9))),
+     L("the values: 1 pass -> 4 passes", keyed(pVb))],
+    [L("each row's wrong answers", keyed(pW)), L("all 64: 0.66 -> 0.70, wrong 6 -> 4", keyed(q("ty11-mb")))]]));
+
+  /* 10.12 our mistakes: after the camera settles, Rogue One turns right and the four confidences change, slowly */
   var rgBar = q("mq-0065"), rgOld = [].slice.call(q("mw-0065").querySelectorAll("text")).pop(), rgNew = q("mw-0065-new");
   var rgb = function (h) { return [1, 3, 5].map(function (k) { return parseInt(h.slice(k, k + 2), 16); }); };
   var c0 = rgb(rgBar.getAttribute("fill")), c1 = rgb(MD.col), f0 = rgBar.getAttribute("fill");
@@ -235,7 +301,7 @@ Deck.slide("10-additional-results", function (A, q) {
   });
   var recount = A.track(1.4, function (u) { var e = E(u); W.forEach(function (o) { o.text.textContent = tween(o.s0, o.s1, e); }); });
   var ours4 = Object.keys(MD.tgt).map(function (qq) { return q("mq-" + qq); });
-  var step10 = A.groups(G("10.10 our mistakes: Rogue One right, the confidences changed", [
+  var step10 = A.groups(G("10.12 our mistakes: Rogue One right, the confidences changed", [
     look(2, 3).concat([L("Hannibal's band put away", away(q("mw-hl")))]),
     L("the camera settled: a pause", A.wait(0.5)),
     [L("Rogue One's bar turns green", recolour),
@@ -255,7 +321,9 @@ Deck.slide("10-additional-results", function (A, q) {
             { enter: fs(3, "10.7 the 3D view, bullet time"), loop: teams(3) },
             { enter: fs(4, "10.8 accHMR flattened"), loop: teams(4) },
             { enter: step9t, loop: calm(tyRing, 0.35) },
+            { enter: step10a, loop: calm(pDisc.filter(function (_, k) { return PD[k].a[1] !== PD[k].a[0]; }), 0.35) },
+            { enter: step11b, loop: calm(pDisc, 0.3) },
             { enter: step10, loop: calm(ours4.concat([rgBar]), 0.3) }],
-    zones: { 1: "strip", 4: "scatter", 9: "types", 10: "mistakes" }
+    zones: { 1: "strip", 4: "scatter", 9: "types", 12: "mistakes" }
   };
 });

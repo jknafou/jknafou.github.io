@@ -14,7 +14,8 @@
  * versioned URL, which no HTTP cache holds an older answer for.
  */
 var ROOT = new URL(self.registration.scope).pathname;
-var SCHEMA = 2, SHELL = "deck-shell-" + SCHEMA + ":" + ROOT, MEDIA = "deck-media-" + SCHEMA + ":" + ROOT;
+var SCHEMA = 2, SHELL = "deck-shell-3:" + ROOT,   /* shell 3: the caches of shell 2 may hold the short deck's page under the full one's path, dropped on activate */
+    MEDIA = "deck-media-" + SCHEMA + ":" + ROOT;
 function ours(name) { return /^deck-(shell|media)(-\d+)?:/.test(name) && name.slice(name.indexOf(":") + 1) === ROOT; }
 var SHELL_FILES = ["./", "index.html", "deck.js", "deck.css", "deck.json", "slides.json", "live.html", "live.js", "anim.js",
   "offline-manifest.json", "media/media.json"];
@@ -37,7 +38,7 @@ function keyOf(url) { return url.origin + url.pathname; }
 
 async function shellFirst(req, url) {
   var c = await caches.open(SHELL);
-  var key = req.mode === "navigate" && /\/$/.test(url.pathname) ? self.registration.scope : keyOf(url);
+  var key = keyOf(url);       /* each page under its own path: never the scope's (the short deck's page was once kept as the full one's) */
   try {
     var r = await fetch(req, { cache: "no-store" });
     if (r.ok) c.put(key, r.clone());
@@ -69,6 +70,10 @@ async function mediaFirst(req, url) {
 self.addEventListener("fetch", function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin || !url.href.startsWith(self.registration.scope)) return;
+  /* the short version (short/) is ANOTHER DECK with its own worker: the full deck's worker, whose scope contains it,
+     never answers or caches its files (the author, 11 November 2026: "It shouldn't be possible to be in the short
+     without showing short") */
+  if (url.href.startsWith(self.registration.scope + "short/")) return;
   if (url.searchParams.has("fill")) return;            /* the download control's own fetch: always the network */
   if (req.mode === "navigate" || isShell(url)) return e.respondWith(shellFirst(req, url));
   e.respondWith(mediaFirst(req, url));
