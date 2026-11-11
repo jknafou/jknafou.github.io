@@ -1,0 +1,95 @@
+/* The deck's shell: one 16:9 stage fitted whole in any window, a bar under it. */
+:root { --paper: #FBF8F4; --ink: #302E2E; --strip: 26px; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); overflow: hidden; }
+body { display: flex; flex-direction: column; font: 13px/1.4 Georgia, "Times New Roman", serif; }
+#view { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; container-type: size; background: var(--paper); }
+/* THE 16:9 STAGE: the largest 16:9 box that fits #view, centred; every layer inside it is placed in
+   percentages of it, so full screen, a 16:10 laptop or a 4:3 projector rescale it with no JS */
+#box { position: absolute; inset: 0; margin: auto; overflow: hidden; background: var(--paper);
+       width: min(100cqw, calc(100cqh * 16 / 9)); height: min(100cqh, calc(100cqw * 9 / 16)); }
+#box > #rest, #box > .jumpimg, #box > video, #box > iframe { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+       object-fit: fill; border: 0; user-select: none; pointer-events: none; }
+#rest { z-index: 0; }
+#box video { opacity: 0; will-change: opacity; }
+#box video.on { opacity: 1; }
+#box .loopvid { z-index: 1; } #box .movevid { z-index: 3; }
+#box .jumpimg { z-index: 4; }
+/* the slide's number, on the stage itself (so ?chrome=0 and full screen keep it), bottom right; a long one set smaller to clear
+   the corner unit's portrait (deck.js fitNum) */
+#num { position: absolute; z-index: 100000; right: 0.8%; bottom: 2.6%; pointer-events: none; user-select: none;
+       font: calc(min(100cqh, 100cqw * 9 / 16) * 0.024)/1 Georgia, "Times New Roman", serif; color: var(--ink); opacity: .55;
+       font-variant-numeric: tabular-nums; }
+/* the mode, just above the position ("pres", "short" over "pres", or "nav"; to its left is the corner unit): quieter still, the
+   position keeping its place */
+#num .mode { position: absolute; right: 0; bottom: 120%; font-size: 0.72em; font-style: italic; opacity: .6; white-space: pre; text-align: right; line-height: 1.15; }
+#num .mode:empty { display: none; }
+#box iframe { pointer-events: auto; z-index: 2; background: var(--paper); }
+/* a zone under the pointer (a slide's `zones`): a faint outline, over the slide, under the veil and the marks */
+#zone { position: absolute; z-index: 99990; box-sizing: border-box; border: 1.5px solid var(--ink); border-radius: 6px;
+        opacity: .22; pointer-events: none; }
+html.nocursor #zone { display: none !important; }
+/* THE FOOT BAND: the paper behind the marks (HES-SO, the corner unit, the number), soft (the author's band A,
+   5 November 2026): 0.85 from the stage's foot to the marks' foot (y 877 of 900; they span 822-877), easing to
+   nothing at y 770, full width. Over every slide layer, under the zones, the veil (paper on paper: a fade looks the
+   same) and the marks; shown by deck.js only where a mark is (not on the title) */
+#footband { position: absolute; left: 0; right: 0; bottom: 0; height: 14.45%; z-index: 99980; pointer-events: none;
+            background: linear-gradient(to top, color-mix(in srgb, var(--paper) 85%, transparent) 18%,
+              color-mix(in srgb, var(--paper) 72%, transparent) 38.5%, color-mix(in srgb, var(--paper) 42.5%, transparent) 59%,
+              color-mix(in srgb, var(--paper) 12%, transparent) 79.5%, color-mix(in srgb, var(--paper) 0%, transparent) 100%); }
+.logo { position: absolute; z-index: 100000; box-sizing: border-box; width: auto; object-fit: contain; pointer-events: none; user-select: none; }
+/* an overlay: a part of one slide, drawn by the shell over the others at the same place (deck.json "overlays") */
+.overlay { position: absolute; inset: 0; z-index: 100000; pointer-events: none; user-select: none; }
+.overlay > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.overlay [data-caret] { animation: caret-blink 1.06s step-end infinite; }      /* shown half the period, hidden half */
+.overlay.still [data-caret] { animation: none; }
+@keyframes caret-blink { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
+/* a "chip" logo keeps the chip's padding (deck.js), so its letters stay where the title draws them, but no plate:
+   only the letters, on the foot band (the author, 5 November 2026) */
+#strip { flex: 0 0 var(--strip); display: flex; align-items: center; gap: 14px; padding: 0 16px;
+         opacity: .72; white-space: nowrap; overflow: hidden; }
+#crumb { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+#strip.going { opacity: 1; } #strip.going #crumb { font-style: italic; }
+#strip.bump { animation: bump .12s ease-out; }
+@keyframes bump { 50% { transform: translateX(4px); } }
+#off { opacity: .55; font-size: 11px; }
+#timer { font-variant-numeric: tabular-nums; opacity: .75; } #timer:empty { display: none; }
+body.nochrome #strip { display: none; }
+#offpanel { position: fixed; right: 16px; bottom: calc(var(--strip) + 8px); z-index: 50; max-width: 420px;
+            background: var(--paper); color: var(--ink); border: 1px solid var(--ink); border-radius: 8px;
+            padding: 10px 14px; font: 13px/1.5 Georgia, "Times New Roman", serif; }
+#offpanel button { font: inherit; margin: 6px 0; padding: 3px 10px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); cursor: pointer; }
+#offpanel .hint { font-size: 12px; opacity: .8; margin-top: 4px; } #offpanel a { color: inherit; }
+#help { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; background: var(--paper);
+        border: 1px solid var(--ink); border-radius: 8px; padding: 14px 20px; display: none; max-width: calc(100vw - 32px); box-sizing: border-box; }
+#help.on { display: block; } #help td { padding: 1px 10px 1px 0; vertical-align: top; }
+html.nocursor, html.nocursor * { cursor: none !important; }
+/* THE PROGRESS LINE (deck.js, header): a 2 px hairline of the muted ink along the stage's very foot, under the marks
+   (they end at y 877 of 900), over the veil with them; its length is the deck's position, set by deck.js (scaleX) */
+#prog { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; z-index: 100000; background: #8C8682;
+        transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; will-change: transform; }
+#prog.off { display: none; }
+/* THE SLIDE GRID (G): the slides on paper, 4 columns, sized so three rows and their captions fit the window */
+#grid { --gap: 18px; --cap: 34px; position: fixed; inset: 0; z-index: 200000; display: none; overflow: auto;   /* over the stage's marks (z 100000) */
+        background: var(--paper); }
+#grid.on { display: flex; align-items: center; justify-content: center; }
+#grid .cells { display: grid; gap: var(--gap); padding: 16px; box-sizing: border-box;
+               grid-template-columns: repeat(4, min(calc((100vw - 32px - 3 * var(--gap)) / 4),
+                                                  calc((100vh - 32px - 2 * var(--gap) - 3 * var(--cap)) / 3 * 16 / 9))); }
+#grid .cell { display: block; cursor: pointer; color: var(--ink); user-select: none; }
+#grid .thumb { position: relative; aspect-ratio: 16 / 9; background: var(--paper); box-sizing: border-box; overflow: hidden;
+               outline: 1px solid color-mix(in srgb, var(--ink) 22%, transparent); outline-offset: 0; border-radius: 3px; }
+#grid .thumb .img { display: block; width: 100%; height: 100%; }
+#grid .thumb .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; opacity: .3; }
+#grid .cap { display: flex; gap: 8px; align-items: baseline; height: var(--cap); padding-top: 6px; box-sizing: border-box;
+             font-size: 14px; line-height: 1.2; overflow: hidden; }
+#grid .cap .n { font-variant-numeric: tabular-nums; opacity: .55; flex: 0 0 auto; }
+#grid .cap .ti { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#grid .cell.sel .thumb { outline: 1px solid var(--ink); }
+#grid .cell.cur .thumb { outline: 2px solid var(--ink); outline-offset: 2px; }
+#grid .cell.cur .cap .n { opacity: 1; }
+#grid .cell.cur .cap .ti { font-style: italic; }
+/* THE BAR hidden (deck.js: in full screen by default, C toggles): the stage takes its height */
+body.nobar #strip { display: none; }
+/* BLANK (B or .): plain paper over everything, the marks included; any key or a click returns */
+#blank { position: fixed; inset: 0; z-index: 2147483000; background: var(--paper); display: none; cursor: none; }
+#blank.on { display: block; }

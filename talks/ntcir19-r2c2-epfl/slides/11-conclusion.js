@@ -1,5 +1,5 @@
 /* Slide 11: its motions, from the animation bank (anim/anim.js), the steps' helpers and A.groups (anim/steps.js).
-   The tree of groups, the ten steps and the grid are in the .py's header. Slide 5's picture (the passages DB, the
+   The tree of groups, the eleven steps and the grid are in the .py's header. Slide 5's picture (the passages DB, the
    maquette, the four pass boxes, filled as 5.6 leaves them) enters as slide 5's does (its tree restated: a slide's
    motions cannot be imported from another's); each step adds its part on a temporary paper overlay or in the right
    column the camera opens, and puts away what the step before added as it starts. */
@@ -21,7 +21,8 @@ Deck.slide("11-conclusion", function (A, q) {
   /* ---- what the steps add: set aside at the overview; at each step, what it shows as it starts ---- */
   var JOURNEY = ["any", "est-say", "lee", "concl", "nug-at", "gl-at", "gl-x", "ev", "lk", "ck", "g1", "a1", "estw", "est", "est-in", "pbg", "pbw",
                  "md", "md-big", "md-small", "ustrip", "mw", "u-say", "cap-u2", "unans", "fly8",
-                 "qa-head", "qa-me", "qq", "aq", "qa-note", "ball",                    /* 11.10's */
+                 "th",                                                                 /* 11.10's */
+                 "qa-head", "qa-me", "qq", "aq", "qa-note", "ball",                    /* 11.11's */
                  "g2", "g3", "g4", "gtb1", "gtb2", "a2", "a3", "a4", "ab"];   /* slide 5's other readings and answers: never */
   function state(shownNames) {
     var O = {};                                     /* "name" shown; "name@0.3" shown at that opacity */
@@ -272,7 +273,7 @@ Deck.slide("11-conclusion", function (A, q) {
   var fx = function (i) { return A.seq(SHOW(q("fx" + i)), A.type(all(q("fx" + i), "text"), { quick: true })); };
   var cnt = q.root.querySelector('[data-a="st-count"]');
 
-  /* ---- 11.10: questions? The speaker is the RAG system. The pipeline's own question box takes the audience's
+  /* ---- 11.11: questions? The speaker is the RAG system. The pipeline's own question box takes the audience's
      question (slide 4.1's device: its ruled line lifted and its "Q" handed over while it fits the question); the
      ball rolls the drawn links into the model, now "Me", out through Submit and the gate to the exit; the answer,
      generated: "Good question!", its gauge hunting, its number "?" ---- */
@@ -284,7 +285,7 @@ Deck.slide("11-conclusion", function (A, q) {
   var go = function () { return A.seq(A.reveal(ball, { dur: 0.01 }), A.travel(ball, { along: [].slice.call(arguments).map(q) })); };
   var leave = function (from, to) { return A.par(go.apply(null, [].slice.call(arguments, 2)), A.become(ball, { from: from, to: to, dur: 0.4 })); };
   var HEAD = q("head");
-  var headAway = A.track(0.8, function (u) {         /* the slide's heading, dimmed at 11.9, out of the frame: gone */
+  var headAway = A.track(0.8, function (u) {         /* the slide's heading (un-keyed at 11.10), out of the frame: gone */
     var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.io(u); HEAD.style.opacity = (0.3 * (1 - e)).toFixed(4); });
   var AQV = q("aq-value"), AQB = q("aq-bar");
   var rock = A.track(1.0, function (u) {             /* the "?" rocks a little, as a question's "?" does, back at rest */
@@ -296,6 +297,83 @@ Deck.slide("11-conclusion", function (A, q) {
   var QA_LOOK = NAMES.filter(function (k) { return ["head", "db-blk5", "lane1", "lane2", "lane3", "lane4", "lvs", "q-card", "ans"].indexOf(k) < 0; });
   var dimTo = function (el, a, b, dur) { return A.track(dur, function (u) {
     var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.io(u), v = a + (b - a) * e; el.style.opacity = v >= 0.9999 ? "" : v.toFixed(4); }); };
+
+  /* ---- 11.10: the take-home messages, each a message keyed, its source, its chart, its numbers ---- */
+  /* message 1, the 25 official AC runs in three beats: the dots drop onto the accuracy axis (a dot plot), the band
+     "accuracy ≥ 0.85" swept on it, its count; the same runs rise onto the HMR axis, its band swept upward, its count;
+     then each run's two dots slide together into its one place in the scatter (accuracy across, HMR up), and the
+     crossing of the two bands is lit and outlined: 4 runs, one team. Every dot is drawn at its scatter place; data-s
+     is its offset on a dot plot, data-d how far above it it drops from. */
+  var AXS = [].slice.call(q("th-axs").children), AYS = [].slice.call(q("th-ays").children);
+  var off = function (c) { return c.getAttribute("data-s").split(",").map(Number); };
+  var put = function (c, dx, dy) { c.style.translate = Math.abs(dx) + Math.abs(dy) < 0.005 ? "" : dx.toFixed(2) + "px " + dy.toFixed(2) + "px"; };
+  var thDrop = A.track(1.6, function (u) {           /* staggered by accuracy (the dots are drawn in that order) */
+    AXS.forEach(function (c, i) {
+      var v = Math.max(0, Math.min(1, (u * 1.6 - i * 0.03) / (1.6 - 24 * 0.03))), e = A.ease.out(v), s = off(c), d = +c.getAttribute("data-d");
+      put(c, s[0], s[1] + d * (1 - e)); c.style.opacity = u <= 0 ? "0" : Math.min(1, v * 4).toFixed(3);
+    });
+  });
+  var thRise = A.track(1.6, function (u) {           /* from the axis's foot up to its height, staggered */
+    AYS.forEach(function (c, i) {
+      var v = Math.max(0, Math.min(1, (u * 1.6 - i * 0.03) / (1.6 - 24 * 0.03))), e = A.ease.out(v), s = off(c);
+      var foot = +q("th-axes").getBBox().y + q("th-axes").getBBox().height - (+c.getAttribute("cy") + s[1]);
+      put(c, s[0], s[1] + foot * (1 - e)); c.style.opacity = u <= 0 ? "0" : Math.min(1, v * 4).toFixed(3);
+    });
+  });
+  var thJoin = A.track(1.4, function (u) {           /* the two dots of a run meet at its place; one disc stays */
+    var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.io(u);
+    AXS.forEach(function (c) { var s = off(c); put(c, s[0] * (1 - e), s[1] * (1 - e)); });
+    AYS.forEach(function (c) { var s = off(c); put(c, s[0] * (1 - e), s[1] * (1 - e)); c.style.opacity = u >= 1 ? "0" : ""; });
+  });
+  var BY = q("th-by"), BYH = +BY.getAttribute("height"), BYY = +BY.getAttribute("y");
+  var bandUp = A.track(0.5, function (u) {           /* the marker swept up the HMR axis, from 0.70 to 1 */
+    var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.io(u), hh = BYH * e;
+    BY.setAttribute("height", hh.toFixed(2)); BY.setAttribute("y", (BYY + BYH - hh).toFixed(2)); BY.style.opacity = e <= 0 ? "0" : "";
+  });
+  var countLine = function (k) { return A.par(A.count(q("th-c" + k + "-n"), { dur: 0.8 }), key("th-c" + k + "-w")); };
+  function thChart() {
+    return G("message 1", [
+      L("its words", A.type(q("th-m0"), { quick: true })),
+      L("its source", key("th-s0")),
+      [L("the axes", A.draw(q("th-axes"), { dur: 0.6 })), L("their numbers", key("th-num")),
+       L("their words", A.type([q("th-yw"), q("th-xw")], { quick: true }))],
+      G("accuracy", [L("the runs drop onto it", thDrop),
+                     [L("0.85 and up", A.highlight(q("th-bx"), { dur: 0.5 })), L("0.85", key("th-tx"))],
+                     L("10 of 25 runs", countLine(0))]),
+      G("HMR", [L("the runs rise onto it", thRise),
+                [L("0.70 and up", bandUp), L("0.70", key("th-ty"))],
+                L("8 of 25 runs", countLine(1))]),
+      G("both", [L("each run's two dots meet", thJoin),
+                 [L("the crossing, lit", A.highlight(q("th-reg-hl"), { dur: 0.5 })), L("outlined", A.draw(q("th-reg"), { dur: 0.6 }))],
+                 L("4 of 25 runs, one team", countLine(2))])]);
+  }
+  /* message 2, the relevant passages found so far, pass by pass: a bar shows the one before (its lighter part), then
+     this pass's new passages grow on top while the value above counts on from the pass before; "pass k" and "+ new"
+     keyed under it */
+  function thBar(j) {
+    var nw = q("th-b" + j + "-new"), v = q("th-b" + j + "-v"), old = q.root.querySelector('[data-a="th-b' + j + '-old"]');
+    var y1 = +nw.getAttribute("y"), h1 = +nw.getAttribute("height"), y0 = +nw.getAttribute("data-base"), vy = +v.getAttribute("y");
+    var v1 = parseFloat(v.textContent || v._full), prev = j ? parseFloat(q("th-b" + (j - 1) + "-v")._full || q("th-b" + (j - 1) + "-v").textContent) : 0;
+    v._full = v._full || v.textContent;
+    var grow = A.track(0.4 + 0.12 * (v1 - prev), function (u) {
+      var e = u >= 1 ? 1 : u <= 0 ? 0 : A.ease.out(u), hh = h1 * e;
+      nw.setAttribute("height", hh.toFixed(2)); nw.setAttribute("y", (y0 - hh).toFixed(2)); nw.style.opacity = u <= 0 ? "0" : "";
+      v.setAttribute("y", (vy + (y0 - y1) * (1 - e)).toFixed(2));
+      v.textContent = u <= 0 ? "" : u >= 1 ? v._full : (Math.round((prev + (v1 - prev) * e) * 10) / 10).toFixed(1);
+    });
+    return G("pass " + (j + 1), [
+      [old ? L("what the passes before found", A.reveal(old, { dur: 0.3 })) : null, L("pass k", key("th-b" + j + "-p"))],
+      L("its new passages, the count on", grow),
+      L("+ new", key("th-b" + j + "-n"))]);
+  }
+  function thBars() {
+    return G("message 2", [
+      L("its words", A.type(q("th-m1"), { quick: true })),
+      L("its source", key("th-s1")),
+      [L("the baseline", A.draw(q("th-base"), { dur: 0.4 })), L("pass, new", key("th-bw"))],
+      thBar(0), thBar(1), thBar(2), thBar(3),
+      L("40 of the 42 wins", A.par(A.count(q("th-d0-n"), { dur: 0.8 }), key("th-d0-w")))]);
+  }
 
   var LOOK_CASE = ["check", "gate", "l-ans", "ans", "l-ck", "l-rg", "rec"];
   var CASE_SHOWN = ["nug-at", "gl-at", "ev", "ck", "g1", "a1"];
@@ -398,8 +476,14 @@ Deck.slide("11-conclusion", function (A, q) {
          L("hypothetical", A.seq(SHOW(q("cap-u2")), KEY(q("cap-u2"))))].filter(Boolean),
         [L("the red mean", mwIn), L("collapsed", redden(1))],
         L("careful about wrong answers", A.seq(SHOW(q("u-say")), key("u-say")))]; } },
-    { look: QA_LOOK, frame: "qa", shown: ["estw", "ustrip", "unans", "fly8", "u-say", "cap-u2", "mw"],   /* 11.10 questions? */
-      away: ["estw", "unans", "fly8"], also: function () { return headAway; },
+    { look: ["head"], frame: "home", shown: ["estw", "ustrip", "unans", "fly8", "u-say", "cap-u2", "mw"],   /* 11.10 take home */
+      away: ["estw", "unans", "fly8"],
+      act: function () { return [
+        [L("a clean page over the picture", A.seq(shown("th"), A.pop(q("th-pnl"), { dur: 0.45 }), A.draw(q("th-sep"), { dur: 0.35 }))),
+         G("the title changes", [L("the old one, un-keyed", A.reverse(key("head"))), L("Take-home messages", key("th-head"))])],
+        thChart(),
+        thBars()]; } },
+    { look: QA_LOOK, frame: "qa", shown: ["th"], away: ["th"], also: function () { return headAway; },   /* 11.11 questions? */
       act: function () { return [
         [L("Questions?", A.seq(shown("qa-head"), key("qa-head"))),
          G("the model is me", [L("its title, un-keyed", A.reverse(key("model-title"))),

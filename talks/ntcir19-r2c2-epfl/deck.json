@@ -9,6 +9,7 @@
   "audience": "About 50 researchers and entrepreneurs, with companies such as ITU and IBM",
   "slug": "ntcir19-r2c2-epfl",
   "short": "epfl-r2c2",
+  "default": "short",
   "site_dir": "$HOME/jknafou.github.io",
   "site_url": "https://jknafou.github.io",
   "parts": [
@@ -45,7 +46,9 @@
       "height": 0.04,
       "chip": true,
       "own": "[data-a^=\"hes-l\"]",
-      "except": [1]
+      "except": [
+        1
+      ]
     }
   ],
   "overlays": [
@@ -55,8 +58,23 @@
       "from": "01-title",
       "part": "corner",
       "caret": "corner-handle",
-      "except": [1],
-      "slides": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      "except": [
+        1
+      ],
+      "slides": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
     }
   ],
   "media": {
@@ -71,5 +89,6 @@
   "preview": {
     "hold": 2.5,
     "slow": 0.5
-  }
+  },
+  "has_short": true
 }

@@ -66,8 +66,8 @@
  *   TWO MODES (the author, 5 November 2026: "The presentation mode should be the default navigation"): PRESENTATION,
  *     the default on every opening: ← → are the linear order (as PageDown / PageUp below), 1, 2, 2.1 ... 3, 3.1 ...;
  *     ↑ or ↓ leaves it for NAVIGATION, the same press doing its move there (↓ N.1, ↑ N; a bump still switches); P
- *     returns to presentation in place. ?nav=1 opens in navigation. The corner shows a faint "nav" above the
- *     position in navigation mode only. The levels below are NAVIGATION mode's.
+ *     returns to presentation in place. ?nav=1 opens in navigation. The corner shows the mode, faint, above the
+ *     position: "nav", or "pres" ("short" over "pres" on the short build; header: X). The levels below are NAVIGATION mode's.
  *   SLIDE LEVEL (an overview): ← → go to the previous / next slide's overview (forward its entry, backward its rest,
  *     after the fade to paper); ↓ enters the steps at k.1, playing its enter (nothing on a slide without steps).
  *   STEP LEVEL (k.s): → plays k.s+1, and past the last step goes to the next slide's overview; ← lands at k.s-1's
@@ -89,6 +89,13 @@
  *   G                  the slide grid      L the progress line on / off      Z or `   back to before the last jump
  *   B or .             blank screen (any key or a click returns)      C the bar on / off
  *   F or F5 full screen      S timer (minutes; S again restarts)    O offline panel    H help
+ *   X                  the short version on / off: ANOTHER DECK at the same position (the author, 10 November 2026; PLAN.md
+ *                      "Short version, re-planned"): tools/build.py --short builds it into build/short/, every slide of
+ *                      the deck but those with a variant in slides/short/, replaced by it, numbered 1-12 as here. Its
+ *                      deck.json says "short_build" (X: location.replace("../")), the full one's "has_short" (X:
+ *                      location.replace("short/")), the hash and the other query parameters (?live=1 ...) kept. The
+ *                      corner shows the mode always: "pres", "short" over "pres" on the short build, "nav" on either.
+ *                      ?short=1 on the full deck opens the short one (the same replace).
  *   A held key (auto-repeat) is one press: its repeats are ignored. Ctrl/Alt/Cmd combinations are the browser's.
  *
  * THE PROGRESS LINE (the author, 8 November 2026: "the progress bar should evolve with the slide animation, e.g. 5.4,
@@ -549,6 +556,16 @@
   /* the line of positions (slide, step) */
   function nextPos(k, s) { return s < nst(k) ? [k, s + 1] : k < N ? [k + 1, 0] : null; }
   function prevPos(k, s) { return s > 0 ? [k, s - 1] : k > 1 ? [k - 1, nst(k - 1)] : null; }
+  /* THE SHORT VERSION (header: X): another deck, build/short/ beside this one's files; X goes to the other at the
+     same position, keeping the hash and every query parameter but "short" */
+  function otherDeck() {
+    var to = CFG.short_build ? "../" : CFG.has_short ? "short/" : null;
+    if (!to) return false;
+    var u = new URL(to, location.href); var q = new URLSearchParams(location.search); q.delete("short");
+    u.search = q.toString() ? "?" + q.toString() : ""; u.hash = location.hash;
+    location.replace(u.href);
+    return true;
+  }
   /* how.play: a zone clicked: step s's attention move is played from what is shown, whichever way it lies (even
      the step shown now, acted once more) */
   function goTo(k, s, how) {
@@ -633,7 +650,7 @@
     crumb.textContent = (g ? (NAV.dir < 0 ? "← " : "→ ") : (CFG.title ? CFG.title + " · " : "")) + d[0];
     pos.textContent = n ? "slide " + d[1] + " · step " + curS + "/" + n : d[1];
     strip.classList.toggle("going", g);
-    if (numEl) { numEl.firstChild.textContent = NAVMODE ? "nav" : ""; numEl.lastChild.textContent = posName(cur, curS); fitNum(); }
+    if (numEl) { numEl.firstChild.textContent = NAVMODE ? "nav" : CFG.short_build ? "short\npres" : "pres";   /* the mode always shown (the author, 10 November 2026) */ numEl.lastChild.textContent = posName(cur, curS); fitNum(); }
     var h = "#/" + posName(cur, curS);
     if (h !== lastHash) { lastHash = h; try { history.replaceState(null, "", h + ""); } catch (e) {} }
     layoutLogos();
@@ -754,6 +771,7 @@
     if (low === "f") { e.preventDefault(); return toggleFull(); }
     if (low === "s") { e.preventDefault(); return startTimer(); }
     if (low === "o") { e.preventDefault(); return toggleOffPanel(); }
+    if (low === "x") { e.preventDefault(); return otherDeck(); }
     if (low === "h" || k === "?") { e.preventDefault(); return $("help").classList.toggle("on"); }
     if (low === "t") { e.preventDefault(); return goTo(1, 0, JUMP); }
     var parts = CFG.parts || [];
@@ -1099,19 +1117,22 @@
     fetch("media/media.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
   ]).then(async function (j) {
     CFG = j[0]; SL = j[1].slides; N = SL.length; MED = j[2];
+    if (params.get("short") === "1" && !CFG.short_build && otherDeck()) return;    /* ?short=1: the short deck (header: X) */
     if (CFG.title) document.title = CFG.title;
     var m = /^#\/(\d+)(?:\.(\d+))?/.exec(location.hash);
     cur = Math.max(1, Math.min(N, m ? +m[1] : 1)); under = cur;
     buildLogos(); await buildOverlays();
     /* the foot band: paper fading upward behind the marks, over the slides and under the veil (deck.css #footband) */
     bandEl = document.createElement("div"); bandEl.id = "footband"; bandEl.setAttribute("aria-hidden", "true"); bandEl.style.display = "none"; box.appendChild(bandEl);
-    /* the corner: the position, right-aligned where it always was, and before it the mode, shown only in navigation */
+    /* the corner: the position, right-aligned where it always was, and above it the mode (update) */
     numEl = document.createElement("div"); numEl.id = "num"; numEl.setAttribute("aria-hidden", "true");
     numEl.innerHTML = '<span class="mode"></span><span class="at"></span>'; box.appendChild(numEl);
     /* the progress line, along the stage's foot, over the veil with the marks (deck.css #prog) */
     progEl = document.createElement("div"); progEl.id = "prog"; progEl.setAttribute("aria-hidden", "true"); box.appendChild(progEl);
     $("help").innerHTML = "<table>" + [["Presentation mode", "(the default) ← → every position in order: 1, 2, 2.1, 2.2 … 3, 3.1 …"],
-      ["Navigation mode", "↓ or ↑ enters it (and moves); P returns to presentation mode"],
+      ["Navigation mode", "↓ or ↑ enters it (and moves)"],
+      ["P", "back to presentation mode, where you are"],
+      ["X", "the short version (another deck at the same place) on / off"],
       ["  ← →", "the slides; on a step, its steps"], ["  ↓ / ↑", "into a slide's steps / back to its overview"],
       ["Space PageDown Enter", "next, in order (both modes)"], ["PageUp Backspace", "previous, in order (both modes)"], ["click", "a part of the slide (where outlined): its step"], ["Home / End", "first / last"],
       ["1–9, 0", "slide 1 to 9, 0: slide 10"], ["G", "all the slides (← → ↑ ↓ Enter or a click; G or Esc closes)"],

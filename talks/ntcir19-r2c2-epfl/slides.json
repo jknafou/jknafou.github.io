@@ -6,8 +6,8 @@
    "part": 0,
    "continues": false,
    "notes": "Introduce yourself; the talk is about telling, from what the pipeline did, when its answer is wrong.",
-   "hash": "a18a44837953882a",
-   "vhash": "bb5d8293266d146b",
+   "hash": "e839b73425ad60f3",
+   "vhash": "d579df584621e271",
    "zones": false
   },
   {
@@ -25,9 +25,9 @@
    "title": "The R2C2 task: answer, cite, and say how sure",
    "part": 1,
    "continues": false,
-   "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages.",
-   "hash": "e5f5186320275ea9",
-   "vhash": "e0bb146f4e881779",
+   "notes": "R2C2 asks exactly this over a movie corpus of two million passages. What we have: the corpus and 64 questions of six types. What we must return for each: the passages that support it, at most 20, and an answer with a confidence from 0 to 100, with its nuggets, each citing one of those passages. Our search reads those passages from about 10 GB of indexes: 6.4 GB of embeddings and 3.4 GB of keyword index.",
+   "hash": "ff35a76ecacf4915",
+   "vhash": "c8ee908e795afe3e",
    "zones": true
   },
   {
@@ -49,6 +49,16 @@
    "hash": "ec0bd7bada61e891",
    "vhash": "209569a8f269bf09",
    "zones": true
+  },
+  {
+   "id": "05b-volume",
+   "title": "The volume of the run",
+   "part": 2,
+   "continues": false,
+   "notes": "The whole run in numbers: 65 questions, 236 passes. A question costs a median of 65 tool calls, 157 passages retrieved and 0.69 GPU-hours (RTX PRO 6000-equivalent), its passes summed; most questions sit near the median, a few cost several times more. Pass by pass: pass 1 is the cheapest (13 calls, 21 passages); passes 2 to 4 make about 19 calls but retrieve more and more passages, the corpus shrinking under them; pass 4 ran on 41 of the 65 questions (a fourth pass runs unless the last two came back unsure). GPU-hours: allocated, the run took 86 GPU-hours (74 for the 236 submitted passes), from Slurm accounting, each pass tied to its job through the orchestrator's logs. Shown here RTX PRO 6000-equivalent: a pass on the RTX PRO 6000s as allocated; a pass on the A100s priced at its tool calls times the RTX rate per tool call (0.012 GPU-hours), because 84% of their 5 times higher allocation was the pool's configuration (4 A100s held for one pass at a time), not the passes; seconds per tool call, 32 on the RTX against 38 on the A100 (medians). That makes 49 GPU-hours for the 236 passes. On running time alone (no boot or idle time) the median pass costs 0.08, 0.16, 0.20 and 0.20 GPU-hours in passes 1 to 4: the work grows to pass 3 then levels off; pass 4's higher mean here is the end of the run's idle time. No wall time: the configurations varied.",
+   "hash": "8d36606432598f19",
+   "vhash": "5394bc68a8cebfa8",
+   "zones": false
   },
   {
    "id": "06-runs",
@@ -105,9 +115,9 @@
    "title": "Conclusion and future work",
    "part": 6,
    "continues": false,
-   "notes": "What the results showed: for passages, pooling the four passes is 4th of 22 runs, one pass 5th; for answers as submitted, accuracy is strong (AC-2 6th of 25) and the confidence weak (HMR 13th); the additional runs read the same passes with new rules and give better confidence: independent agreement 5th on accuracy, 9th on HMR, 5th on accHMR; longest deliberation 7th on accHMR. Future work: the gate checks each nugget against its passage, never the answer against the nuggets: Han Solo's nugget was entailed at 0.975, the gate passed at 98, and the planet is Ilum (the orchestrator's only answer-to-nugget test, `_db_nugget_entails_answer`, is a word overlap in a fallback, and it would say yes here: 2 of 5 words). Then an estimator fitted on the signals a pass already records, chosen on synthetic questions and tested once on R2C2's 64. Aggregation is AC-2's lowest rank by question type (6 of 7 right, 7th of 25; six runs got all 7): a count's evidence is split across passes, each withholding what the passes before met; one pass of the same model, asked to gather more proof, would keep it together (four passes cost 4.8 times one pass's calls). Every pass ran Qwen3.5-122B-A10B-FP8: would a smaller or a bigger model change the results? And the benchmark never tests a question whose answer is not in the corpus: a model right on every question scores perfectly by answering everything at 100; eight such questions answered at 100 take its HMR to 0.",
-   "hash": "8e684d02f437dea1",
-   "vhash": "881c9a975dfbe2a9",
+   "notes": "What the results showed: for passages, pooling the four passes is 4th of 22 runs, one pass 5th; for answers as submitted, accuracy is strong (AC-2 6th of 25) and the confidence weak (HMR 13th); the additional runs read the same passes with new rules and give better confidence: independent agreement 5th on accuracy, 9th on HMR, 5th on accHMR; longest deliberation 7th on accHMR. Future work: the gate checks each nugget against its passage, never the answer against the nuggets: Han Solo's nugget was entailed at 0.975, the gate passed at 98, and the planet is Ilum (the orchestrator's only answer-to-nugget test, `_db_nugget_entails_answer`, is a word overlap in a fallback, and it would say yes here: 2 of 5 words). Then an estimator fitted on the signals a pass already records, chosen on synthetic questions and tested once on R2C2's 64. Aggregation is AC-2's lowest rank by question type (6 of 7 right, 7th of 25; six runs got all 7): a count's evidence is split across passes, each withholding what the passes before met; one pass of the same model, asked to gather more proof, would keep it together (four passes cost 4.8 times one pass's calls). Every pass ran Qwen3.5-122B-A10B-FP8: would a smaller or a bigger model change the results? And the benchmark never tests a question whose answer is not in the corpus: a model right on every question scores perfectly by answering everything at 100; eight such questions answered at 100 take its HMR to 0. To take home, first: being accurate and knowing when you're wrong rarely go together. Of the 25 official answer runs, 10 reach accuracy 0.85 and 8 reach HMR 0.70, but only 4 reach both, all from one team (retrank); the thresholds are a reading aid. This is not 'the more accurate, the less calibrated': across the 25 runs Spearman(accuracy, HMR) is 0.14; what holds is that few runs are high on both. Two pairs of runs were submitted twice (BITEM-AC-3 = AC-4, hit-u-AC-2 = AC-3); their dots stand side by side, as on slide 8. Second: each new pass finds relevant passages the earlier ones missed: relevant passages found per question, so far, 8.5, 11.6, 14.4, 15.9 after passes 1 to 4 (each adding 3.0, 2.9, then 1.4 over the 64; pass 4 ran on 41 of them, 2.2 on each); 40 of the 42 questions where pooling (PG-2) beats one pass (PG-1) hold relevant passages only later passes found. Caveats: the counts are lower bounds, since a passage is judged only if some run submitted it; the new passages are as relevant as pass 1's, not more (15% highly relevant in both); about 42% of the nDCG gain fills slots pass 1 left empty, re-ranking adds nothing; the two-run paired test gives p = 0.0002, but the organisers' test over the 22 runs finds no significant difference.",
+   "hash": "43439daaac2bcebb",
+   "vhash": "b26e6f3c46a9d866",
    "zones": false
   },
   {
@@ -116,8 +126,8 @@
    "part": 0,
    "continues": false,
    "notes": "Thank the room and the co-authors. The paper is on arXiv and the code on GitHub, both under the QR codes; everything, this presentation included, goes on LinkedIn today after the talk.",
-   "hash": "37b11417df97f6ea",
-   "vhash": "e442044331b9614a",
+   "hash": "1330c1f7ced3ddfd",
+   "vhash": "9766d8623010c304",
    "zones": false
   }
  ]

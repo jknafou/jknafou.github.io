@@ -4,7 +4,9 @@
    ENTRY (short and light), a tree of groups in layers (A.groups; the tree is in the .py's header): (1) the camera
    set at once on the task canvas's right half (the slide no longer continues slide 2: it starts from paper); then
    THREE GROUPS STARTED TOGETHER: (2) the title keyed while the divider is drawn down; (3) what we have: its heading
-   keyed, then the corpus (named, then its tiles in, its count growing) and the questions (named, then the six cards
+   keyed, then the corpus (named, then its tiles in, its count growing, then the size of the indexes our search reads,
+   "10 GB of indexes", growing from 0 under it; the author, 10 November 2026: "The size of the index can be displayed
+   at slide 3.") and the questions (named, then the six cards
    all together: each its type tag turned in and counted while its card pops RULED, then its rows' rules drawn: no
    words, no scene) together; (4) what we must return: its heading keyed, then PR (named, then its 20 ruled rows
    in), AC (named, then its card in, its gauge settling) and the nuggets (named, then the three ruled N cards popping
@@ -50,7 +52,7 @@ Deck.slide("03-r2c2-task", function (A, q) {
   }
 
   var have = { name: "what we have", layers: [key("have"), [
-    { name: "corpus", layers: [key("corpus-name"), A.enter(q("corpus"))] },
+    { name: "corpus", layers: [key("corpus-name"), A.enter(q("corpus")), A.count(q("corpus-size"), { dur: 0.6 })] },
     { name: "questions", layers: [key("qs-name"), { name: "six cards", group: six.map(ruledCard) }] }]] };
   var ret = { name: "what we must return", layers: [key("return"), [
     { name: "PR", layers: [key("pr-name"), A.pace(A.enter(q("pr")), 2.5)] },

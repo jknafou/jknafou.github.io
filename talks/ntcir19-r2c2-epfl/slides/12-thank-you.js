@@ -4,9 +4,10 @@
      ├─ header   layers: "Thank you" keyed → the rule drawn by pen
      ├─ authors  layers: the six names keyed → the affiliations keyed
      ├─ QR       one layer: the paper's card ‖ the code's card, each by A.enter's layers (card and code pop, caption keyed)
-     └─ handles  layers: the portrait pops → its ring drawn from the top → the three marks pop in turn →
-                 ["jknafou" typed, the caret staying ‖ the sentence keyed]; "jknafou"'s IDLE, the caret blinking,
-                 starts the moment it is written (as on the title slide)
+     ├─ handles  layers: the portrait pops → its ring drawn from the top → the three marks pop in turn →
+     │           ["jknafou" typed, the caret staying ‖ the email keyed ‖ the sentence keyed]; "jknafou"'s IDLE, the
+     │           caret blinking, starts the moment it is written (as on the title slide)
+     └─ funding  layers: the ELIXIR logo (or its slot, until the file is in assets/) pops → the acknowledgement keyed
    Rest: still, the caret blinking after "jknafou" (8 blinks, starting and ending on the rest still). */
 Deck.slide("12-thank-you", function (A, q) {
   var blink = 1.06;
@@ -18,7 +19,9 @@ Deck.slide("12-thank-you", function (A, q) {
     { name: "handles", layers: [A.pop(q("me-portrait"), { dur: 0.6 }), A.draw(q("me-ring"), { dur: 0.7 }),
                                 A.stagger(["me-github", "me-hf", "me-linkedin"], function (m) { return A.pop(q(m), { dur: 0.4 }); }, 0.15),
                                 [{ name: "jknafou", track: handle, idle: handle.blink(blink) },
-                                 { name: "links", track: A.type(q("links"), { quick: true, dur: 2.4 }) }]] }
+                                 { name: "email", track: A.type(q("me-email"), { quick: true }) },
+                                 { name: "links", track: A.type(q("links"), { quick: true, dur: 2.4 }) }]] },
+    { name: "funding", layers: [A.pop(q("elixir-logo"), { dur: 0.5 }), A.type(q("ack"), { quick: true, dur: 2.0 })] }
   ]] };
   var bl = [];
   for (var b = 0; b < 8; b++) bl.push(handle.blink(blink));

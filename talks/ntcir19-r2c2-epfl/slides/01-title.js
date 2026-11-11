@@ -5,7 +5,8 @@
    a layer start at the same instant. The tree (also in the .py's header):
      slide: ONE LAYER, all started together at t = 0 (as the author validated, 5 November 2026)
      ├─ header     layers: the title keyed → the rule drawn by pen → "Dr. Julien Knafou" keyed
-     ├─ HES-SO     its letters appear one after another (H e s · s o, 9 a second), no plate behind them
+     ├─ marks      layers: HES-SO, its letters appear one after another (H e s · s o, 9 a second), no plate behind
+     │             them → SIB, its mark pops beside them (read left to right)
      ├─ corner     layers: the portrait pops → its ring drawn from the top → the three marks pop in turn → "jknafou"
      │             typed, the caret staying: its IDLE, the caret blinking, starts the moment "jknafou" is written
      └─ emblem     layers: query → arrow → model → arrow → answer (each arrow its own group, between the two it
@@ -52,7 +53,8 @@ Deck.slide("01-title", function (A, q) {
   var tree = { name: "slide", layers: [[
     { name: "header", layers: [A.type([q("title-1"), q("title-2")], { quick: true }), A.draw(q("rule"), { dur: 0.4 }),
                                A.type(q("author"), { quick: true })] },
-    { name: "HES-SO", track: A.stagger(letters, function (l) { return A.reveal(l, { dur: 0.04 }); }, 1 / 9) },
+    { name: "marks", layers: [{ name: "HES-SO", track: A.stagger(letters, function (l) { return A.reveal(l, { dur: 0.04 }); }, 1 / 9) },
+                              { name: "SIB", track: A.pop(q("sib"), { dur: 0.5 }) }] },
     { name: "corner", layers: [A.pop(q("corner-portrait"), { dur: 0.6 }), A.draw(q("corner-ring"), { dur: 0.7 }),
                                A.stagger(["corner-github", "corner-hf", "corner-linkedin"], function (m) { return A.pop(q(m), { dur: 0.4 }); }, 0.15),
                                { name: "jknafou", track: handle, idle: handle.blink(blink) }] },
